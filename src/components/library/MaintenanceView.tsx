@@ -1,0 +1,256 @@
+import React, { useMemo, useState } from 'react';
+import { useLibrary } from '../../contexts/LibraryContext';
+import { persistenceService } from '../../services/persistence';
+import { TrackItem } from '../../types/music';
+import { ShieldAlert, Trash2, Download, RefreshCcw, FileWarning, Zap, CheckCircle2, ChevronRight, BarChart3, Database } from 'lucide-react';
+
+export const MaintenanceView: React.FC = () => {
+    const { state } = useLibrary();
+    const [activeTab, setActiveTab] = useState<'duplicates' | 'health' | 'data'>('duplicates');
+
+    // --- Duplicate Logic ---
+    const duplicateGroups = useMemo(() => {
+        const hashGroups: Record<string, TrackItem[]> = {};
+        const fuzzyGroups: Record<string, TrackItem[]> = {};
+
+        state.tracks.forEach(track => {
+            // Hash Based
+            const h = track.logic.hash_sha256;
+            if (!hashGroups[h]) hashGroups[h] = [];
+            hashGroups[h].push(track);
+
+            // Fuzzy (Title + Artist)
+            const fuzzyKey = `${(track.metadata?.title || '').toLowerCase().trim()}|${(track.metadata?.artists?.[0] || '').toLowerCase().trim()}`;
+            if (fuzzyKey.length > 5) { // Avoid grouping empty tags
+                if (!fuzzyGroups[fuzzyKey]) fuzzyGroups[fuzzyKey] = [];
+                fuzzyGroups[fuzzyKey].push(track);
+            }
+        });
+
+        const exact = Object.values(hashGroups).filter(g => g.length > 1);
+        const probable = Object.values(fuzzyGroups).filter(g => {
+            // Filter out if they are already in 'exact' duplicates
+            if (g.length <= 1) return false;
+            const hashes = new Set(g.map(t => t.logic.hash_sha256));
+            return hashes.size > 1;
+        });
+
+        return { exact, probable };
+    }, [state.tracks]);
+
+    // --- Health Logic ---
+    const healthIssues = useMemo(() => {
+        const lowBitrate = state.tracks.filter(t => {
+            const br = parseInt(t.audio_specs?.bitrate || '0');
+            return br > 0 && br < 128;
+        });
+        const missingMetadata = state.tracks.filter(t => !t.metadata?.genre || !t.metadata?.year || !t.metadata?.album);
+        const ghostTracks: TrackItem[] = []; // Placeholder for files not found on disk if we had that check
+
+        return { lowBitrate, missingMetadata, ghostTracks };
+    }, [state.tracks]);
+
+    // --- Actions ---
+    const handleExport = () => {
+        const data = persistenceService.getData();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `library_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    };
+
+    return (
+        <div className="h-full flex flex-col p-8 pt-24 bg-surface-primary overflow-y-auto custom-scrollbar">
+            <div className="flex items-end justify-between mb-10">
+                <div>
+                    <h1 className="text-4xl font-black tracking-tighter text-white flex items-center gap-4">
+                        <Database className="text-dominant" size={32} />
+                        Library Maintenance
+                    </h1>
+                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">
+                        Analyze, clean, and backup your collection · {state.tracks.length} tracks indexed
+                    </p>
+                </div>
+                <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl">
+                    {(['duplicates', 'health', 'data'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab ? 'bg-white/10 text-white shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div className="bg-white/5 border border-white/5 p-6 rounded-3xl flex items-center gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-dominant/20 text-dominant flex items-center justify-center shadow-inner">
+                        <Zap size={24} />
+                    </div>
+                    <div>
+                        <div className="text-2xl font-black text-white">{duplicateGroups.exact.length + duplicateGroups.probable.length}</div>
+                        <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Duplicate Issues</div>
+                    </div>
+                </div>
+                <div className="bg-white/5 border border-white/5 p-6 rounded-3xl flex items-center gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 text-yellow-500 flex items-center justify-center shadow-inner">
+                        <FileWarning size={24} />
+                    </div>
+                    <div>
+                        <div className="text-2xl font-black text-white">{healthIssues.lowBitrate.length + healthIssues.missingMetadata.length}</div>
+                        <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Health Warnings</div>
+                    </div>
+                </div>
+                <div className="bg-white/5 border border-white/5 p-6 rounded-3xl flex items-center gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-green-500/20 text-green-500 flex items-center justify-center shadow-inner">
+                        <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                        <div className="text-2xl font-black text-white">{state.tracks.length > 0 ? (100 - ((healthIssues.missingMetadata.length / state.tracks.length) * 100)).toFixed(1) : 100}%</div>
+                        <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Library Integrity</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-1">
+                {activeTab === 'duplicates' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <section className="mb-12">
+                            <h2 className="text-lg font-black text-white mb-6 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>
+                                Exact Hash Duplicates
+                                <span className="ml-2 text-xs text-gray-500 font-bold px-2 py-0.5 bg-white/5 rounded-md">{duplicateGroups.exact.length} cases</span>
+                            </h2>
+                            <p className="text-sm text-gray-500 mb-8 max-w-2xl leading-relaxed">
+                                These tracks point to identical files on your disk. You might want to remove one version to save space or reduce clutter.
+                            </p>
+                            <div className="grid gap-4">
+                                {duplicateGroups.exact.slice(0, 10).map((group, idx) => (
+                                    <div key={idx} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.07] transition-all group">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="font-bold text-white text-sm truncate max-w-[70%]">{group[0].metadata?.title || group[0].logic.track_name}</h3>
+                                            <button className="text-xs text-red-400 font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:text-red-300">Clean Group</button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {group.map(track => (
+                                                <div key={track.id} className="flex items-center justify-between text-xs py-2 border-t border-white/5">
+                                                    <div className="flex items-center gap-3 truncate">
+                                                        <span className="text-gray-500 font-mono">#{track.id}</span>
+                                                        <span className="text-gray-300 truncate opacity-60 font-mono">{track.file.path}</span>
+                                                    </div>
+                                                    <Trash2 size={14} className="text-gray-600 hover:text-red-500 cursor-pointer transition-colors" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className="text-lg font-black text-white mb-6 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></span>
+                                Probable Duplicates (Title/Artist)
+                                <span className="ml-2 text-xs text-gray-500 font-bold px-2 py-0.5 bg-white/5 rounded-md">{duplicateGroups.probable.length} groups</span>
+                            </h2>
+                            <p className="text-sm text-gray-500 mb-8 max-w-2xl leading-relaxed">
+                                These tracks share the same metadata but have different file hashes. They could be different versions (Live, Remix, Extended) or actual duplicates in different formats.
+                            </p>
+                            {/* Similar rendering to exact duplicates */}
+                        </section>
+                    </div>
+                )}
+
+                {activeTab === 'health' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <section className="bg-white/5 border border-white/5 p-8 rounded-[2rem]">
+                            <h2 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+                                <BarChart3 className="text-dominant-light" size={20} />
+                                Low Bitrate Alert
+                                <span className="ml-auto text-xs font-black text-gray-500 bg-black/40 px-3 py-1 rounded-full uppercase tracking-tighter">{healthIssues.lowBitrate.length} files</span>
+                            </h2>
+                            <p className="text-xs text-gray-400 mb-8 leading-relaxed">Files with bitrate under 128kbps. Consider replacing with higher quality versions for a better listening experience.</p>
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-4">
+                                {healthIssues.lowBitrate.map(track => (
+                                    <div key={track.id} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 group hover:border-dominant/30 transition-all">
+                                        <div className="truncate">
+                                            <div className="text-white text-sm font-bold truncate">{track.metadata?.title || track.logic.track_name}</div>
+                                            <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">{track.audio_specs?.bitrate} kbps · {track.audio_specs?.codec}</div>
+                                        </div>
+                                        <ChevronRight size={16} className="text-gray-600 group-hover:text-dominant transition-all translate-x-0 group-hover:translate-x-1" />
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="bg-white/5 border border-white/5 p-8 rounded-[2rem]">
+                            <h2 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+                                <FileWarning className="text-yellow-500" size={20} />
+                                Missing Critical Tags
+                                <span className="ml-auto text-xs font-black text-gray-500 bg-black/40 px-3 py-1 rounded-full uppercase tracking-tighter">{healthIssues.missingMetadata.length} files</span>
+                            </h2>
+                            <p className="text-xs text-gray-400 mb-8 leading-relaxed">Tracks missing Genre, Year, or Album tags. These won't appear correctly in filtered views or smart playlists.</p>
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-4">
+                                {healthIssues.missingMetadata.map(track => (
+                                    <div key={track.id} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 group hover:border-yellow-500/30 transition-all">
+                                        <div className="truncate pr-4">
+                                            <div className="text-white text-sm font-bold truncate">{track.metadata?.title || track.logic.track_name}</div>
+                                            <div className="flex gap-2 mt-2">
+                                                {!track.metadata?.genre && <span className="bg-yellow-500/10 text-yellow-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">No Genre</span>}
+                                                {!track.metadata?.year && <span className="bg-yellow-500/10 text-yellow-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">No Year</span>}
+                                                {!track.metadata?.album && <span className="bg-yellow-500/10 text-yellow-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">No Album</span>}
+                                            </div>
+                                        </div>
+                                        <button className="px-4 py-2 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">Fix Tags</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+                )}
+
+                {activeTab === 'data' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl">
+                        <div className="bg-white/5 border border-white/5 p-10 rounded-[3rem] shadow-3xl overflow-hidden relative group">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-dominant/10 blur-[100px] -z-10 group-hover:bg-dominant/20 transition-all duration-1000"></div>
+                            <h2 className="text-2xl font-black text-white mb-6">Backup & Export</h2>
+                            <p className="text-gray-400 mb-10 leading-relaxed">
+                                Save all your custom metadata, playlists, ratings, and artwork overrides into a single JSON file. You can use this file to restore your settings if you move your library.
+                            </p>
+
+                            <div className="flex flex-col gap-4">
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center justify-center gap-4 px-8 py-5 bg-dominant text-black rounded-2xl text-sm font-black hover:bg-dominant-light transition-all shadow-2xl shadow-dominant/30 active:scale-[0.98] uppercase tracking-[0.2em]"
+                                >
+                                    <Download size={20} /> Export Library Data
+                                </button>
+                                <button
+                                    className="flex items-center justify-center gap-4 px-8 py-5 bg-white/5 text-white/50 border border-white/5 rounded-2xl text-sm font-black hover:bg-white/10 hover:text-white transition-all active:scale-[0.98] uppercase tracking-[0.2em]"
+                                    onClick={() => alert('Feature coming soon: Manual JSON Import')}
+                                >
+                                    <RefreshCcw size={20} /> Import Backup
+                                </button>
+                            </div>
+
+                            <div className="mt-12 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                                <h4 className="text-red-500 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <ShieldAlert size={14} /> Danger Zone
+                                </h4>
+                                <p className="text-[10px] text-red-400/70 mb-4 font-bold leading-relaxed">
+                                    This will permanently delete all your custom metadata, playlists, and ratings. Your audio files will not be touched.
+                                </p>
+                                <button className="text-[10px] font-black uppercase tracking-[0.25em] text-red-500 opacity-50 hover:opacity-100 transition-all underline decoration-2 underline-offset-4">Reset Application Metadata</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};

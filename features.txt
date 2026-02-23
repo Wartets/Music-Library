@@ -1,0 +1,459 @@
+1. Gestion et structuration de la bibliothèque locale
+
+[X] 1.1 Indexation initiale (Completed)
+
+1.2 Organisation logique
+
+* Vue par morceaux
+* Vue par albums
+* Vue par artistes
+* Vue par artistes d’album
+* Vue par genres
+* Vue par compositeurs
+* Vue par années
+* Vue par dossiers physiques
+* Vue par formats audio
+* Vue par qualité audio (lossless, lossy, hi-res)
+* Vue par date d’ajout
+* Vue par durée
+* Vue par notation
+* Vue par disques pour albums multi-disques
+* Gestion des compilations et artistes variés
+* Regroupement automatique des albums multi-disques
+* Fusion automatique d’albums identiques mal taggés (optionnelle)
+* Gestion des albums sans artwork avec placeholder automatique
+
+1.3 Mise à jour de la bibliothèque
+
+* Détection automatique de nouveaux fichiers dans les dossiers surveillés
+* Synchronisation manuelle via bouton “Actualiser”
+* Suppression automatique des entrées si fichier supprimé
+* Mise à jour des métadonnées si le fichier change
+* Ajout manuel de fichiers ou dossiers
+* Réindexation complète ou partielle
+* Reconstruction de la base interne en cas de corruption
+
+2. Navigation et affichage
+
+2.1 Navigation principale
+
+* Barre latérale avec catégories fixes
+* Vue principale avec contenu dynamique
+* Fil d’Ariane de navigation
+* Historique arrière/avant
+* Navigation au clavier
+* Scroll infini ou pagination
+* Accès rapide alphabétique (index A-Z)
+* Sauts rapides par lettre
+
+2.2 Modes d’affichage
+
+* Mode liste détaillée
+* Mode grille avec pochettes
+* Mode compact
+* Mode étendu avec métadonnées enrichies
+* Regroupement visuel par section (ex. par lettre)
+* Taille de jaquette configurable
+* Affichage en colonnes personnalisables
+* Affichage des informations techniques (bitrate, format, fréquence d’échantillonnage)
+
+2.3 Tri et filtrage
+
+* Tri par titre
+* Tri par artiste
+* Tri par album
+* Tri par année
+* Tri par genre
+* Tri par date d’ajout
+* Tri par durée
+* Tri par notation
+* Tri ascendant/descendant
+* Filtres combinés (ex. genre + année)
+* Filtres dynamiques en temps réel
+* Filtres enregistrables
+* Filtre par qualité audio
+* Filtre par présence de paroles
+* Filtre par présence d’artwork
+* Filtre par format (MP3, FLAC, AAC, WAV, etc.)
+
+3. Lecture audio
+
+[X] 3.1 Contrôles de base (Completed)
+
+3.2 File d’attente
+
+* Lecture immédiate
+* Ajouter à la suite
+* Ajouter à la fin
+* Supprimer de la file
+* Réorganiser par glisser-déposer
+* Sauvegarder la file en playlist
+* Vider la file
+* Historique de lecture locale
+
+3.3 Modes de lecture
+
+* Lecture normale
+* Répéter la piste
+* Répéter la file
+* Lecture aléatoire globale
+* Lecture aléatoire contextuelle (dans album, playlist, artiste)
+* Reprise automatique à la dernière position
+* Fondu enchaîné configurable
+* Lecture sans blanc (gapless)
+* Normalisation du volume
+* Limiteur de volume
+* Égaliseur paramétrique ou préréglages
+* Balance gauche/droite
+* Choix de périphérique audio local
+
+[X] 3.4 Informations pendant la lecture (Completed)
+
+4. Recherche
+
+[X] 4.1 Recherche simple (Completed)
+
+4.2 Recherche avancée
+
+* Recherche multi-critères
+* Opérateurs logiques (ET, OU)
+* Recherche par plage d’années
+* Recherche par durée minimale/maximale
+* Recherche par notation
+* Recherche par format
+* Recherche approximative (tolérance fautes)
+* Historique des recherches
+* Suggestions basées sur bibliothèque locale
+
+5. Playlists et curation locale
+
+5.1 Playlists manuelles
+
+* Création de playlist
+* Renommage
+* Suppression
+* Ajout de piste par glisser-déposer
+* Réorganisation interne
+* Description personnalisée
+* Image personnalisée
+* Tri interne
+
+5.2 Playlists intelligentes
+
+* Création basée sur règles
+* Règles multiples combinables
+* Mise à jour automatique selon critères
+* Critères sur genre, année, note, date d’ajout, nombre de lectures
+* Limite de nombre de pistes
+* Tri automatique interne
+
+5.3 Statistiques locales
+
+* Nombre total de pistes
+* Durée totale bibliothèque
+* Répartition par genre
+* Répartition par année
+* Top morceaux les plus écoutés
+* Top artistes
+* Comptage du nombre de lectures
+* Date de dernière lecture
+
+6. Gestion des métadonnées
+
+6.1 Édition
+
+* Modification des tags piste individuelle
+* Modification en lot
+* Édition du titre
+* Édition artiste
+* Édition album
+* Édition compositeur
+* Édition genre
+* Édition année
+* Édition numéro de piste/disque
+* Ajout ou remplacement d’artwork
+* Ajout ou modification paroles
+* Commentaires personnalisés
+* Notation par étoiles
+* Indicateur favori
+
+6.2 Artwork
+
+* Import d’image locale
+* Suppression d’artwork
+* Redimensionnement automatique
+* Association d’une image à tout un album
+* Gestion d’images multiples si supporté
+
+7. Qualité audio et formats
+
+* Support multi-formats (MP3, AAC, FLAC, ALAC, WAV, AIFF, etc.)
+* Lecture haute résolution
+* Indication lossless
+* Indication hi-res
+* Conversion locale de format
+* Conversion de bitrate
+* Gestion du sample rate
+* Paramètres de sortie audio
+
+8. Interface et personnalisation visuelle
+
+* Thème clair
+* Thème sombre
+* Thème adaptatif système
+* Couleur d’accent personnalisable
+* Mise en page compacte ou espacée
+* Taille de police ajustable
+* Animations activables/désactivables
+* Mode plein écran
+* Mini-lecteur
+* Lecteur flottant
+* Raccourcis clavier personnalisables
+* Personnalisation des colonnes affichées
+
+9. Gestion des fichiers physiques
+
+* Affichage du chemin du fichier
+* Ouvrir le fichier dans l’explorateur
+* Supprimer le fichier du disque
+* Déplacer le fichier vers un autre dossier
+* Renommer fichier selon modèle basé sur métadonnées
+* Organisation automatique des dossiers
+* Export de playlist en fichier (ex. m3u)
+* Export de la base vers fichier externe
+* Sauvegarde locale de la base
+* Restauration depuis sauvegarde
+
+10. Contenus multimédia associés
+
+* Lecture de fichiers audio multi-pistes
+* Support des chapitres audio
+* Affichage de livrets numériques si présents
+* Visualisation des fichiers PDF associés
+* Support des pistes bonus cachées
+* Gestion des silences en fin de piste
+
+[X] 11. Gestion des erreurs et maintenance (Completed)
+
+12. Performance et optimisation
+
+* Chargement progressif des grandes bibliothèques
+* Mise en cache des artworks
+* Mise en cache des métadonnées
+* Indexation incrémentale
+* Optimisation mémoire
+* Gestion des très grandes bibliothèques
+* Multi-threading pour indexation
+* Temps de réponse optimisé lors des recherches
+
+13. Fonctionnalités supplémentaires proposées
+
+13.1 Enrichissement social et découverte
+
+* Partage de playlists par lien (encodage JSON exportable/importable)
+* Notes et commentaires sur chaque piste/album
+* Système de tags personnalisés (au-delà des genres standard)
+* Recommandations basées sur l'historique d'écoute (algorithme local)
+* Détection automatique de morceaux similaires (BPM, genre, tonalité)
+
+13.2 Analyses audio avancées
+
+* Analyse de la dynamique audio (DR rating, loudness)
+* Détection du BPM automatique
+* Detection de la tonalité musicale
+* Graphiques de forme d'onde (waveform overview)
+* Spectrogramme en temps réel
+* Détection des silences et des transitions
+
+13.3 Intégration et interopérabilité
+
+* Import de playlists depuis fichiers M3U/M3U8/PLS
+* Synchronisation multi-onglets (SharedWorker)
+* Mode kiosque pour soirées/événements
+* API REST locale pour contrôle externe
+* Support des raccourcis médias clavier système (MediaSession API)
+
+13.4 Accessibilité et ergonomie
+
+* Mode haute accessibilité (ARIA complet, navigation clavier)
+* Descriptions audio pour malvoyants
+* Réglage de la vitesse de lecture (0.5x à 2x)
+* Mise en file d'attente par glisser-déposer depuis les vues
+* Raccourcis contextuels affichés dans les tooltips
+* Mode sombre profond (OLED-optimized blacks)
+
+13.5 Gestion avancée des collections
+
+* Collections et dossiers virtuels
+* Étiquettes de couleur pour organisation visuelle
+* Comparaison de versions d'un même morceau
+* Détection des masters/remasters différents
+
+Menu de context:
+1. Ajouter à la playlist - Permet d'ajouter la piste sélectionnée à une playlist existante ou de créer une nouvelle playlist.
+2. Supprimer de la playlist - Permet de retirer la piste sélectionnée d'une playlist.
+3. Télécharger - Propose l'option de télécharger le fichier audio (si disponible).
+4. Prévisualiser - Offre un aperçu rapide de la piste sélectionnée, avant de la lire en entier.
+5. Lire en boucle - Active la lecture en boucle de la piste ou de l'album sélectionné.
+6. Ajouter aux favoris - Permet d'ajouter une piste ou un album à une liste de favoris pour un accès facile plus tard.
+7. Modifier les métadonnées - Permet de modifier les informations de la piste (titre, artiste, genre, etc.).
+8. Organiser par genre/artiste - Propose d'organiser la bibliothèque musicale par genre ou artiste dans le menu contextuel.
+9. Exporter la liste de lecture - Propose d'exporter une playlist sous forme de fichier (par exemple M3U ou autres formats compatibles).
+10. Partager le fichier - Permet de partager la piste ou l'album via un lien de téléchargement direct ou une autre méthode.
+11. Ajouter un fichier local - Permet d'ajouter un fichier musical local à la bibliothèque.
+12. Créer un lien direct - Génère un lien direct vers le fichier audio pour un accès facile via un autre appareil.
+13. Lire - Lance la lecture immédiate de la piste sélectionnée.
+14. Sauter à la fin - Permet de se déplacer directement à la fin de la piste ou de l'album sélectionné.
+15. Afficher les informations détaillées - Affiche un panneau avec des détails comme la durée, le bit rate, l'artiste, etc.
+16. Analyser la qualité du fichier - Permet d’afficher des informations sur la qualité du fichier (format, échantillonnage, etc.).
+17. Supprimer - Supprime définitivement le fichier audio de la bibliothèque.
+18. Mettre à jour la bibliothèque - Actualise les fichiers ou réindexe la bibliothèque musicale pour les nouvelles ajouts ou modifications.
+19. Ajouter des tags personnalisés - Permet d'ajouter des tags personnalisés pour mieux organiser les pistes.
+20. Regarder les albums similaires - Propose une liste d'albums similaires au fichier sélectionné.
+21. Ajouter à un dossier spécifique - Permet d'ajouter la piste à un dossier particulier dans la bibliothèque musicale.
+22. Supprimer le fichier de l’appareil - Supprime le fichier audio de l'appareil tout en le laissant dans la bibliothèque musicale.
+23. Modifier les préférences de lecture - Permet de changer la qualité de lecture (par exemple, la résolution du son).
+24. Voir les commentaires de la piste - Si applicable, permet de voir des commentaires associés à la piste (en cas de future extension).
+25. Activer l'égaliseur - Permet d'ouvrir un égaliseur audio pour ajuster le son de la piste.
+26. Activer l'option de shuffle - Lance une lecture en mode aléatoire dans la playlist.
+27. Convertir le format - Offre l'option de convertir le fichier audio dans un autre format supporté (MP3, FLAC, etc.).
+28. Ajouter un effet sonore - Permet d'ajouter un effet sonore comme reverb, chorus, ou autre à la piste en cours.
+29. Ajouter à la section "Découvertes" - Ajoute le fichier à une section dédiée à la découverte de nouvelles musiques.
+30. Créer un mix personnalisé - Permet de créer un mix personnalisé en ajoutant plusieurs pistes à la file d'attente de lecture.
+31. Voir la piste dans le mode d’édition - Permet d’accéder à un éditeur où l'on peut couper, éditer, ou remixer la piste.
+32. Appliquer des filtres audio - Applique des effets de filtre (par exemple, un filtre passe-bas) pour modifier le son de la piste.
+33. Renommer la piste - Permet de renommer la piste pour une meilleure organisation de la bibliothèque musicale.
+34. Ajouter à une collection - Permet d'ajouter la piste à une collection spécifique au sein de la bibliothèque.
+35. Vérifier les droits d’auteur - Permet de consulter l’information légale sur les droits d’auteur de la piste sélectionnée.
+36. Synchroniser avec un appareil - Permet de synchroniser ou transférer le fichier audio vers un autre appareil connecté.
+37. Lire avec un autre lecteur - Propose d'ouvrir la piste audio avec une autre application ou lecteur audio tiers.
+38. Supprimer l'historique de lecture - Permet de supprimer l’historique des pistes récemment lues.
+39. Mode d'affichage - Permet de changer l’affichage de la bibliothèque (par album, par artiste, par playlist, etc.).
+40. Ajouter à une playlist intelligente - Ajoute la piste à une playlist intelligente générée selon des critères comme le genre ou l’humeur.
+41. Voir les partitions - Si le site propose des partitions, permet de voir la partition ou les partitions associées à la musique.
+42. Visualiser l'historique des écoutes - Permet de voir une liste des pistes que l'utilisateur a écoutées précédemment.
+43. Activer le mode sombre - Permet d’activer ou de désactiver le mode sombre de l'interface.
+44. Lancer un test audio - Permet de tester le son de la piste avant de l'ajouter à une playlist ou de la jouer.
+45. Ajouter à une file d’attente - Ajoute la piste à une file d'attente de lecture qui sera jouée après la piste actuelle.
+46. Édition de l'artiste - Permet de modifier les informations associées à l'artiste, comme sa biographie ou ses œuvres.
+47. Créer une playlist dynamique - Créer une playlist qui se met à jour automatiquement en fonction de critères prédéfinis (par exemple, genre, année, etc.).
+48. Verrouiller la lecture - Empêche de passer à la piste suivante ou de modifier l'état de lecture de la piste actuelle.
+49. Changer la vitesse de lecture - Permet de ralentir ou accélérer la lecture de la piste.
+50. Synchroniser les paroles - Si les paroles sont disponibles, synchroniser leur affichage pendant la lecture de la piste.
+51. Filtrer par année - Permet de filtrer ou de rechercher les fichiers audio par date de publication.
+52. Cacher l'élément - Permet de cacher temporairement un fichier ou un album sans le supprimer de la bibliothèque.
+53. Ajouter au fichier d'index - Permet d'ajouter un fichier audio à un index pour une gestion interne spécifique au site.
+54. Vérifier les mises à jour du fichier - Permet de vérifier si un fichier mis à jour (version améliorée) est disponible pour téléchargement.
+55. Rechercher des informations supplémentaires - Offre une recherche automatique des informations supplémentaires sur la chanson, l'artiste ou l'album en ligne.
+56. Ajuster le volume de la piste - Permet d'ajuster directement le volume pour une piste en particulier.
+57. Vérifier l'intégrité du fichier - Permet d’effectuer un test de vérification du fichier pour s'assurer qu'il n’est pas corrompu.
+58. Recommander à un ami - Permet d'envoyer la piste ou l'album par email ou via un autre moyen externe.
+
+
+Editeur de métadonnées :
+1. Modifier le titre - Permet de changer le titre de la piste pour une meilleure organisation ou correction d'erreurs.
+2. Modifier l'artiste - Permet de changer ou d'ajouter l'artiste principal de la piste ou de l'album.
+3. Modifier l'album - Permet de changer ou d’ajouter le titre de l'album auquel la piste appartient.
+4. Modifier le genre - Permet de changer ou d’ajouter le genre musical de la piste pour une meilleure classification.
+5. Modifier la date de sortie - Permet de spécifier ou de modifier la date de sortie de la piste ou de l’album.
+6. Modifier le compositeur - Permet d'ajouter ou de modifier l'information sur le compositeur de la piste, si différente de l'artiste.
+7. Modifier le producteur - Permet d’ajouter ou de changer le nom du producteur de la musique, si pertinent.
+8. Modifier le label - Permet de spécifier le label ou la maison de disque ayant produit la musique.
+9. Modifier la durée - Permet de corriger la durée de la piste si l'information est erronée.
+10. Ajouter une image de couverture - Permet d'ajouter ou de modifier l'image de couverture de l'album ou de la piste.
+11. Modifier le numéro de piste - Permet de spécifier ou de modifier le numéro de la piste dans l'album ou la collection.
+12. Modifier la piste parent - Permet de lier la piste à un autre fichier audio (par exemple, une version alternative ou remix).
+13. Ajouter des crédits supplémentaires - Permet d'ajouter des informations sur d'autres contributeurs à la musique, comme des musiciens invités, des ingénieurs du son, etc.
+14. Ajouter des paroles - Permet d’ajouter ou de modifier les paroles de la piste.
+15. Ajouter des tags - Permet d’ajouter des tags ou des mots-clés pour faciliter la recherche ou l’organisation du contenu.
+16. Modifier le format audio - Permet de vérifier et, si nécessaire, de modifier le format ou la qualité du fichier audio (ex. MP3, FLAC, etc.).
+17. Modifier le bit rate - Permet de spécifier le bit rate du fichier audio, ce qui affecte sa qualité sonore.
+18. Modifier la fréquence d'échantillonnage - Permet de modifier la fréquence d'échantillonnage du fichier audio pour les utilisateurs avancés.
+19. Ajouter des commentaires - Permet d'ajouter des notes ou des commentaires personnalisés au fichier pour une meilleure gestion interne.
+20. Modifier le type de fichier - Permet de spécifier ou modifier le type de fichier (par exemple, single, album complet, etc.).
+21. Ajouter une version - Permet d’ajouter une version spécifique de la piste (par exemple, version live, remix, version radio).
+22. Modifier les droits d'auteur - Permet de spécifier ou de modifier les informations liées aux droits d'auteur (propriétaire, licence, etc.).
+23. Ajouter un code ISRC - Permet d’ajouter un code ISRC (International Standard Recording Code) pour l’identification unique de la piste.
+24. Ajouter un code UPC - Permet d’ajouter un code UPC (Universal Product Code) pour l’identification de l’album ou de la piste.
+25. Ajouter une partition - Permet d’ajouter des informations ou des liens vers la partition musicale associée à la piste.
+26. Ajouter des annotations - Permet d’ajouter des annotations ou des notes explicatives pour chaque piste, comme des détails de production ou des inspirations.
+27. Ajouter des collaborations - Permet d’ajouter des informations concernant les artistes ou producteurs qui ont collaboré sur la piste.
+28. Marquer comme "exclusif" - Permet de marquer la piste ou l'album comme exclusif à un utilisateur ou à un groupe particulier.
+29. Ajouter un copyright - Permet d’ajouter une mention de copyright spécifique à la piste ou à l'album.
+30. Modifier la langue - Permet de spécifier la langue principale de la piste ou de l'album.
+31. Modifier l'année de l'enregistrement - Permet de spécifier ou de corriger l'année d'enregistrement de la musique.
+32. Ajouter un remixe - Permet d’ajouter des informations sur un remix de la piste (artiste remixeur, version, etc.).
+33. Ajouter des crédits visuels - Permet d’ajouter des informations sur les contributeurs visuels, comme les photographes, designers de pochettes, etc.
+34. Modifier la version d'édition - Permet de spécifier si la version est une édition standard, deluxe, limitée, etc.
+35. Ajouter un "mood" ou humeur - Permet d’ajouter des tags liés à l'humeur de la piste (ex. joyeux, mélancolique, énergique).
+36. Ajouter des informations de distribution - Permet d’ajouter les informations sur la distribution du fichier, comme la plateforme ou la méthode de diffusion.
+37. Ajouter un lien vers la vidéo - Permet d’ajouter un lien vers une vidéo officielle associée à la musique (clip, live, etc.).
+38. Modifier le type d’édition - Permet de spécifier si c'est une édition de studio, un enregistrement en concert, un live, etc.
+39. Ajouter des liens vers des supports physiques - Permet d’ajouter des liens vers des CD, vinyles ou autres formats physiques.
+40. Ajouter une version acoustique - Permet d’ajouter des informations sur une version acoustique de la piste.
+41. Marquer comme "non publié" - Permet de marquer une piste comme étant non encore publiée ou dans une phase préliminaire.
+42. Modifier la compression - Permet de modifier ou d’ajuster la compression du fichier audio pour optimiser sa taille ou sa qualité sonore.
+43. Ajouter une version "radio edit" - Permet d’ajouter des informations sur une version modifiée pour la diffusion radio (par exemple, version censurée).
+44. Ajouter des informations de performance - Permet d’ajouter des détails sur les performances de la piste (ex. position dans les charts, certifications).
+45. Ajouter un identifiant unique - Permet de générer ou de saisir un identifiant unique pour chaque piste ou album dans la bibliothèque.
+46. Ajouter un lien vers une plateforme de streaming - Permet d'ajouter un lien vers une version en streaming de la piste sur une plateforme (par exemple, Spotify, Apple Music).
+47. Marquer comme "interdit de distribuer" - Permet de marquer la piste comme n’étant pas destinée à la distribution publique.
+48. Ajouter des notes de production - Permet d’ajouter des informations sur les aspects techniques ou artistiques de la production musicale.
+49. Ajouter un lien vers des critiques - Permet d'ajouter des liens vers des critiques musicales en ligne liées à la piste ou à l'album.
+50. Ajouter des informations sur les performances live - Permet d'ajouter des informations concernant les performances en direct de la piste, comme des dates ou lieux spécifiques.
+51. Ajouter un nom de groupe ou collectif - Permet d'ajouter un nom de groupe ou collectif si la piste est une collaboration d’artistes multiples.
+52. Ajouter un alias d'artiste - Permet de spécifier un alias ou pseudonyme d'artiste associé à la piste.
+53. Ajouter une catégorie de musique - Permet de classer la musique dans une catégorie spécifique (ex. musique instrumentale, musique vocale, etc.).
+54. Vérifier les doublons - Permet de vérifier si le fichier audio est déjà présent dans la bibliothèque sous une autre forme ou dans une version différente.
+
+Playlist :
+1. Créer une nouvelle playlist - Permet de créer une playlist vide ou pré-remplie avec des critères définis (par exemple, genre, artiste).
+2. Renommer une playlist - Permet de modifier le nom d’une playlist existante pour mieux refléter son contenu.
+3. Supprimer une playlist - Supprime définitivement une playlist de la bibliothèque.
+4. Ajouter une piste à une playlist - Permet d'ajouter une ou plusieurs pistes à une playlist existante.
+5. Supprimer une piste d'une playlist - Permet de retirer une ou plusieurs pistes d'une playlist.
+6. Réorganiser les pistes - Permet de modifier l'ordre des pistes dans une playlist en les déplaçant par glisser-déposer ou avec des flèches.
+7. Dupliquer une playlist - Crée une copie exacte d'une playlist existante, permettant des modifications sans altérer l'originale.
+8. Modifier la description de la playlist - Permet d'ajouter ou de modifier une description textuelle pour mieux décrire l'objectif ou le thème de la playlist.
+9. Ajouter une image de couverture - Permet d’ajouter ou de changer l’image de couverture d’une playlist pour une personnalisation visuelle.
+10. Créer une playlist intelligente - Permet de générer une playlist qui se met à jour automatiquement en fonction de critères (genre, artiste, date d’ajout, etc.).
+11. Trier les pistes - Permet de trier les pistes d'une playlist selon différents critères : titre, artiste, date d'ajout, durée, etc.
+12. Ajouter une playlist à un dossier - Permet de placer une playlist dans un dossier ou sous-dossier pour une meilleure organisation.
+13. Exporter une playlist - Permet d'exporter une playlist sous forme de fichier texte ou dans des formats compatibles comme M3U ou XSPF.
+14. Importer une playlist - Permet d’importer une playlist depuis un fichier externe (M3U, CSV, etc.) dans la bibliothèque du gestionnaire de playlists.
+15. Activer ou désactiver la lecture en boucle - Permet de définir si la playlist doit être lue en boucle, répétant les pistes une fois la fin atteinte.
+16. Lecture aléatoire - Permet de lire les pistes d’une playlist dans un ordre aléatoire, pour éviter la répétition.
+17. Créer une playlist à partir de critères - Permet de générer une playlist basée sur des critères définis, tels que le genre, l’artiste, l'humeur, ou la date d’ajout.
+18. Afficher ou masquer les playlists - Permet de gérer la visibilité des playlists dans l'interface de l’utilisateur, pour garder un accès rapide à celles qui sont fréquemment utilisées.
+19. Gérer les permissions de lecture - Permet de définir les autorisations de lecture pour chaque playlist, par exemple en la rendant privée ou accessible à un groupe particulier.
+20. Fusionner des playlists - Permet de fusionner le contenu de deux ou plusieurs playlists en une seule, tout en évitant les doublons.
+21. Réinitialiser l'ordre des pistes - Permet de réinitialiser l'ordre des pistes d’une playlist à l’ordre d'origine ou à un ordre par défaut.
+22. Marquer comme "playlist en cours" - Permet de marquer une playlist comme étant en cours de création ou en révision.
+23. Appliquer un filtre de contenu - Permet d'appliquer un filtre sur les pistes d’une playlist pour n'afficher que celles qui respectent un certain critère (par exemple, genre ou durée).
+24. Sauvegarder une playlist comme modèle - Permet de sauvegarder une playlist comme modèle pour créer de futures playlists avec la même structure ou les mêmes critères.
+25. Partager la playlist - Offre l'option d'exporter ou de partager une playlist avec un lien vers une autre plateforme (pas de partage social, juste via des liens directs).
+26. Activer ou désactiver les notifications de modification - Permet de gérer si l'utilisateur reçoit des notifications en cas de modification d’une playlist.
+27. Regrouper des playlists - Permet de regrouper plusieurs playlists sous une même étiquette ou dossier pour une organisation plus facile.
+28. Vérifier la présence de doublons - Permet de détecter et de supprimer les doublons dans une playlist, pour éviter les répétitions de pistes.
+29. Ajouter des notes à une playlist - Permet d’ajouter des notes ou des annotations personnelles à une playlist pour se souvenir de son intention ou de son utilisation.
+30. Modifier les métadonnées de la playlist - Permet de modifier des informations comme l'artiste principal, l'album, ou le genre de la playlist.
+31. Rendre une playlist publique - Permet de rendre une playlist accessible par tous, tout en évitant les interactions sociales ou communautaires.
+32. Activer le mode lecture en mode aléatoire - Permet de lancer la lecture d'une playlist en mode shuffle, pour une écoute sans ordre précis.
+33. Créer des playlists basées sur l'humeur - Permet de générer des playlists en fonction de l'humeur (par exemple, motivant, relaxant, dynamique).
+34. Mettre en avant une playlist - Permet de définir une playlist comme étant "en vedette", pour un accès rapide à l’utilisateur.
+35. Synchroniser une playlist sur un appareil externe - Permet de synchroniser le contenu d’une playlist avec un appareil portable ou autre dispositif compatible.
+36. Créer une playlist "smart" - Permet de créer des playlists dynamiques qui se mettent à jour automatiquement selon des critères prédéfinis.
+37. Ajouter une note de lecture - Permet d'ajouter des notes ou des commentaires relatifs à l'expérience d'écoute de la playlist (par exemple, notes de performance).
+38. Gérer les fichiers manquants - Permet de notifier l'utilisateur si certaines pistes d'une playlist ne sont pas disponibles ou ont été supprimées.
+39. Ajouter une étiquette de priorité - Permet d'ajouter des étiquettes (par exemple "urgent", "à écouter", "préférée") pour marquer les playlists ou les pistes selon leur priorité d’écoute.
+40. Créer une playlist selon un tempo - Permet de générer une playlist en fonction du tempo (par exemple, rapide, lent, médium) des pistes.
+41. Verrouiller une playlist - Permet de verrouiller une playlist pour empêcher toute modification accidentelle.
+42. Créer une playlist à partir de la musique récemment ajoutée - Permet de générer une playlist qui regroupe uniquement les fichiers musicaux récemment ajoutés à la bibliothèque.
+43. Gérer les métadonnées des pistes dans une playlist - Permet de modifier les métadonnées (comme l’artiste ou l'album) des pistes qui sont spécifiquement dans cette playlist.
+44. Appliquer une couleur ou un thème - Permet de personnaliser visuellement une playlist en lui appliquant un thème ou une couleur spécifique.
+45. Appliquer une qualité de son spécifique - Permet de paramétrer une qualité de son ou d'encodage particulier pour les pistes de la playlist.
+46. Supprimer un fichier audio manquant - Permet de supprimer automatiquement les pistes qui ne sont plus présentes dans la bibliothèque.
+47. Vérification des erreurs de métadonnées - Permet de scanner une playlist pour identifier et corriger toute erreur de métadonnée (mauvais nom, genre manquant, etc.).
+48. Ajouter des partitions ou des liens vers des partitions - Permet d’ajouter des informations relatives aux partitions musicales disponibles pour les pistes de la playlist.
+49. Synchroniser avec un service externe - Permet de synchroniser la playlist avec des services externes de gestion musicale, si applicable (comme un service de stockage ou de sauvegarde).
+50. Planifier la lecture d’une playlist - Permet de planifier la lecture automatique d'une playlist à une heure donnée, par exemple lors de la mise en route de l'application.

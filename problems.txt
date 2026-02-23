@@ -1,0 +1,130 @@
+You must analyze, correct, and improve the application.
+You must organize yourself in a structured way, work task by task, and clearly detail for each point: problem analysis, probable cause, proposed solution, implementation steps, verification, and testing.
+You must not forget anything. You must strictly preserve all the requirements below.
+Organize your work into clear sections and handle each point separately before moving to the next one.
+
+1. Performance and event handling issues during audio playback
+
+* When a track is playing, it becomes difficult to click buttons.
+* Hover effects glitch (rapid activation/deactivation loops).
+* This appears to be caused by excessive re-renders blocking events (performance issues, poor event management, main loop blocking).
+  You must analyze rendering flow, listeners, state management, and audio playback handling to eliminate blocking and ensure smooth interaction while music is playing.
+
+2. Insufficient playlist editing capabilities
+
+* There are not enough editing options.
+* It must be possible to modify: playlist image, description, and name.
+  You must add a complete playlist editing interface with proper data persistence.
+
+3. New Arrivals
+
+* Items must be displayed in strictly chronological order.
+* They must have a release date less than 6 months old compared to the current date.
+  You must implement dynamic filtering based on the current date and reliable chronological sorting.
+
+4. Editorial and visual consistency
+
+* Verify that the editorial direction and visual style are consistent across the entire application.
+* The style must remain uniform everywhere.
+  You must audit components, styles, texts, and visual behaviors to guarantee full consistency.
+
+5. Dynamic interface colors based on the currently playing track
+
+* The dynamic color adjustments based on the current track are not sufficiently applied.
+* The adaptive styling must be improved according to the playing music.
+  You must enhance the dynamic theme system so it meaningfully affects the interface (backgrounds, accents, active elements, etc.).
+
+6. Scrollbars
+
+* All scrollbars must be thin and minimal.
+* They must be significantly more discreet.
+  You must globally standardize their styling.
+
+7. Top padding for views
+
+* Ensure there is proper gap/padding at the top of every view.
+* When scrolled to the very top, navigation buttons must never overlap the content.
+* Do not modify the navigation buttons themselves.
+  You must correct spacing only within the views.
+
+8. Column configuration
+
+* The column configuration button does not work.
+* There are no elements allowing users to choose which columns to display.
+  You must implement a fully functional column selection system with persistence.
+
+9. Removal of “go back” buttons
+
+* Remove all specific “go back” buttons from individual views.
+* Global navigation buttons are already sufficient.
+* Never reintroduce this type of button.
+  You must clean the interface of these elements.
+
+10. Folder and format click behavior
+
+* Clicking a folder must open a view listing all tracks in that folder.
+* It must not start playback.
+* Clicking a format type must open a view listing all tracks in that format.
+* It must not start playback.
+  You must separate navigation logic from playback logic.
+
+11. Folder artwork
+
+* Display artwork for folders when available.
+  You must implement proper artwork detection and rendering.
+
+12. Full persistence after page reload
+    Reloading the page must:
+
+* Resume the current track at the exact correct timestamp.
+* Preserve the queue.
+* Preserve the active playlist.
+* Preserve as much information as possible, including minor settings.
+  You must implement a robust state save and restore system.
+
+13. Remove the go back button in album view
+
+* Remove the go back button from the album view.
+* Never add this type of button anywhere else.
+
+14. Unified views (albums, genres, years, folders, etc.)
+
+* Views for albums, genres, years, folders, etc. must have exactly the same style and features as “all track”.
+* They must only adapt to the selected context.
+* Create a centralized display manager.
+* Each tab must simply call this manager with appropriate parameters.
+  You must factorize logic and avoid duplication.
+
+15. Grouping multiple versions of a track
+
+* Always group different versions of a track together as in “all track”.
+* By default, only play the most recent version.
+  You must enforce this behavior consistently across the entire application.
+
+16. Full-screen immersion exit button layout issue
+
+* The exit full-screen immersion button has layout problems.
+* Elements are misaligned.
+* The button is not perfectly round.
+  You must fix alignment, centering, and shape.
+
+17. Final verification
+
+* Ensure the application launches correctly after all modifications.
+* No bug must prevent startup or navigation.
+
+Mandatory methodology:
+
+* Handle each point individually.
+* Describe analysis, solution, and implementation.
+* Check for side effects.
+* Test after each correction.
+* Do not modify elements that are not requested.
+* Maintain a clean, factorized, and maintainable architecture.
+* Prioritize performance, consistency, stability, and code clarity.
+
+Be structured, methodical, and rigorous.
+
+---
+
+Les musiques de l'album 4.2 ne foncitonne pas, ne se lisent pas

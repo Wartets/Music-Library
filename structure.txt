@@ -1,0 +1,110 @@
+DOCUMENTATION DE LA BIBLIOTHEQUE MUSICALE ET DE L'INDEXATION
+Auteur / Proprietaire : Colin Bossu Reaubourg (Wartets)
+
+---
+
+1. STRUCTURE DES FICHIERS ET DOSSIERS
+
+La bibliotheque musicale est organisee de maniere tres methodique et hierarchique.
+
+La structure se divise en plusieurs niveaux :
+
+NIVEAU 1 : LES GROUPES (Albums / Singles)
+Les dossiers principaux representent des periodes ou des grands ensembles de travail chronologiques :
+- Album 2 (2018-2019-2020)
+- Album 3 (2020-2021)
+- Album 4 (2021-2022-2023)
+- Album 5 (2023-2024)
+- Album 6 (2025)
+- Album 7 (2026)
+- Single (Pour les morceaux independants)
+
+NIVEAU 2 : LES SOUS-ALBUMS OU PROJETS
+A l'interieur des grands albums, la musique est souvent sous-divisee en parties ou en projets numerotes :
+- Exemples : "Album 3.1", "Album 3.2", "Projet 8", "Projet 19", etc.
+
+NIVEAU 3 : LES DOSSIERS DE MORCEAUX
+Chaque piste musicale ou idee possede son propre dossier (ex: "Computers", "Oh okay...", "Une balade en Fa mineur"). 
+Ce dossier specifique regroupe toutes les donnees relatives a ce morceau.
+
+NIVEAU 4 : LES FICHIERS (Audio et Visuels)
+Dans le dossier d'un morceau, on retrouve :
+- Les differentes versions ou exports du morceau (ex: 1.0, 1.2, versions mp3, m4a ou wav).
+- L'illustration visuelle associee (generalement nommee "artwork.jpg").
+
+Note : La presence de fichiers caches ".DS_Store" indique que ces dossiers ont probablement ete manipules ou sauvegardes depuis un systeme macOS a un moment donne.
+
+---
+
+2. FONCTIONNEMENT DU SCRIPT D'INDEXATION (indexation.bat)
+
+Le fichier "indexation.bat" est un script hybride (Batch et PowerShell). Son but est de scanner l'integralite de la bibliotheque pour generer une base de donnees complete. 
+
+Voici les grandes etapes de son fonctionnement :
+
+A. INITIALISATION
+Le script se lance et bascule l'encodage en UTF-8 pour supporter les caracteres speciaux (comme les accents ou le texte russe present dans certains titres d'Album 3.3).
+
+B. RECHERCHE
+Il liste tous les fichiers audio (mp3, wav, flac, m4a, etc.) presents dans les dossiers.
+
+C. ANALYSE PROFONDE (Par fichier)
+Pour chaque piste audio trouvee, le script effectue plusieurs actions poussees :
+- Calcul de l'empreinte unique (Hash SHA256) pour identifier precisement le fichier.
+- Comptage du nombre de versions alternatives presentes dans le meme dossier.
+- Extraction des metadonnees via le moteur de Windows (Artiste, Titre, BPM, Duree, etc.).
+- Comblement automatique des informations manquantes (le Compositeur devient "Colin Bossu Reaubourg" par defaut).
+
+D. ANALYSE DE L'IMAGE (Artwork)
+Le script trouve l'image associee au morceau (ou a l'album) et utilise le systeme de dessin de Windows pour calculer :
+- Les dimensions exactes.
+- Le ratio (Carre, Paysage, ou Portrait).
+- La couleur dominante (convertie en code hexadecimal, ex: #FFFFFF). Les images sont mises en cache pour eviter de recalculer la meme pochette 50 fois.
+
+E. OPTIMISATION ET SAUVEGARDE
+Toutes les donnees sont assemblees dans un objet global. Avant de sauvegarder, le script modifie la maniere dont le JSON est formate : il remplace l'indentation standard de 4 espaces par 1 seul espace afin de reduire drastiquement la taille du fichier final. Le resultat est sauvegarde dans "musicBib.json".
+
+---
+
+3. CONTENU DE LA BASE DE DONNEES (musicBib.json)
+
+Le fichier "musicBib.json" est le resultat direct de l'indexation. Il sert de base de donnees exploitable pour des applications futures. 
+
+Il est divise en deux blocs principaux :
+
+BLOC 1 : "info" (Informations globales)
+- owner : Details sur le proprietaire (Prenom, Nom, Surnom "Wartets").
+- date : Date et heure exactes de la creation du fichier d'indexation.
+- total_tracks_versions : Le nombre total de fichiers audio scannes.
+- execution_time_ms : Le temps qu'a pris le script pour tout analyser, en millisecondes.
+
+BLOC 2 : "items" (La liste detaillee des morceaux)
+C'est un tableau contenant chaque version de chaque morceau. Chaque entree possede les blocs suivants :
+
+- id : Un numero d'identification unique.
+
+- logic : La logique de rangement.
+   * hash_sha256 : L'empreinte securisee du fichier.
+   * track_name : Le nom du dossier (le nom global du morceau).
+   * version_name : Le nom exact du fichier sans l'extension (ex: "Quing 1.4 (waw)").
+   * total_versions_in_folder : Combien d'autres versions existent avec celle-ci.
+   * is_single : Vrai ou Faux.
+   * hierarchy : L'emplacement exact (Groupe > Album > Dossier).
+
+- file : Les caracteristiques physiques du fichier sur le disque.
+   * name, ext, path, dir : Nom, extension, chemin relatif et dossier de parent.
+   * size_bytes & size_mb : Poids du fichier.
+   * created & modified : Dates de creation et de modification lisibles.
+   * epoch_created & epoch_modified : Dates au format informatique Unix (utile pour du developpement web).
+
+- metadata : Les balises (tags) musicales du fichier.
+   * title, artists, album_artist, composer, album, genre, year, track_number, bpm, comment, description.
+
+- audio_specs : Les specificites techniques du son.
+   * is_lossless : Vrai si c'est du WAV ou FLAC (sans perte), Faux si c'est du MP3 ou M4A.
+   * duration : Duree du morceau.
+   * bitrate, sample_rate, channels : Qualite de l'encodage audio.
+
+- artworks : Les informations sur les pochettes.
+   * track_artwork : Les details de l'image (couleur, ratio, taille) trouvee dans le dossier du morceau.
+   * album_artwork : Les details de l'image trouvee dans le dossier parent (l'album global).

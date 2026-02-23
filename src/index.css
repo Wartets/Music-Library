@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Chameleon UI Default Variables */
+  --color-dominant: #1a1a1a;
+  --color-dominant-light: #333333;
+  --color-dominant-dark: #000000;
+  --color-on-dominant: #ffffff;
+
+  --color-surface-primary: #000000;
+  --color-surface-secondary: #0a0a0a;
+  --color-surface-elevated: #141414;
+  --color-surface-hover: rgba(255, 255, 255, 0.05);
+  --color-surface-active: rgba(255, 255, 255, 0.1);
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #52525b;
+  --color-text-accent: #ffffff;
+
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-default: rgba(255, 255, 255, 0.1);
+  --color-border-accent: rgba(255, 255, 255, 0.2);
+
+  --color-badge-bg: rgba(255, 255, 255, 0.1);
+  --color-badge-text: #ffffff;
+  --color-scrollbar: rgba(255, 255, 255, 0.1);
+  
+  transition: --color-dominant 0.5s ease, 
+              --color-dominant-light 0.5s ease, 
+              --color-dominant-dark 0.5s ease,
+              --color-surface-secondary 0.5s ease,
+              --color-surface-elevated 0.5s ease,
+              --color-text-accent 0.5s ease,
+              --color-border-accent 0.5s ease,
+              --color-badge-bg 0.5s ease;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface-primary);
+    color: var(--color-text-primary);
+    overflow: hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  ::selection {
+    background-color: var(--color-dominant);
+    color: var(--color-on-dominant);
+  }
+}
+
+/* Global scrollbar-width for Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
+}
+
+/* Custom Scrollbar Global — thin & discreet */
+::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Alias for compatibility */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
+}
+
+.vertical-range {
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
+}

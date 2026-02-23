@@ -1,0 +1,386 @@
+import React, { useState } from 'react';
+import { persistenceService, Playlist } from '../../services/persistence';
+import { useLibrary } from '../../contexts/LibraryContext';
+import { usePlayer } from '../../contexts/PlayerContext';
+import { useUI } from '../../contexts/UIContext';
+import { TrackItem } from '../../types/music';
+import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus } from 'lucide-react';
+import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { ArtworkImage } from '../shared/ArtworkImage';
+import { SmartPlaylistBuilder } from './SmartPlaylistBuilder';
+import { evaluateSmartPlaylist, SmartPlaylistDefinition } from '../../utils/smartPlaylistEvaluator';
+
+interface PlaylistsViewProps {
+    onNavigate?: (view: any, data?: any) => void;
+}
+
+export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
+    const { state, setEditingTracks, refresh } = useLibrary();
+    const { playTrack } = usePlayer();
+    const { showContextMenu, showToast } = useUI();
+    const { openTrackContextMenu } = useTrackContextMenu();
+    const [playlists, setPlaylists] = useState<Playlist[]>(persistenceService.getPlaylists());
+    const [smartPlaylists, setSmartPlaylists] = useState<SmartPlaylistDefinition[]>(persistenceService.getSmartPlaylists());
+    const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | SmartPlaylistDefinition | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isCreatingSmart, setIsCreatingSmart] = useState(false);
+    const [newPlaylistName, setNewPlaylistName] = useState('');
+
+    const handleCreate = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newPlaylistName.trim()) return;
+        const newPl = persistenceService.createPlaylist(newPlaylistName.trim());
+        setPlaylists(persistenceService.getPlaylists());
+        setNewPlaylistName('');
+        setIsCreating(false);
+        setSelectedPlaylist(newPl);
+        showToast(`Playlist "${newPl.name}" created`, 'success');
+    };
+
+    const onRightClickTrack = (e: React.MouseEvent, track: TrackItem, playlist: Playlist) => {
+        openTrackContextMenu(e, track, state.tracks, onNavigate, [
+            { divider: true, label: '', onClick: () => { } },
+            {
+                label: 'Remove from Playlist',
+                icon: <ListMinus size={14} />,
+                danger: true,
+                onClick: () => {
+                    persistenceService.removeFromPlaylist(playlist.id, track.logic.hash_sha256);
+                    const updated = persistenceService.getPlaylists();
+                    setPlaylists(updated);
+                    const refreshed = updated.find(p => p.id === playlist.id);
+                    if (refreshed) setSelectedPlaylist(refreshed);
+                    showToast('Track removed from playlist');
+                    refresh();
+                }
+            }
+        ]);
+    };
+
+    const onRightClickPlaylist = (e: React.MouseEvent, pl: Playlist) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        showContextMenu(e.clientX, e.clientY, [
+            {
+                label: `Play ${pl.name}`,
+                icon: <Play size={14} fill="currentColor" />,
+                onClick: () => {
+                    const tracks = pl.trackIds.map(h => state.tracks.find(t => t.logic.hash_sha256 === h)).filter(Boolean) as TrackItem[];
+                    if (tracks.length > 0) playTrack(tracks[0], tracks);
+                }
+            },
+            { divider: true, label: '', onClick: () => { } },
+            {
+                label: 'Export as M3U',
+                icon: <ListMusic size={14} />,
+                onClick: () => {
+                    const tracks = pl.trackIds.map(h => state.tracks.find(t => t.logic.hash_sha256 === h)).filter(Boolean) as TrackItem[];
+                    let m3u = '#EXTM3U\n';
+                    tracks.forEach(t => {
+                        const dur = t.audio_specs?.duration || '0';
+                        const secs = dur.split(':').reduce((acc, v) => acc * 60 + parseFloat(v), 0);
+                        m3u += `#EXTINF:${Math.round(secs)},${t.metadata?.artists?.[0] || 'Unknown'} - ${t.metadata?.title || t.logic.track_name}\n`;
+                        m3u += `${t.file?.path || ''}\n`;
+                    });
+                    const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${pl.name}.m3u`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast(`Exported "${pl.name}.m3u"`, 'success');
+                }
+            },
+            { divider: true, label: '', onClick: () => { } },
+            {
+                label: 'Delete Playlist',
+                icon: <Trash2 size={14} />,
+                danger: true,
+                onClick: () => {
+                    if (confirm(`Delete playlist "${pl.name}"?`)) {
+                        showToast('Currently only manual clearing supported', 'info');
+                    }
+                }
+            }
+        ]);
+    };
+
+    const togglePlaylist = (pl: Playlist | SmartPlaylistDefinition) => {
+        setSelectedPlaylist(selectedPlaylist?.id === pl.id ? null : pl);
+    };
+
+    const isSmartPlaylist = (pl: any): pl is SmartPlaylistDefinition => {
+        return 'group' in pl;
+    };
+
+    const getActiveTrackIds = (): string[] => {
+        if (!selectedPlaylist) return [];
+        if (isSmartPlaylist(selectedPlaylist)) {
+            const evaluated = evaluateSmartPlaylist(state.tracks, selectedPlaylist);
+            return evaluated.map(t => t.logic.hash_sha256);
+        }
+        return selectedPlaylist.trackIds;
+    };
+
+    const activeTrackIds = getActiveTrackIds();
+
+    const getTrackByHash = (hash: string): TrackItem | undefined => {
+        return state.tracks.find(t => t.logic.hash_sha256 === hash);
+    };
+
+    return (
+        <div className="h-full flex flex-col p-6 pt-24 overflow-hidden relative z-10 bg-surface-primary">
+            <div className="flex items-center justify-between mb-10">
+                <div>
+                    <h1 className="text-4xl font-black tracking-tighter text-white">Playlists</h1>
+                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">{playlists.length + smartPlaylists.length} user collections</p>
+                </div>
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => { setIsCreating(false); setIsCreatingSmart(true); }}
+                        className="bg-white/5 border border-white/10 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all shadow-lg flex items-center gap-2"
+                    >
+                        <ScanSearch size={16} /> Smart Playlist
+                    </button>
+                    <button
+                        onClick={() => { setIsCreatingSmart(false); setIsCreating(true); }}
+                        className="bg-dominant text-on-dominant px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-dominant-light transition-all shadow-lg"
+                    >
+                        + Create New
+                    </button>
+                </div>
+            </div>
+
+            {isCreatingSmart && (
+                <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
+                    <SmartPlaylistBuilder
+                        onSave={(def) => {
+                            setSmartPlaylists(persistenceService.getSmartPlaylists());
+                            setIsCreatingSmart(false);
+                            setSelectedPlaylist(def);
+                            showToast(`Smart Playlist "${def.name}" created`, 'success');
+                        }}
+                        onCancel={() => setIsCreatingSmart(false)}
+                    />
+                </div>
+            )}
+
+            {isCreating && (
+                <form onSubmit={handleCreate} className="mb-8 bg-white/5 p-6 rounded-3xl border border-white/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-dominant">
+                        <FolderPlus size={24} />
+                    </div>
+                    <input
+                        type="text"
+                        value={newPlaylistName}
+                        onChange={e => setNewPlaylistName(e.target.value)}
+                        placeholder="Name your masterpiece..."
+                        className="bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white flex-1 outline-none focus:border-dominant transition-all font-bold"
+                        autoFocus
+                    />
+                    <button type="submit" className="bg-dominant text-on-dominant font-black px-8 py-3 rounded-xl hover:bg-dominant-light transition-all uppercase tracking-widest text-xs">
+                        Create
+                    </button>
+                    <button type="button" onClick={() => setIsCreating(false)} className="text-gray-400 font-bold hover:text-white px-4 py-3 transition-colors text-xs uppercase tracking-widest">
+                        Discard
+                    </button>
+                </form>
+            )}
+
+            <div className="flex-1 flex gap-10 overflow-hidden">
+                {/* Left: List of Playlists */}
+                <div className="w-80 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 pb-8">
+                    {playlists.length === 0 && smartPlaylists.length === 0 && !isCreating ? (
+                        <div className="text-gray-600 font-bold uppercase tracking-widest text-[10px] flex flex-col h-48 items-center justify-center border-2 border-dashed border-white/5 rounded-3xl gap-4">
+                            <FolderPlus size={32} className="opacity-20" />
+                            Your library is quiet.
+                        </div>
+                    ) : (
+                        <>
+                            {smartPlaylists.map(pl => (
+                                <button
+                                    key={pl.id}
+                                    onClick={() => togglePlaylist(pl)}
+                                    className={`text-left p-5 rounded-2xl transition-all border block w-full group ${selectedPlaylist?.id === pl.id ? 'bg-dominant border-dominant shadow-2xl shadow-dominant/20' : 'bg-white/2 border-white/5 hover:bg-white/5 hover:border-white/10'}`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 border border-white/10 text-dominant">
+                                            <ScanSearch size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className={`font-black truncate text-base ${selectedPlaylist?.id === pl.id ? 'text-on-dominant' : 'text-white'}`}>{pl.name}</h3>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <p className={`text-[10px] font-bold uppercase tracking-widest ${selectedPlaylist?.id === pl.id ? 'text-on-dominant/70' : 'text-gray-500'}`}>Smart Filter</p>
+                                                <Play size={12} className={`${selectedPlaylist?.id === pl.id ? 'text-on-dominant' : 'text-transparent group-hover:text-dominant'} transition-colors`} fill="currentColor" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                            {playlists.map(pl => (
+                                <button
+                                    key={pl.id}
+                                    onClick={() => togglePlaylist(pl)}
+                                    onContextMenu={(e) => onRightClickPlaylist(e, pl)}
+                                    className={`text-left p-5 rounded-2xl transition-all border block w-full group ${selectedPlaylist?.id === pl.id ? 'bg-dominant border-dominant shadow-2xl shadow-dominant/20' : 'bg-white/2 border-white/5 hover:bg-white/5 hover:border-white/10'}`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        {pl.customImage ? (
+                                            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                                <img src={pl.customImage} alt={pl.name} className="w-full h-full object-cover" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 border border-white/10 text-white/20">
+                                                <ListMusic size={20} />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className={`font-black truncate text-base ${selectedPlaylist?.id === pl.id ? 'text-on-dominant' : 'text-white'}`}>{pl.name}</h3>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <p className={`text-[10px] font-bold uppercase tracking-widest ${selectedPlaylist?.id === pl.id ? 'text-on-dominant/70' : 'text-gray-500'}`}>{pl.trackIds.length} tracks</p>
+                                                <Play size={12} className={`${selectedPlaylist?.id === pl.id ? 'text-on-dominant' : 'text-transparent group-hover:text-dominant'} transition-colors`} fill="currentColor" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </>
+                    )}
+                </div>
+
+                {/* Right: Selected Playlist Details */}
+                <div className="flex-1 overflow-hidden relative">
+                    <AnimatePresence mode="wait">
+                        {selectedPlaylist ? (
+                            <div key={selectedPlaylist.id} className="h-full flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="mb-8 flex items-end justify-between border-b border-white/5 pb-6">
+                                    <div>
+                                        <h2 className="text-4xl font-black text-white tracking-tighter">{selectedPlaylist.name}</h2>
+                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2 flex items-center gap-2">
+                                            <span className="text-dominant-light">#</span> {activeTrackIds.length} curated tracks
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        {!isSmartPlaylist(selectedPlaylist) && (
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = prompt('Enter image URL for playlist cover:', (selectedPlaylist as Playlist).customImage || '');
+                                                        if (url !== null) {
+                                                            persistenceService.updatePlaylist(selectedPlaylist.id, { customImage: url });
+                                                            setPlaylists(persistenceService.getPlaylists());
+                                                            setSelectedPlaylist({ ...selectedPlaylist, customImage: url } as Playlist);
+                                                            showToast('Playlist image updated', 'success');
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5"
+                                                >
+                                                    Edit Image
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const newName = prompt('Enter new playlist name:', selectedPlaylist.name);
+                                                        if (newName && newName.trim() !== '') {
+                                                            let updates: Partial<Playlist> = { name: newName.trim() };
+                                                            const newDesc = prompt('Enter description (optional):', (selectedPlaylist as Playlist).description || '');
+                                                            if (newDesc !== null) {
+                                                                updates.description = newDesc.trim();
+                                                            }
+                                                            persistenceService.updatePlaylist(selectedPlaylist.id, updates);
+                                                            setPlaylists(persistenceService.getPlaylists());
+                                                            setSelectedPlaylist({ ...selectedPlaylist, ...updates } as Playlist);
+                                                            showToast('Playlist details updated', 'success');
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5"
+                                                >
+                                                    Edit Details
+                                                </button>
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                const tracks = activeTrackIds.map(h => state.tracks.find(t => t.logic.hash_sha256 === h)).filter(Boolean) as TrackItem[];
+                                                if (tracks.length > 0) playTrack(tracks[0], tracks);
+                                            }}
+                                            className="flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5"
+                                        >
+                                            <Play size={14} fill="currentColor" /> Play Mix
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                                    {activeTrackIds.length === 0 ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-center text-gray-600 gap-4">
+                                            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center">
+                                                <ListMusic size={32} className="opacity-20" />
+                                            </div>
+                                            <p className="font-black uppercase tracking-[0.2em] text-xs">This collection is currently empty</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 pb-20">
+                                            {activeTrackIds.map((hash, idx) => {
+                                                const track = getTrackByHash(hash);
+                                                if (!track) return null;
+                                                return (
+                                                    <div
+                                                        key={`${hash}-${idx}`}
+                                                        className="flex items-center justify-between p-4 bg-white/2 border border-transparent rounded-2xl group hover:bg-white/5 hover:border-white/5 transition-all cursor-pointer relative"
+                                                        onClick={() => playTrack(track, state.tracks)}
+                                                        onContextMenu={(e) => {
+                                                            if (!isSmartPlaylist(selectedPlaylist)) {
+                                                                onRightClickTrack(e, track, selectedPlaylist as Playlist);
+                                                            } else {
+                                                                // For smart playlists, maybe just standard track context menu (play, queue)
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                showContextMenu(e.clientX, e.clientY, [
+                                                                    { label: 'Play Now', icon: <Play size={14} fill="currentColor" />, onClick: () => playTrack(track, state.tracks) },
+                                                                    { label: 'Add to Queue', icon: <ListPlus size={14} />, onClick: () => showToast('Added to queue') },
+                                                                    { divider: true, label: '', onClick: () => { } },
+                                                                    { label: 'Edit Metadata', icon: <Pencil size={14} />, onClick: () => setEditingTracks([track]) }
+                                                                ]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                        <div className="flex items-center min-w-0 flex-1 gap-5">
+                                                            <div className="w-12 h-12 rounded-xl bg-black/50 overflow-hidden flex items-center justify-center text-xs text-white/30 flex-shrink-0 border border-white/10 group-hover:border-white/20 transition-all">
+                                                                <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="text-white font-black text-sm truncate group-hover:text-dominant-light transition-colors">{track.metadata?.title || track.logic.track_name}</h4>
+                                                                <p className="text-gray-500 font-bold text-[10px] uppercase tracking-tighter truncate mt-1">{track.metadata?.artists?.join(', ')}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-4 text-xs font-bold text-gray-600 font-mono">
+                                                            {track.audio_specs?.duration}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 select-none animate-in fade-in duration-700">
+                                <div className="w-32 h-32 rounded-full bg-white/5 mb-8 flex items-center justify-center relative">
+                                    <div className="absolute inset-0 bg-dominant/5 blur-3xl rounded-full"></div>
+                                    <Plus size={48} className="opacity-10" />
+                                </div>
+                                <h2 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">Select a Collection</h2>
+                                <p className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-600">to view and manage your curated tracks</p>
+                            </div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AnimatePresence: React.FC<{ children: React.ReactNode, mode?: string }> = ({ children }) => <>{children}</>;
