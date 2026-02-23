@@ -126,7 +126,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }));
 
         persistenceService.addToHistory(track.logic.hash_sha256);
-        audioEngine.play(track).catch(err => {
+        audioEngine.play(track).catch(_err => {
             // Already handled by onError but good for safety
         });
     }, []);
