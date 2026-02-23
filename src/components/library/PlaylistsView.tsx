@@ -4,10 +4,11 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
 import { TrackItem } from '../../types/music';
-import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus } from 'lucide-react';
+import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus, Edit3, Clock, Database } from 'lucide-react';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { SmartPlaylistBuilder } from './SmartPlaylistBuilder';
+import { PlaylistEditor } from './PlaylistEditor';
 import { evaluateSmartPlaylist, SmartPlaylistDefinition } from '../../utils/smartPlaylistEvaluator';
 
 interface PlaylistsViewProps {
@@ -25,6 +26,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     const [isCreating, setIsCreating] = useState(false);
     const [isCreatingSmart, setIsCreatingSmart] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState('');
+    const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,12 +97,20 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
             },
             { divider: true, label: '', onClick: () => { } },
             {
+                label: 'Edit Playlist',
+                icon: <Pencil size={14} />,
+                onClick: () => setEditingPlaylist(pl)
+            },
+            {
                 label: 'Delete Playlist',
                 icon: <Trash2 size={14} />,
                 danger: true,
                 onClick: () => {
                     if (confirm(`Delete playlist "${pl.name}"?`)) {
-                        showToast('Currently only manual clearing supported', 'info');
+                        persistenceService.deletePlaylist(pl.id);
+                        setPlaylists(persistenceService.getPlaylists());
+                        if (selectedPlaylist?.id === pl.id) setSelectedPlaylist(null);
+                        showToast('Playlist deleted');
                     }
                 }
             }
@@ -165,6 +175,26 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                         onCancel={() => setIsCreatingSmart(false)}
                     />
                 </div>
+            )}
+
+            {editingPlaylist && (
+                <PlaylistEditor
+                    playlist={editingPlaylist}
+                    onSave={(updated) => {
+                        setPlaylists(persistenceService.getPlaylists());
+                        if (selectedPlaylist?.id === updated.id) setSelectedPlaylist(updated);
+                        setEditingPlaylist(null);
+                        showToast('Playlist updated', 'success');
+                    }}
+                    onCancel={() => setEditingPlaylist(null)}
+                    onDelete={(id) => {
+                        persistenceService.deletePlaylist(id);
+                        setPlaylists(persistenceService.getPlaylists());
+                        if (selectedPlaylist?.id === id) setSelectedPlaylist(null);
+                        setEditingPlaylist(null);
+                        showToast('Playlist deleted', 'success');
+                    }}
+                />
             )}
 
             {isCreating && (
@@ -255,60 +285,82 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                     <AnimatePresence mode="wait">
                         {selectedPlaylist ? (
                             <div key={selectedPlaylist.id} className="h-full flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="mb-8 flex items-end justify-between border-b border-white/5 pb-6">
-                                    <div>
-                                        <h2 className="text-4xl font-black text-white tracking-tighter">{selectedPlaylist.name}</h2>
-                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2 flex items-center gap-2">
-                                            <span className="text-dominant-light">#</span> {activeTrackIds.length} curated tracks
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        {!isSmartPlaylist(selectedPlaylist) && (
-                                            <>
-                                                <button
-                                                    onClick={() => {
-                                                        const url = prompt('Enter image URL for playlist cover:', (selectedPlaylist as Playlist).customImage || '');
-                                                        if (url !== null) {
-                                                            persistenceService.updatePlaylist(selectedPlaylist.id, { customImage: url });
-                                                            setPlaylists(persistenceService.getPlaylists());
-                                                            setSelectedPlaylist({ ...selectedPlaylist, customImage: url } as Playlist);
-                                                            showToast('Playlist image updated', 'success');
-                                                        }
-                                                    }}
-                                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5"
-                                                >
-                                                    Edit Image
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const newName = prompt('Enter new playlist name:', selectedPlaylist.name);
-                                                        if (newName && newName.trim() !== '') {
-                                                            let updates: Partial<Playlist> = { name: newName.trim() };
-                                                            const newDesc = prompt('Enter description (optional):', (selectedPlaylist as Playlist).description || '');
-                                                            if (newDesc !== null) {
-                                                                updates.description = newDesc.trim();
-                                                            }
-                                                            persistenceService.updatePlaylist(selectedPlaylist.id, updates);
-                                                            setPlaylists(persistenceService.getPlaylists());
-                                                            setSelectedPlaylist({ ...selectedPlaylist, ...updates } as Playlist);
-                                                            showToast('Playlist details updated', 'success');
-                                                        }
-                                                    }}
-                                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5"
-                                                >
-                                                    Edit Details
-                                                </button>
-                                            </>
+                                <div className="mb-10 flex flex-col md:flex-row items-start md:items-end gap-8 pb-10 border-b border-white/5 relative group">
+                                    <div className="w-48 h-48 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 flex-shrink-0 relative">
+                                        {(selectedPlaylist as Playlist).customImage || isSmartPlaylist(selectedPlaylist) ? (
+                                            <img
+                                                src={isSmartPlaylist(selectedPlaylist) ? '' : (selectedPlaylist as Playlist).customImage}
+                                                alt={selectedPlaylist.name}
+                                                className={`w-full h-full object-cover ${isSmartPlaylist(selectedPlaylist) ? 'opacity-0' : ''}`}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-white/10">
+                                                <ListMusic size={64} />
+                                            </div>
                                         )}
-                                        <button
-                                            onClick={() => {
-                                                const tracks = activeTrackIds.map(h => state.tracks.find(t => t.logic.hash_sha256 === h)).filter(Boolean) as TrackItem[];
-                                                if (tracks.length > 0) playTrack(tracks[0], tracks);
-                                            }}
-                                            className="flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5"
-                                        >
-                                            <Play size={14} fill="currentColor" /> Play Mix
-                                        </button>
+                                        {isSmartPlaylist(selectedPlaylist) && (
+                                            <div className="absolute inset-0 flex items-center justify-center text-dominant">
+                                                <ScanSearch size={64} />
+                                            </div>
+                                        )}
+                                        {!isSmartPlaylist(selectedPlaylist) && (
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button
+                                                    onClick={() => setEditingPlaylist(selectedPlaylist as Playlist)}
+                                                    className="bg-white/20 hover:bg-white/30 p-3 rounded-full text-white backdrop-blur-md transition-transform hover:scale-110"
+                                                >
+                                                    <Edit3 size={24} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="px-2 py-0.5 bg-dominant/20 text-dominant text-[10px] font-black uppercase tracking-widest rounded-md">
+                                                {isSmartPlaylist(selectedPlaylist) ? 'Smart Collection' : 'Curated Playlist'}
+                                            </span>
+                                            {isSmartPlaylist(selectedPlaylist) && (
+                                                <span className="flex items-center gap-1 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                                    <Clock size={10} /> Live Evaluation
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h2 className="text-6xl font-black text-white tracking-tighter mb-4 truncate leading-none">{selectedPlaylist.name}</h2>
+
+                                        {!isSmartPlaylist(selectedPlaylist) && (selectedPlaylist as Playlist).description && (
+                                            <p className="text-gray-400 font-medium text-sm max-w-2xl mb-6 line-clamp-2 italic">
+                                                "{(selectedPlaylist as Playlist).description}"
+                                            </p>
+                                        )}
+
+                                        <div className="flex items-center gap-6">
+                                            <div className="flex items-center gap-2 text-gray-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+                                                <Database size={12} className="text-dominant" />
+                                                <span>{activeTrackIds.length} tracks</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const tracks = activeTrackIds.map(h => state.tracks.find(t => t.logic.hash_sha256 === h)).filter(Boolean) as TrackItem[];
+                                                        if (tracks.length > 0) playTrack(tracks[0], tracks);
+                                                    }}
+                                                    className="flex items-center gap-2 px-8 py-3 bg-dominant text-on-dominant rounded-xl text-xs font-black hover:bg-dominant-light transition-all shadow-xl shadow-dominant/20 uppercase tracking-widest"
+                                                >
+                                                    <Play size={14} fill="currentColor" /> Play Mix
+                                                </button>
+
+                                                {!isSmartPlaylist(selectedPlaylist) && (
+                                                    <button
+                                                        onClick={() => setEditingPlaylist(selectedPlaylist as Playlist)}
+                                                        className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10"
+                                                    >
+                                                        <Pencil size={14} /> Edit Details
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 

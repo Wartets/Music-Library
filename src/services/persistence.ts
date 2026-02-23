@@ -191,6 +191,11 @@ class PersistenceService {
         }
     }
 
+    deletePlaylist(id: string) {
+        this.data.playlists = this.data.playlists.filter(p => p.id !== id);
+        this.saveData();
+    }
+
     // -- Smart Playlists
     getSmartPlaylists() {
         return this.data.smartPlaylists || [];
