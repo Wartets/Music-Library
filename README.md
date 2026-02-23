@@ -50,9 +50,3 @@ A high-performance local music library and player designed for managing and play
 The library is organized into strict categories (Albums and Singles). Files are indexed via a batch script that generates `musicBib.json`.
 
 **Note**: Music files and large folders (e.g., `Album 2`, `Album 3`, etc.) are excluded from this repository via `.gitignore` to keep the codebase lean.
-
-## Documentation
-
-- [Architecture Overview](architecture.md)
-- [Feature Roadmap](features.txt)
-- [Recorded Problems & Solutions](problems.txt)
