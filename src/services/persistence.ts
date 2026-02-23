@@ -16,7 +16,7 @@ export interface UserPreferences {
     shuffleMode: ShuffleMode;
     repeat: 'none' | 'all' | 'one';
     eqEnabled: boolean;
-    eqBands: number[]; // [60Hz, 250Hz, 1kHz, 4kHz, 16kHz]
+    eqBands: number[]; // [32Hz, 64Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz]
     crossfadeEnabled: boolean;
     crossfadeDuration: number;
 }
@@ -54,7 +54,7 @@ const DEFAULT_DATA: UserDataStore = {
         shuffleMode: 'standard',
         repeat: 'none',
         eqEnabled: false,
-        eqBands: [0, 0, 0, 0, 0],
+        eqBands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         crossfadeEnabled: false,
         crossfadeDuration: 3
     },

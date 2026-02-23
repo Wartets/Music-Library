@@ -25,7 +25,13 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
 
     // --- Audio Settings State ---
     const [eqEnabled, setEqEnabled] = useState(() => persistenceService.getPreferences().eqEnabled);
-    const [eqBands, setEqBands] = useState<number[]>(() => persistenceService.getPreferences().eqBands || Array(10).fill(0));
+    const [eqBands, setEqBands] = useState<number[]>(() => {
+        const bands = persistenceService.getPreferences().eqBands || Array(10).fill(0);
+        if (bands.length < 10) {
+            return [...bands, ...Array(10 - bands.length).fill(0)];
+        }
+        return bands.slice(0, 10);
+    });
     const [crossfadeEnabled, setCrossfadeEnabled] = useState(() => persistenceService.getPreferences().crossfadeEnabled || false);
     const [crossfadeDuration, setCrossfadeDuration] = useState(() => persistenceService.getPreferences().crossfadeDuration || 3);
 
@@ -37,7 +43,13 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
         'Rock': [5, 3, 2, 1, 0, 0, 1, 2, 3, 4],
         'Pop': [-1, 0, 2, 4, 5, 4, 2, 0, -1, -2],
         'Classical': [0, 0, 0, 0, 0, 0, -1, -2, -3, -4],
-        'Vocal Boost': [-2, -3, -3, 0, 2, 4, 4, 2, 0, -1]
+        'Vocal Boost': [-2, -3, -3, 0, 2, 4, 4, 2, 0, -1],
+        'Jazz': [4, 3, 1, 2, -2, -2, 0, 1, 3, 4],
+        'Dubstep': [6, 5, 2, 0, -2, -2, 0, 2, 5, 6],
+        'Party': [5, 4, 0, 0, 0, 0, 0, 0, 4, 5],
+        'Bass Reducer': [-6, -5, -4, -2, 0, 0, 0, 0, 0, 0],
+        'Treble Boost': [0, 0, 0, 0, 0, 0, 2, 4, 5, 6],
+        'Treble Reducer': [0, 0, 0, 0, 0, 0, -2, -4, -5, -6]
     };
 
     useEffect(() => {
