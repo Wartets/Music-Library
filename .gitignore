@@ -31,6 +31,8 @@ Album 5 (2023-2024)
 Album 6 (2025)
 Album 7 (2026)
 Single
+/scripts
+scripts
 
 # Data files
 musicBib.json
@@ -42,4 +44,3 @@ problems.txt
 launch_site.bat
 launch_browser.bat
 architecture.md
-/scripts

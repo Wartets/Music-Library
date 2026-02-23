@@ -1,4 +1,3 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { TrackItem } from '../types/music';
 
 /**
@@ -80,7 +79,7 @@ export class SearchService {
         });
     }
 
-    evaluateSmartQuery(criteria: string): TrackItem[] {
+    evaluateSmartQuery(_criteria: string): TrackItem[] {
         return [];
     }
 }

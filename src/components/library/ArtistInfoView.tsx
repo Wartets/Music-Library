@@ -2,15 +2,16 @@ import React, { useMemo } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { TrackItem } from '../../types/music';
-
 import { Play } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { ViewType } from '../layout/AppLayout';
 
 interface ArtistInfoViewProps {
     artistName: string;
+    onNavigate: (view: ViewType, data?: any) => void;
 }
 
-export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName }) => {
+export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
 
@@ -53,7 +54,10 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName }) =>
             <div className="space-y-12">
                 {artistAlbums.map(album => (
                     <div key={album.name} className="flex flex-col lg:flex-row gap-8">
-                        <div className="w-48 h-48 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/5 bg-gray-900 group relative">
+                        <div
+                            className="w-48 h-48 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/5 bg-gray-900 group relative cursor-pointer"
+                            onClick={() => onNavigate('AlbumDetail', album.name)}
+                        >
                             {album.artwork ? (
                                 <ArtworkImage details={album.artwork} alt={album.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                             ) : (
@@ -62,7 +66,10 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName }) =>
                                 </div>
                             )}
                             <button
-                                onClick={() => playTrack(album.tracks[0], album.tracks)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    playTrack(album.tracks[0], album.tracks);
+                                }}
                                 className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
                             >
                                 <div className="w-12 h-12 bg-dominant rounded-full flex items-center justify-center shadow-xl scale-90 group-hover:scale-100 transition-transform">
@@ -72,7 +79,10 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName }) =>
                         </div>
 
                         <div className="flex-1 flex flex-col">
-                            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                            <h3
+                                className="text-xl font-bold text-white mb-4 flex items-center gap-3 cursor-pointer hover:text-dominant transition-colors"
+                                onClick={() => onNavigate('AlbumDetail', album.name)}
+                            >
                                 {album.name}
                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{album.tracks.length} tracks</span>
                             </h3>
