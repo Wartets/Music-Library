@@ -3,6 +3,7 @@ import { PlayerState, TrackItem } from '../types/music';
 import { audioEngine } from '../services/audioEngine';
 import { persistenceService } from '../services/persistence';
 import { useLibrary } from './LibraryContext';
+import { useUI } from './UIContext';
 
 interface PlayerContextProps {
     state: PlayerState;
@@ -62,6 +63,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     // Handle initial state restoration from persistence
     const [isRestored, setIsRestored] = useState(false);
     const { state: libState } = useLibrary();
+    const { showToast } = useUI();
 
     useEffect(() => {
         if (libState.isLoading || isRestored) return;
@@ -124,7 +126,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }));
 
         persistenceService.addToHistory(track.logic.hash_sha256);
-        audioEngine.play(track);
+        audioEngine.play(track).catch(err => {
+            // Already handled by onError but good for safety
+        });
     }, []);
 
     useEffect(() => {
@@ -156,7 +160,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         audioEngine.onPlay = () => setState(prev => ({ ...prev, isPlaying: true }));
         audioEngine.onPause = () => setState(prev => ({ ...prev, isPlaying: false }));
-    }, [playTrackLogic]);
+
+        audioEngine.onError = (error) => {
+            showToast(error.message, 'error');
+            setState(prev => ({ ...prev, isPlaying: false }));
+        };
+    }, [playTrackLogic, showToast]);
 
     const playTrack = useCallback((track: TrackItem, queue?: TrackItem[]) => {
         playTrackLogic(track, queue);

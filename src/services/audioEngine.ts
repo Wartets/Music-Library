@@ -28,6 +28,7 @@ export class AudioEngine {
     public onEnded?: () => void;
     public onPlay?: () => void;
     public onPause?: () => void;
+    public onError?: (error: Error) => void;
 
     constructor() {
         // Initialize HTML5 Audio elements
@@ -62,6 +63,22 @@ export class AudioEngine {
 
             el.addEventListener('pause', () => {
                 if (this.getActiveElement() === el && this.onPause) this.onPause();
+            });
+
+            el.addEventListener('error', () => {
+                if (this.getActiveElement() === el && this.onError) {
+                    const error = el.error;
+                    let message = 'Unknown audio error';
+                    if (error) {
+                        switch (error.code) {
+                            case error.MEDIA_ERR_ABORTED: message = 'Fetching process aborted'; break;
+                            case error.MEDIA_ERR_NETWORK: message = 'A network error occurred while fetching the audio'; break;
+                            case error.MEDIA_ERR_DECODE: message = 'An error occurred while decoding the audio'; break;
+                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED: message = 'The audio format is not supported by your browser (e.g. ALAC)'; break;
+                        }
+                    }
+                    this.onError(new Error(message));
+                }
             });
         };
 
@@ -188,7 +205,12 @@ export class AudioEngine {
                         }
                     }
 
-                    try { await fadeInEl.play(); } catch (e) { console.error(e); }
+                    try {
+                        await fadeInEl.play();
+                    } catch (e) {
+                        console.error("AudioEngine play error (preloaded):", e);
+                        throw e;
+                    }
                 } else {
                     // Normal play (not preloaded)
                     const relativePath = dbService.getRelativePath(track.file.path);
@@ -219,7 +241,12 @@ export class AudioEngine {
                             setTimeout(() => { fadeOutEl.pause(); }, crossfadeDuration * 1000);
                         }
 
-                        try { await fadeInEl.play(); } catch (e) { console.error(e); }
+                        try {
+                            await fadeInEl.play();
+                        } catch (e) {
+                            console.error("AudioEngine play error (crossfade):", e);
+                            throw e;
+                        }
                     } else {
                         const activeEl = this.getActiveElement();
                         const activeGain = this.getActiveGainNode();
@@ -230,16 +257,31 @@ export class AudioEngine {
                             activeGain.gain.setValueAtTime(activeEl.volume, this.audioContext.currentTime);
                         }
 
-                        try { await activeEl.play(); } catch (e) { console.error(e); }
+                        try {
+                            await activeEl.play();
+                        } catch (e) {
+                            console.error("AudioEngine play error (normal):", e);
+                            throw e;
+                        }
                     }
                 }
             } else {
                 // Same track, just resume
-                try { await this.getActiveElement().play(); } catch (e) { console.error(e); }
+                try {
+                    await this.getActiveElement().play();
+                } catch (e) {
+                    console.error("AudioEngine play error (resume same):", e);
+                    throw e;
+                }
             }
         } else {
             // General resume
-            try { await this.getActiveElement().play(); } catch (e) { console.error(e); }
+            try {
+                await this.getActiveElement().play();
+            } catch (e) {
+                console.error("AudioEngine play error (general resume):", e);
+                throw e;
+            }
         }
 
         if (this.audioContext && this.audioContext.state === 'suspended') {
