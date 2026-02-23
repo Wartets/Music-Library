@@ -80,61 +80,35 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
         }));
     }, []);
 
-    const groupedTracks = useMemo(() => {
-        const groups: Record<string, TrackItem[]> = {};
-
-        tracks.forEach(track => {
-            const groupKey = `${track.logic.hierarchy.folder || 'nofolder'}###${track.logic.track_name}`;
-            if (!groups[groupKey]) groups[groupKey] = [];
-            groups[groupKey].push(track);
-        });
-
-        const result: { main: TrackItem, versions: TrackItem[], isExpanded: boolean }[] = [];
-        const seenKeys = new Set<string>();
-
-        tracks.forEach(track => {
-            const groupKey = `${track.logic.hierarchy.folder || 'nofolder'}###${track.logic.track_name}`;
-            if (!seenKeys.has(groupKey)) {
-                seenKeys.add(groupKey);
-                const versions = groups[groupKey];
-                // play latest by default (using epoch_modified or epoch_created)
-                const main = versions.reduce((latest, current) => {
-                    const latestTime = latest.file?.epoch_modified || latest.file?.epoch_created || 0;
-                    const currentTime = current.file?.epoch_modified || current.file?.epoch_created || 0;
-                    return currentTime > latestTime ? current : latest;
-                }, versions[0]);
-
-                result.push({
-                    main: main,
-                    versions: versions.length > 1 ? versions : [],
-                    isExpanded: expandedFolders[groupKey] || false
-                });
-            }
-        });
-
-        return result;
-    }, [tracks, expandedFolders]);
-
     const flatList = useMemo(() => {
         const flat: any[] = [];
-        groupedTracks.forEach(group => {
-            const groupKey = `${group.main.logic.hierarchy.folder || 'nofolder'}###${group.main.logic.track_name}`;
+        tracks.forEach(track => {
+            const hasVersions = track.versions && track.versions.length > 1;
+            const groupKey = `${track.logic.hierarchy.folder || 'nofolder'}###${track.logic.track_name}`;
+            const isExpanded = expandedFolders[groupKey] || false;
+
             flat.push({
-                ...group.main,
+                ...track,
                 _isMain: true,
-                _hasVersions: group.versions.length > 0,
-                _isExpanded: group.isExpanded,
-                _versionCount: group.versions.length,
+                _hasVersions: hasVersions,
+                _isExpanded: isExpanded,
+                _versionCount: track.versions?.length || 0,
                 _folderKey: groupKey
             });
-            if (group.isExpanded) {
-                group.versions.forEach((v, i) => {
-                    flat.push({ ...v, _isVersion: true, _versionIndex: i + 1, _folderKey: groupKey });
+
+            if (hasVersions && isExpanded) {
+                track.versions!.forEach((v, i) => {
+                    flat.push({
+                        ...v,
+                        _isVersion: true,
+                        _versionIndex: i + 1,
+                        _folderKey: groupKey
+                    });
                 });
             }
         });
         return flat;
-    }, [groupedTracks]);
+    }, [tracks, expandedFolders]);
 
     const { openTrackContextMenu } = useTrackContextMenu();
 
@@ -192,7 +166,12 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                                 {isVersion ? (
                                                     <HighlightText text={item.logic.version_name || item.file.name} query={libraryState.searchQuery} />
                                                 ) : (
-                                                    <HighlightText text={item.logic.track_name || item.metadata?.title || 'Unknown'} query={libraryState.searchQuery} />
+                                                    <>
+                                                        <HighlightText text={item.logic.track_name || item.metadata?.title || 'Unknown'} query={libraryState.searchQuery} />
+                                                        {item.logic.version_name && (
+                                                            <span className="text-white/20 font-medium ml-1.5 text-[10px]">({item.logic.version_name})</span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </span>
                                             {item._hasVersions && !item._isExpanded && (

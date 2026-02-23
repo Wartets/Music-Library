@@ -109,6 +109,7 @@ export interface TrackItem {
     metadata: TrackMetadata;
     audio_specs: AudioSpecs;
     artworks: TrackArtworks;
+    versions?: TrackItem[];
 }
 
 export interface MusicDatabase {
@@ -156,6 +157,7 @@ export interface LibraryState {
     sortOrder: 'asc' | 'desc';
     filterBy: Record<string, any>;
     columnConfig: ColumnConfig[];
+    versionToPrimaryMap: Record<string, string>;
     stats: {
         totalDuration: number;
         totalTracks: number;

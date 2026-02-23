@@ -44,6 +44,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             sortOrder: 'desc',
             filterBy: {},
             columnConfig: saved || DEFAULT_COLUMNS,
+            versionToPrimaryMap: {},
             stats: { totalDuration: 0, totalTracks: 0, totalSizeMb: 0 }
         };
     });
@@ -55,7 +56,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 const overrides = persistenceService.getMetadataOverrides();
                 const artworkOverrides = persistenceService.getArtworkOverrides();
 
-                const tracks = db.items.map((t: TrackItem) => {
+                const rawTracks = db.items.map((t: TrackItem) => {
                     const hash = t.logic?.hash_sha256;
                     let track = { ...t };
                     if (hash && overrides[hash]) {
@@ -72,6 +73,27 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                     }
                     return track;
                 });
+
+                // Group tracks by track_name and folder
+                const groupedMap = new Map<string, TrackItem[]>();
+                rawTracks.forEach(t => {
+                    const key = `${t.logic?.track_name || 'unknown'}-${t.logic?.hierarchy?.folder || 'root'}`;
+                    if (!groupedMap.has(key)) {
+                        groupedMap.set(key, []);
+                    }
+                    groupedMap.get(key)!.push(t);
+                });
+
+                const tracks: TrackItem[] = Array.from(groupedMap.values()).map(versions => {
+                    // Sort versions by modified date descending
+                    const sorted = [...versions].sort((a, b) =>
+                        (b.file?.epoch_modified || 0) - (a.file?.epoch_modified || 0)
+                    );
+                    const primary = { ...sorted[0] };
+                    primary.versions = sorted;
+                    return primary;
+                });
+
                 searchService.buildIndex(tracks);
 
                 // Calculate stats
@@ -89,11 +111,20 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                     }
                 });
 
+                // Calculate version to primary mapping
+                const versionToPrimaryMap: Record<string, string> = {};
+                tracks.forEach(primary => {
+                    primary.versions?.forEach(v => {
+                        versionToPrimaryMap[v.logic.hash_sha256] = primary.logic.hash_sha256;
+                    });
+                });
+
                 setState(prev => ({
                     ...prev,
                     tracks,
                     filteredTracks: tracks,
                     isLoading: false,
+                    versionToPrimaryMap,
                     stats: { totalTracks, totalSizeMb, totalDuration }
                 }));
             } else {

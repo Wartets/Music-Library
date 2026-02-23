@@ -54,20 +54,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         const playCounts = persistenceService.getAllPlayCounts();
 
         // Statistical calculations
-        const recentlyPlayedTracks = historyIds.slice(0, 10).map(id => tracks.find(t => t.logic.hash_sha256 === id)).filter((t): t is TrackItem => !!t);
+        const { versionToPrimaryMap } = libraryState;
+
+        const recentlyPlayedTracks = historyIds.slice(0, 10)
+            .map(id => {
+                const primaryId = versionToPrimaryMap[id] || id;
+                return tracks.find(t => t.logic.hash_sha256 === primaryId);
+            })
+            .filter((t): t is TrackItem => !!t);
 
         const mostPlayedTracks = Object.entries(playCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
-            .map(entry => tracks.find(t => t.logic.hash_sha256 === entry[0]))
+            .map(entry => {
+                const primaryId = versionToPrimaryMap[entry[0]] || entry[0];
+                return tracks.find(t => t.logic.hash_sha256 === primaryId);
+            })
             .filter((t): t is TrackItem => !!t);
 
         const sixMonthsAgo = (Date.now() / 1000) - (6 * 30 * 24 * 3600);
         const newArrivalsTracks = tracks
             .filter(t => (t.file?.epoch_created || 0) > sixMonthsAgo)
             .sort((a, b) => (b.file?.epoch_created || 0) - (a.file?.epoch_created || 0))
-            .slice(0, 20); // Show up to 20 arrivals
-        const favoriteTracks = favs.map(id => tracks.find(t => t.logic.hash_sha256 === id)).filter((t): t is TrackItem => !!t).slice(0, 10);
+            .slice(0, 20);
+
+        const favoriteTracks = favs
+            .map(id => {
+                const primaryId = versionToPrimaryMap[id] || id;
+                return tracks.find(t => t.logic.hash_sha256 === primaryId);
+            })
+            .filter((t): t is TrackItem => !!t)
+            .slice(0, 10);
 
         const genres: Record<string, number> = {};
         let totalTime = 0;

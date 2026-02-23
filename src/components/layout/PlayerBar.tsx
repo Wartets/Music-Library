@@ -23,7 +23,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     useEffect(() => {
         let lastTime = 0;
         const updateProgress = (timestamp: number) => {
-            if (timestamp - lastTime > 30) { // Limit to ~30fps 
+            if (timestamp - lastTime > 42) {
                 lastTime = timestamp;
                 const current = getProgress();
                 const duration = durationRef.current;
@@ -101,10 +101,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     const IconNext = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>;
     const IconPrev = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>;
     const IconShuffle = ({ active }: { active: boolean }) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--color-dominant-light)' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-all"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${active ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
     );
     const IconRepeat = ({ mode }: { mode: 'none' | 'all' | 'one' }) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={mode !== 'none' ? 'var(--color-dominant-light)' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-all">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={mode !== 'none' ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${mode !== 'none' ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}>
             {mode === 'one' ? (
                 <><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /><text x="11" y="15" fontSize="10" fill="currentColor" stroke="none" strokeWidth="0">1</text></>
             ) : (
@@ -202,6 +202,11 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                         className="text-white font-bold text-sm truncate hover:text-dominant-light transition-colors text-left pointer-events-auto"
                                     >
                                         {track.metadata?.title || track.logic.track_name}
+                                        {track.logic.version_name && (
+                                            <span className="text-white/40 font-medium ml-1.5 text-[11px]">
+                                                ({track.logic.version_name})
+                                            </span>
+                                        )}
                                     </button>
                                     {isLossless && (
                                         <span className="text-[9px] bg-dominant/20 text-dominant-light px-1.5 py-0.5 rounded uppercase tracking-widest font-bold border border-dominant/30 flex-shrink-0">
@@ -236,7 +241,8 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={toggleShuffle}
                             disabled={!track}
-                            className={`transition-colors py-2 px-1 ${activeClass(track, state.shuffle ? 'text-dominant hover:text-dominant-light' : 'text-gray-400 hover:text-white')}`}
+                            className={`transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
                         >
                             <IconShuffle active={state.shuffle} />
                         </button>
@@ -286,7 +292,8 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
                             disabled={!track}
-                            className={`transition-colors py-2 px-1 ${activeClass(track, state.repeat !== 'none' ? 'text-dominant hover:text-dominant-light' : 'text-gray-400 hover:text-white')}`}
+                            className={`transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            title={`Repeat: ${state.repeat}`}
                         >
                             <IconRepeat mode={state.repeat} />
                         </button>
