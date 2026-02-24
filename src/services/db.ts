@@ -30,8 +30,7 @@ export class DatabaseService {
         }
 
         try {
-            // Fetch path correctly set to root for static serving
-            const response = await fetch('/musicBib.json');
+            const response = await fetch(`${import.meta.env.BASE_URL}musicBib.json`);
             if (!response.ok) {
                 throw new Error(`Failed to load musicBib.json: ${response.statusText}`);
             }
