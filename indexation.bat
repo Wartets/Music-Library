@@ -1,6 +1,6 @@
 <# :
 @echo off
-title Music Indexer PRO
+title Music Indexer
 color 0B
 echo Initialisation de l'indexation avec analyse profonde...
 setlocal
