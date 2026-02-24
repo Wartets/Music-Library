@@ -262,7 +262,7 @@ export const MetadataEditor: React.FC = () => {
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setEditingTracks(null)}>
             <div
-                className="bg-[#111] border border-white/10 rounded-2xl shadow-3xl w-full max-w-2xl p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar relative"
+                className="bg-[#111] border border-white/10 rounded-2xl shadow-3xl w-full max-w-4xl p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar relative"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}

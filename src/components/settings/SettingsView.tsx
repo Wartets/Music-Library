@@ -168,12 +168,12 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
 
     return (
         <div className="h-full flex flex-col p-8 pt-24 bg-surface-primary overflow-hidden">
-            <div className="max-w-6xl mx-auto w-full flex flex-col h-full">
+            <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
                 {/* Header */}
                 <div className="flex items-end justify-between mb-8">
                     <div>
                         <h1 className="text-4xl font-black tracking-tighter text-white">Settings</h1>
-                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Personalize and maintain your experience</p>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Personalize your experience</p>
                     </div>
 
                     {/* Main Tabs */}
