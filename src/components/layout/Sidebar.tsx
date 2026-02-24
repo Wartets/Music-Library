@@ -5,6 +5,7 @@ import { ArtworkImage } from '../shared/ArtworkImage';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { persistenceService } from '../../services/persistence';
 
 interface SidebarProps {
     currentView: ViewType;
@@ -13,9 +14,15 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
     const { state: libState, setSearchQuery } = useLibrary();
-    const { playTrack } = usePlayer();
+    const { playTrack, state: playerState } = usePlayer();
     const { currentPalette } = useTheme();
     const [isFocused, React_setIsFocused] = React.useState(false);
+    const trackHashes = new Set(libState.tracks.map(track => track.logic.hash_sha256));
+    const hasFavorites = persistenceService.getFavorites().some(id => {
+        const primaryId = libState.versionToPrimaryMap[id] || id;
+        return trackHashes.has(primaryId);
+    });
+    const hasHistory = playerState.history.length > 0 || persistenceService.getHistoryIds().length > 0;
 
     const navItems = [
         { id: 'Dashboard', label: 'Home', icon: <Library size={20} /> },
@@ -26,8 +33,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         { id: 'Years', label: 'Years', icon: <Calendar size={20} /> },
         { id: 'Folders', label: 'Folders', icon: <FolderOpen size={20} /> },
         { id: 'Formats', label: 'Formats', icon: <FileAudio size={20} /> },
-        { id: 'Favorites', label: 'Favorites', icon: <Heart size={20} /> },
-        { id: 'DetailedHistory', label: 'History', icon: <History size={20} /> },
+        ...(hasFavorites ? [{ id: 'Favorites', label: 'Favorites', icon: <Heart size={20} /> }] : []),
+        ...(hasHistory ? [{ id: 'DetailedHistory', label: 'History', icon: <History size={20} /> }] : []),
         { id: 'Playlists', label: 'Playlists', icon: <ListMusic size={20} /> },
         { id: 'Queue', label: 'Queue', icon: <ListMusic size={20} /> },
     ];
