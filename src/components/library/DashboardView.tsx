@@ -46,12 +46,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         genreDistribution,
         maxGenreCount,
         totalPlaytimeMinutes,
-        averageBitrate
+        averageBitrate,
+        totalTracks,
+        totalAlbums,
+        totalArtists,
+        totalGenres,
+        totalFolders,
+        totalSizeGb,
+        averageDurationMinutes,
+        losslessCount,
+        ratedTracksCount,
+        averageRating
     } = useMemo(() => {
         const tracks = libraryState.tracks;
         const historyIds = persistenceService.getHistoryIds();
         const favs = persistenceService.getFavorites();
         const playCounts = persistenceService.getAllPlayCounts();
+        const ratings = persistenceService.getAllRatings();
 
         // Statistical calculations
         const { versionToPrimaryMap } = libraryState;
@@ -87,9 +98,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             .slice(0, 10);
 
         const genres: Record<string, number> = {};
+        const artistSet = new Set<string>();
+        const albumSet = new Set<string>();
+        const folderSet = new Set<string>();
         let totalTime = 0;
         let totalBitrate = 0;
         let bitrateCount = 0;
+        let totalSizeMb = 0;
+        let lossless = 0;
 
         tracks.forEach(t => {
             const trackGenres = t.metadata?.genre;
@@ -98,6 +114,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             } else if (trackGenres) {
                 genres[trackGenres] = (genres[trackGenres] || 0) + 1;
             }
+
+            const artists = t.metadata?.artists || [];
+            artists.forEach(artist => {
+                if (artist?.trim()) artistSet.add(artist.trim());
+            });
+
+            if (t.metadata?.album?.trim()) albumSet.add(t.metadata.album.trim());
+            if (t.logic?.hierarchy?.folder?.trim()) folderSet.add(t.logic.hierarchy.folder.trim());
 
             if (t.audio_specs?.duration) {
                 const parts = t.audio_specs.duration.split(':').map(Number);
@@ -115,9 +139,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     bitrateCount++;
                 }
             }
+
+            totalSizeMb += t.file?.size_mb || 0;
+            if (t.audio_specs?.is_lossless) {
+                lossless++;
+            }
         });
 
         const sortedGenres = Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 8);
+        const ratingsValues = Object.values(ratings).filter(val => val > 0);
 
         return {
             recentlyPlayed: recentlyPlayedTracks,
@@ -127,7 +157,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             genreDistribution: sortedGenres,
             maxGenreCount: Math.max(...Object.values(genres).concat(1)),
             totalPlaytimeMinutes: Math.round(totalTime / 60),
-            averageBitrate: bitrateCount > 0 ? Math.round(totalBitrate / bitrateCount) : 0
+            averageBitrate: bitrateCount > 0 ? Math.round(totalBitrate / bitrateCount) : 0,
+            totalTracks: tracks.length,
+            totalAlbums: albumSet.size,
+            totalArtists: artistSet.size,
+            totalGenres: Object.keys(genres).length,
+            totalFolders: folderSet.size,
+            totalSizeGb: totalSizeMb / 1024,
+            averageDurationMinutes: tracks.length > 0 ? (totalTime / tracks.length) / 60 : 0,
+            losslessCount: lossless,
+            ratedTracksCount: ratingsValues.length,
+            averageRating: ratingsValues.length > 0
+                ? ratingsValues.reduce((acc, n) => acc + n, 0) / ratingsValues.length
+                : 0
         };
     }, [libraryState.tracks, playerState.history]);
 
@@ -238,6 +280,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     <section className="bg-white/2 rounded-3xl p-6 border border-white/5">
                         <h2 className="text-lg font-black tracking-tight text-white mb-6">Library Stats</h2>
                         <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-xl border border-white/5 bg-white/5 p-3">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Tracks</div>
+                                    <div className="text-lg font-black text-white mt-1">{totalTracks}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/5 bg-white/5 p-3">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Albums</div>
+                                    <div className="text-lg font-black text-white mt-1">{totalAlbums}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/5 bg-white/5 p-3">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Artists</div>
+                                    <div className="text-lg font-black text-white mt-1">{totalArtists}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/5 bg-white/5 p-3">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Genres</div>
+                                    <div className="text-lg font-black text-white mt-1">{totalGenres}</div>
+                                </div>
+                            </div>
                             <div className="flex justify-between items-center group">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Total Playtime</span>
                                 <span className="text-sm font-black text-dominant">{totalPlaytimeMinutes} min</span>
@@ -245,6 +305,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             <div className="flex justify-between items-center group">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Avg. Quality</span>
                                 <span className="text-sm font-black text-white">{averageBitrate} kbps</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Avg. Duration</span>
+                                <span className="text-sm font-black text-white">{averageDurationMinutes.toFixed(1)} min</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Library Size</span>
+                                <span className="text-sm font-black text-white">{totalSizeGb.toFixed(2)} GB</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Lossless</span>
+                                <span className="text-sm font-black text-white">{losslessCount} ({totalTracks > 0 ? Math.round((losslessCount / totalTracks) * 100) : 0}%)</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Rated Tracks</span>
+                                <span className="text-sm font-black text-white">{ratedTracksCount} {ratedTracksCount > 0 ? `(${averageRating.toFixed(1)}★)` : ''}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Folders</span>
+                                <span className="text-sm font-black text-white">{totalFolders}</span>
                             </div>
                             <div className="pt-4 border-t border-white/5">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4">Genre Mix</h3>
@@ -268,17 +348,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                         </div>
                     </section>
 
-                    <section>
-                        <div className="flex items-end justify-between mb-6 px-2">
-                            <h2 className="text-lg font-black tracking-tight text-white">Favorites</h2>
-                            <button onClick={() => onNavigate('Favorites')} className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors">See All</button>
-                        </div>
-                        <div className="space-y-2">
-                            {favorites.map((track, i) => (
-                                <TrackRow key={`fav-${track.logic.hash_sha256}`} track={track} list={favorites} index={i} />
-                            ))}
-                        </div>
-                    </section>
+                    {favorites.length > 0 && (
+                        <section>
+                            <div className="flex items-end justify-between mb-6 px-2">
+                                <h2 className="text-lg font-black tracking-tight text-white">Favorites</h2>
+                                <button onClick={() => onNavigate('Favorites')} className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors">See All</button>
+                            </div>
+                            <div className="space-y-2">
+                                {favorites.map((track, i) => (
+                                    <TrackRow key={`fav-${track.logic.hash_sha256}`} track={track} list={favorites} index={i} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>

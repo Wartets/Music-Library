@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
-import { persistenceService } from '../../services/persistence';
+import { MetadataWriteTarget, persistenceService } from '../../services/persistence';
 import { Heart, Star, Disc, Hash, Music, Type, Save, X, Image as ImageIcon, Trash2, Edit2, Globe, Tag, Calendar, Mic, Link, Users, Building, ShieldCheck, Bookmark, FileText, Activity } from 'lucide-react';
 import { TrackItem, TrackMetadata } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
@@ -22,6 +22,7 @@ export const MetadataEditor: React.FC = () => {
     const [bpm, setBpm] = useState('');
     const [lyrics, setLyrics] = useState('');
     const [comment, setComment] = useState('');
+    const [description, setDescription] = useState('');
     const [artworkUrl, setArtworkUrl] = useState('');
     const [rating, setRating] = useState<number | 'mixed'>(0);
     const [isFav, setIsFav] = useState<boolean | 'mixed'>(false);
@@ -41,6 +42,7 @@ export const MetadataEditor: React.FC = () => {
     const [recordingYear, setRecordingYear] = useState('');
     const [videoLink, setVideoLink] = useState('');
     const [streamingLink, setStreamingLink] = useState('');
+    const [writeTarget, setWriteTarget] = useState<MetadataWriteTarget>(() => persistenceService.getPreferences().metadataWriteTarget || 'musicbib');
 
     const [activeTab, setActiveTab] = useState<'general' | 'professional' | 'organization' | 'lyrics' | 'external'>('general');
 
@@ -72,6 +74,7 @@ export const MetadataEditor: React.FC = () => {
             const bpmInfo = getSharedValue(t => t.metadata?.bpm || '');
             const lyricsInfo = getSharedValue(t => t.metadata?.lyrics || '');
             const commentInfo = getSharedValue(t => t.metadata?.comment || '');
+            const descriptionInfo = getSharedValue(t => t.metadata?.description || '');
             const artworkUrlInfo = getSharedValue(t => t.artworks?.track_artwork?.[0]?.path || '');
 
             // Expanded initializations
@@ -110,6 +113,7 @@ export const MetadataEditor: React.FC = () => {
             setBpm(bpmInfo.value);
             setLyrics(lyricsInfo.value);
             setComment(commentInfo.value);
+            setDescription(descriptionInfo.value);
             setArtworkUrl(artworkUrlInfo.value);
             setRating(ratingMixed ? 'mixed' : ratingValues[0]);
             setIsFav(favMixed ? 'mixed' : favValues[0]);
@@ -145,6 +149,7 @@ export const MetadataEditor: React.FC = () => {
             if (bpmInfo.isMixed) mixed.add('bpm');
             if (lyricsInfo.isMixed) mixed.add('lyrics');
             if (commentInfo.isMixed) mixed.add('comment');
+            if (descriptionInfo.isMixed) mixed.add('description');
             if (artworkUrlInfo.isMixed) mixed.add('artworkUrl');
 
             // Add expanded mixed states
@@ -169,8 +174,9 @@ export const MetadataEditor: React.FC = () => {
 
     if (!editingTracks || editingTracks.length === 0) return null;
 
-    const handleSave = () => {
-        editingTracks.forEach(track => {
+    const handleSave = async () => {
+        persistenceService.updatePreferences({ metadataWriteTarget: writeTarget });
+        await Promise.all(editingTracks.map(async track => {
             const hash = track.logic?.hash_sha256;
             if (!hash) return;
 
@@ -189,6 +195,7 @@ export const MetadataEditor: React.FC = () => {
             if (!mixedFields.has('bpm')) update.bpm = bpm.trim() || null;
             if (!mixedFields.has('lyrics')) update.lyrics = lyrics.trim() || null;
             if (!mixedFields.has('comment')) update.comment = comment.trim() || null;
+            if (!mixedFields.has('description')) update.description = description.trim() || null;
 
             // Expanded saves
             if (!mixedFields.has('producer')) update.producer = producer.trim() || null;
@@ -206,7 +213,7 @@ export const MetadataEditor: React.FC = () => {
             if (!mixedFields.has('videoLink')) update.video_link = videoLink.trim() || null;
             if (!mixedFields.has('streamingLink')) update.streaming_link = streamingLink.trim() || null;
 
-            updateTrackMetadata(hash, update);
+            await updateTrackMetadata(hash, update, writeTarget);
 
             if (!mixedFields.has('artworkUrl')) {
                 if (artworkUrl !== (track.artworks?.track_artwork?.[0]?.path || '')) {
@@ -234,7 +241,7 @@ export const MetadataEditor: React.FC = () => {
                     persistenceService.toggleFavorite(hash);
                 }
             }
-        });
+        }));
 
         setEditingTracks(null);
     };
@@ -255,7 +262,7 @@ export const MetadataEditor: React.FC = () => {
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setEditingTracks(null)}>
             <div
-                className="bg-[#111] border border-white/10 rounded-2xl shadow-3xl w-full max-w-2xl p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar relative"
+                className="bg-[#111] border border-white/10 rounded-2xl shadow-3xl w-full max-w-4xl p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar relative"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -276,6 +283,27 @@ export const MetadataEditor: React.FC = () => {
                 </div>
 
                 {/* Top Section: Artwork & Ratings */}
+                <div className="mb-6 p-4 rounded-2xl border border-white/10 bg-black/30">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                        Metadata Write Target
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { id: 'musicbib', label: 'musicBib.json' },
+                            { id: 'file', label: 'Audio File' },
+                            { id: 'both', label: 'Both' }
+                        ].map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => setWriteTarget(opt.id as MetadataWriteTarget)}
+                                className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${writeTarget === opt.id ? 'bg-dominant text-on-dominant border-dominant' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="flex flex-col md:flex-row gap-8 mb-10">
                     {/* Artwork Preview */}
                     <div className="flex flex-col items-center gap-4">
@@ -514,6 +542,16 @@ export const MetadataEditor: React.FC = () => {
                                     placeholder={mixedFields.has('comment') ? '--- Mixed Comments ---' : 'Notes...'}
                                 />
                             </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Description</label>
+                                <input
+                                    type="text"
+                                    className={inputClass('description')}
+                                    value={description}
+                                    onChange={e => handleInputChange('description', e.target.value, setDescription)}
+                                    placeholder={mixedFields.has('description') ? '--- Mixed Descriptions ---' : 'Extended description'}
+                                />
+                            </div>
                         </div>
                     )}
 
@@ -731,7 +769,7 @@ export const MetadataEditor: React.FC = () => {
                 <div className="sticky bottom-0 bg-[#111] pt-6 border-t border-white/10 mt-4 pb-2 z-10">
                     <div className="flex justify-between items-center gap-4">
                         <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest max-w-[50%]">
-                            * Changes are stored locally. Original audio files are not modified.
+                            * Target: {writeTarget === 'musicbib' ? 'musicBib.json export' : writeTarget === 'file' ? 'file-level override' : 'musicBib.json export + file-level override'}.
                         </p>
                         <div className="flex gap-4">
                             <button
@@ -754,7 +792,3 @@ export const MetadataEditor: React.FC = () => {
         </div>
     );
 };
-
-const UserIcon = () => (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-);

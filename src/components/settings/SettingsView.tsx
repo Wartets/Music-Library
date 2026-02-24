@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
-import { persistenceService } from '../../services/persistence';
+import { MetadataWriteTarget, persistenceService } from '../../services/persistence';
 import { audioEngine } from '../../services/audioEngine';
 import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
 import { usePlayer } from '../../contexts/PlayerContext';
@@ -8,20 +8,24 @@ import { TrackItem } from '../../types/music';
 import {
     Sparkles, Volume2, Database, ShieldAlert,
     Download, RefreshCcw, FileWarning, Zap,
-    Sliders, Monitor, Palette, BarChart3
+    Sliders, Monitor, Palette, BarChart3, FileText
 } from 'lucide-react';
 
 export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) => {
-    const { state: libState } = useLibrary();
+    const { state: libState, setEditingTracks } = useLibrary();
     const { state: playerState, setShuffleMode } = usePlayer();
     const { settings: themeSettings, updateSettings, currentPalette, reportBadPalette } = useTheme();
 
-    const [activeTab, setActiveTab] = useState<'interface' | 'audio' | 'maintenance'>(() => {
+    const [activeTab, setActiveTab] = useState<'interface' | 'audio' | 'metadata' | 'maintenance'>(() => {
         if (initialTab === 'maintenance') return 'maintenance';
         if (initialTab === 'audio') return 'audio';
+        if (initialTab === 'metadata') return 'metadata';
         return 'interface';
     });
     const [maintenanceTab, setMaintenanceTab] = useState<'duplicates' | 'health' | 'data'>('duplicates');
+    const [metadataWriteTarget, setMetadataWriteTarget] = useState<MetadataWriteTarget>(() => persistenceService.getPreferences().metadataWriteTarget || 'musicbib');
+    const [metadataSearch, setMetadataSearch] = useState('');
+    const [selectedHashes, setSelectedHashes] = useState<Set<string>>(new Set());
 
     // --- Audio Settings State ---
     const [eqEnabled, setEqEnabled] = useState(() => persistenceService.getPreferences().eqEnabled);
@@ -107,6 +111,18 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
         return { lowBitrate, missingMetadata };
     }, [libState.tracks]);
 
+    const metadataCandidates = useMemo(() => {
+        const query = metadataSearch.trim().toLowerCase();
+        const list = libState.tracks.filter(t => {
+            if (!query) return true;
+            const title = (t.metadata?.title || t.logic.track_name || '').toLowerCase();
+            const artist = (t.metadata?.artists?.join(' ') || '').toLowerCase();
+            const album = (t.metadata?.album || '').toLowerCase();
+            return title.includes(query) || artist.includes(query) || album.includes(query);
+        });
+        return list.slice(0, 80);
+    }, [libState.tracks, metadataSearch]);
+
     const handleExport = () => {
         const data = persistenceService.getData();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -131,14 +147,33 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
         }
     };
 
+    const toggleTrackSelection = (hash: string) => {
+        setSelectedHashes(prev => {
+            const next = new Set(prev);
+            if (next.has(hash)) {
+                next.delete(hash);
+            } else {
+                next.add(hash);
+            }
+            return next;
+        });
+    };
+
+    const openMetadataEditor = () => {
+        const selected = libState.tracks.filter(t => selectedHashes.has(t.logic.hash_sha256));
+        if (selected.length === 0) return;
+        persistenceService.updatePreferences({ metadataWriteTarget });
+        setEditingTracks(selected);
+    };
+
     return (
         <div className="h-full flex flex-col p-8 pt-24 bg-surface-primary overflow-hidden">
-            <div className="max-w-6xl mx-auto w-full flex flex-col h-full">
+            <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
                 {/* Header */}
                 <div className="flex items-end justify-between mb-8">
                     <div>
                         <h1 className="text-4xl font-black tracking-tighter text-white">Settings</h1>
-                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Personalize and maintain your experience</p>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Personalize your experience</p>
                     </div>
 
                     {/* Main Tabs */}
@@ -146,6 +181,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                         {[
                             { id: 'interface', label: 'Interface', icon: <Palette size={16} /> },
                             { id: 'audio', label: 'Audio Engine', icon: <Volume2 size={16} /> },
+                            { id: 'metadata', label: 'Metadata', icon: <FileText size={16} /> },
                             { id: 'maintenance', label: 'Maintenance', icon: <Database size={16} /> }
                         ].map(tab => (
                             <button
@@ -383,6 +419,83 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'metadata' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
+                                <h2 className="text-2xl font-black text-white mb-3">Advanced Metadata Editing</h2>
+                                <p className="text-sm text-gray-500 mb-8">Select how edits are applied, then select tracks and launch the full editor.</p>
+
+                                <div className="mb-8">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Default Write Target</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {[
+                                            { id: 'musicbib', label: 'musicBib.json', desc: 'Apply edits into the working library snapshot export.' },
+                                            { id: 'file', label: 'Audio File', desc: 'Apply edits as persistent file-level overrides.' },
+                                            { id: 'both', label: 'Both', desc: 'Apply both workflows in one operation.' }
+                                        ].map(option => (
+                                            <button
+                                                key={option.id}
+                                                onClick={() => {
+                                                    const target = option.id as MetadataWriteTarget;
+                                                    setMetadataWriteTarget(target);
+                                                    persistenceService.updatePreferences({ metadataWriteTarget: target });
+                                                }}
+                                                className={`text-left p-4 rounded-2xl border transition-all ${metadataWriteTarget === option.id ? 'bg-dominant/20 border-dominant text-white' : 'bg-black/20 border-white/10 text-gray-300 hover:bg-white/5'}`}
+                                            >
+                                                <div className="font-black text-sm mb-1">{option.label}</div>
+                                                <div className="text-[10px] text-gray-500">{option.desc}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Track Selection</label>
+                                    <input
+                                        type="text"
+                                        value={metadataSearch}
+                                        onChange={(e) => setMetadataSearch(e.target.value)}
+                                        placeholder="Search by title, artist, album..."
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-dominant"
+                                    />
+                                </div>
+
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar border border-white/10 rounded-2xl bg-black/20">
+                                    {metadataCandidates.map(track => {
+                                        const hash = track.logic.hash_sha256;
+                                        const checked = selectedHashes.has(hash);
+                                        return (
+                                            <button
+                                                key={hash}
+                                                onClick={() => toggleTrackSelection(hash)}
+                                                className={`w-full text-left px-4 py-3 border-b border-white/5 last:border-b-0 transition-colors ${checked ? 'bg-dominant/15' : 'hover:bg-white/5'}`}
+                                            >
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="min-w-0">
+                                                        <div className="text-sm font-bold text-white truncate">{track.metadata?.title || track.logic.track_name}</div>
+                                                        <div className="text-[10px] text-gray-500 uppercase tracking-widest truncate">{track.metadata?.artists?.join(', ') || 'Unknown Artist'} • {track.metadata?.album || 'Unknown Album'}</div>
+                                                    </div>
+                                                    <div className={`w-4 h-4 rounded border ${checked ? 'bg-dominant border-dominant' : 'border-white/20'}`}></div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-6 flex items-center justify-between gap-4">
+                                    <p className="text-xs text-gray-500">{selectedHashes.size} track(s) selected</p>
+                                    <button
+                                        onClick={openMetadataEditor}
+                                        disabled={selectedHashes.size === 0}
+                                        className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${selectedHashes.size === 0 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-dominant text-on-dominant hover:bg-dominant-light'}`}
+                                    >
+                                        Open Advanced Editor
+                                    </button>
                                 </div>
                             </div>
                         </div>

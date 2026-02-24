@@ -99,6 +99,22 @@ export class DatabaseService {
         return this.trackMap.get(hash) || null;
     }
 
+    updateTrackMetadata(hash: string, metadataPatch: Partial<TrackItem['metadata']>): boolean {
+        if (!this.database) return false;
+        const track = this.trackMap.get(hash);
+        if (!track) return false;
+        track.metadata = {
+            ...track.metadata,
+            ...metadataPatch
+        };
+        return true;
+    }
+
+    exportDatabaseJson(): string | null {
+        if (!this.database) return null;
+        return JSON.stringify(this.database, null, 2);
+    }
+
     async loadUserDataStore(): Promise<any> {
         return {};
     }

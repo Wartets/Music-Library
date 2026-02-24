@@ -1,6 +1,7 @@
 // Persistence Service for Music Library
 
 export type ShuffleMode = 'standard' | 'weighted' | 'discovery' | 'recent';
+export type MetadataWriteTarget = 'musicbib' | 'file' | 'both';
 
 export interface Playlist {
     id: string;
@@ -19,6 +20,7 @@ export interface UserPreferences {
     eqBands: number[]; // [32Hz, 64Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz]
     crossfadeEnabled: boolean;
     crossfadeDuration: number;
+    metadataWriteTarget: MetadataWriteTarget;
 }
 
 export interface PlaybackState {
@@ -56,7 +58,8 @@ const DEFAULT_DATA: UserDataStore = {
         eqEnabled: false,
         eqBands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         crossfadeEnabled: false,
-        crossfadeDuration: 3
+        crossfadeDuration: 3,
+        metadataWriteTarget: 'musicbib'
     },
     playCounts: {},
     metadataOverrides: {},

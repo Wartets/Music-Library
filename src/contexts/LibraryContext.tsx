@@ -4,12 +4,13 @@ import { dbService } from '../services/db';
 import { searchService } from '../services/search';
 import { persistenceService } from '../services/persistence';
 import { TrackMetadata } from '../types/music';
+import { MetadataWriteTarget } from '../services/persistence';
 
 interface LibraryContextProps {
     state: LibraryState;
     setSearchQuery: (query: string) => void;
     setSortBy: (sortBy: string) => void;
-    updateTrackMetadata: (hash_sha256: string, override: Partial<TrackMetadata>) => void;
+    updateTrackMetadata: (hash_sha256: string, override: Partial<TrackMetadata>, target?: MetadataWriteTarget) => Promise<void>;
     updateArtworkOverride: (hash_sha256: string, artwork: import('../types/music').ImageDetails[]) => void;
     updateColumnConfig: (config: ColumnConfig[]) => void;
     editingTracks: TrackItem[] | null;
@@ -177,6 +178,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
 
     const currentSearchQueryRef = useRef(state.searchQuery);
+    const metadataExportTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
         currentSearchQueryRef.current = state.searchQuery;
@@ -223,8 +225,16 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         });
     };
 
-    const updateTrackMetadata = (hash_sha256: string, override: Partial<TrackMetadata>) => {
-        persistenceService.setMetadataOverride(hash_sha256, override);
+    const updateTrackMetadata = async (hash_sha256: string, override: Partial<TrackMetadata>, target?: MetadataWriteTarget) => {
+        const activeTarget = target || persistenceService.getPreferences().metadataWriteTarget || 'musicbib';
+
+        if (activeTarget === 'musicbib' || activeTarget === 'both') {
+            dbService.updateTrackMetadata(hash_sha256, override);
+        }
+
+        if (activeTarget === 'file' || activeTarget === 'both') {
+            persistenceService.setMetadataOverride(hash_sha256, override);
+        }
 
         setState(prev => {
             const updateTracksArray = (tracks: TrackItem[]) => tracks.map(t => {
@@ -243,6 +253,25 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 filteredTracks: newFiltered
             };
         });
+
+        if (activeTarget === 'musicbib' || activeTarget === 'both') {
+            if (metadataExportTimerRef.current) {
+                window.clearTimeout(metadataExportTimerRef.current);
+            }
+
+            metadataExportTimerRef.current = window.setTimeout(() => {
+                const serialized = dbService.exportDatabaseJson();
+                if (!serialized || typeof window === 'undefined') return;
+
+                const blob = new Blob([serialized], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'musicBib.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }, 250);
+        }
     };
 
     const updateArtworkOverride = (hash_sha256: string, artwork: import('../types/music').ImageDetails[]) => {
