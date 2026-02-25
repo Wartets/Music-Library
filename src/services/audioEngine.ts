@@ -7,6 +7,25 @@ import { dbService } from './db';
  * Handles play, pause, volume, gapless playback, and audio manipulations.
  */
 
+export type AudioPlaybackErrorCode =
+    | 'media_aborted'
+    | 'media_network'
+    | 'media_decode'
+    | 'format_unsupported'
+    | 'autoplay_blocked'
+    | 'playback_interrupted'
+    | 'unknown';
+
+export class AudioPlaybackError extends Error {
+    public readonly code: AudioPlaybackErrorCode;
+
+    constructor(code: AudioPlaybackErrorCode, message: string) {
+        super(message);
+        this.name = 'AudioPlaybackError';
+        this.code = code;
+    }
+}
+
 export class AudioEngine {
     private audioContext: AudioContext | null = null;
     private audioElement: HTMLAudioElement;
@@ -67,17 +86,7 @@ export class AudioEngine {
 
             el.addEventListener('error', () => {
                 if (this.getActiveElement() === el && this.onError) {
-                    const error = el.error;
-                    let message = 'Unknown audio error';
-                    if (error) {
-                        switch (error.code) {
-                            case error.MEDIA_ERR_ABORTED: message = 'Fetching process aborted'; break;
-                            case error.MEDIA_ERR_NETWORK: message = 'A network error occurred while fetching the audio'; break;
-                            case error.MEDIA_ERR_DECODE: message = 'An error occurred while decoding the audio'; break;
-                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED: message = 'The audio format is not supported by your browser (e.g. ALAC)'; break;
-                        }
-                    }
-                    this.onError(new Error(message));
+                    this.onError(this.createMediaError(el.error));
                 }
             });
         };
@@ -139,6 +148,44 @@ export class AudioEngine {
             this.eqBands[this.eqBands.length - 1].connect(this.analyserNode);
             this.analyserNode.connect(ctx.destination);
         }
+    }
+
+    private createMediaError(error: MediaError | null): AudioPlaybackError {
+        if (!error) {
+            return new AudioPlaybackError('unknown', 'Unknown audio error.');
+        }
+
+        switch (error.code) {
+            case error.MEDIA_ERR_ABORTED:
+                return new AudioPlaybackError('media_aborted', 'Playback was interrupted before completion.');
+            case error.MEDIA_ERR_NETWORK:
+                return new AudioPlaybackError('media_network', 'Network or file access error while loading audio.');
+            case error.MEDIA_ERR_DECODE:
+                return new AudioPlaybackError('media_decode', 'This file could not be decoded by the audio engine.');
+            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                return new AudioPlaybackError('format_unsupported', 'This audio format is not supported in your browser.');
+            default:
+                return new AudioPlaybackError('unknown', 'Unknown audio error.');
+        }
+    }
+
+    private normalizePlaybackException(error: unknown): AudioPlaybackError {
+        if (error instanceof AudioPlaybackError) return error;
+        if (error instanceof DOMException) {
+            if (error.name === 'NotAllowedError') {
+                return new AudioPlaybackError('autoplay_blocked', 'Playback is blocked by browser autoplay policy.');
+            }
+            if (error.name === 'AbortError') {
+                return new AudioPlaybackError('playback_interrupted', 'Playback request was interrupted.');
+            }
+            if (error.name === 'NotSupportedError') {
+                return new AudioPlaybackError('format_unsupported', 'This file format is not supported.');
+            }
+        }
+        if (error instanceof Error) {
+            return new AudioPlaybackError('unknown', error.message || 'Unknown playback failure.');
+        }
+        return new AudioPlaybackError('unknown', 'Unknown playback failure.');
     }
 
     /**
@@ -208,8 +255,9 @@ export class AudioEngine {
                     try {
                         await fadeInEl.play();
                     } catch (e) {
-                        console.error("AudioEngine play error (preloaded):", e);
-                        throw e;
+                        const playbackError = this.normalizePlaybackException(e);
+                        if (this.onError) this.onError(playbackError);
+                        throw playbackError;
                     }
                 } else {
                     // Normal play (not preloaded)
@@ -244,8 +292,9 @@ export class AudioEngine {
                         try {
                             await fadeInEl.play();
                         } catch (e) {
-                            console.error("AudioEngine play error (crossfade):", e);
-                            throw e;
+                            const playbackError = this.normalizePlaybackException(e);
+                            if (this.onError) this.onError(playbackError);
+                            throw playbackError;
                         }
                     } else {
                         const activeEl = this.getActiveElement();
@@ -260,8 +309,9 @@ export class AudioEngine {
                         try {
                             await activeEl.play();
                         } catch (e) {
-                            console.error("AudioEngine play error (normal):", e);
-                            throw e;
+                            const playbackError = this.normalizePlaybackException(e);
+                            if (this.onError) this.onError(playbackError);
+                            throw playbackError;
                         }
                     }
                 }
@@ -270,8 +320,9 @@ export class AudioEngine {
                 try {
                     await this.getActiveElement().play();
                 } catch (e) {
-                    console.error("AudioEngine play error (resume same):", e);
-                    throw e;
+                    const playbackError = this.normalizePlaybackException(e);
+                    if (this.onError) this.onError(playbackError);
+                    throw playbackError;
                 }
             }
         } else {
@@ -279,8 +330,9 @@ export class AudioEngine {
             try {
                 await this.getActiveElement().play();
             } catch (e) {
-                console.error("AudioEngine play error (general resume):", e);
-                throw e;
+                const playbackError = this.normalizePlaybackException(e);
+                if (this.onError) this.onError(playbackError);
+                throw playbackError;
             }
         }
 

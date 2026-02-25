@@ -3,8 +3,12 @@
  * @param seconds - Total seconds
  */
 export const formatDuration = (seconds?: number | string): string => {
-    if (!seconds) return '0:00';
-    const num = typeof seconds === 'string' ? parseFloat(seconds) : seconds;
+    if (seconds === null || seconds === undefined || seconds === '') return '0:00';
+
+    const num = typeof seconds === 'string'
+        ? (seconds.includes(':') ? parseDuration(seconds) : parseFloat(seconds))
+        : seconds;
+
     if (isNaN(num)) return '0:00';
 
     const minutes = Math.floor(num / 60);
@@ -19,14 +23,30 @@ export const formatDuration = (seconds?: number | string): string => {
  */
 export const parseDuration = (durationStr?: string | null): number => {
     if (!durationStr) return 0;
-    const parts = durationStr.split(':');
-    if (parts.length === 2) {
-        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+
+    const normalized = durationStr.trim();
+    if (!normalized) return 0;
+
+    if (/^\d+(\.\d+)?$/.test(normalized)) {
+        return Math.max(0, Math.floor(parseFloat(normalized)));
     }
-    if (parts.length === 1) {
-        return parseInt(parts[0]);
+
+    const cleaned = normalized.replace(/[^0-9:.]/g, '');
+    const parts = cleaned.split(':').map(part => part.trim()).filter(Boolean);
+
+    if (parts.length === 0 || parts.some(part => Number.isNaN(Number(part)))) {
+        return 0;
     }
-    return 0;
+
+    let totalSeconds = 0;
+    let multiplier = 1;
+
+    for (let i = parts.length - 1; i >= 0; i--) {
+        totalSeconds += parseFloat(parts[i]) * multiplier;
+        multiplier *= 60;
+    }
+
+    return Math.max(0, Math.floor(totalSeconds));
 };
 
 /**

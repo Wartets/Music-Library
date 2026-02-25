@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import {
@@ -121,6 +121,12 @@ export const QueueView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'index' | 'duration' | 'name'>('index');
+    const [clockTick, setClockTick] = useState(0);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setClockTick(prev => prev + 1), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -147,7 +153,10 @@ export const QueueView: React.FC = () => {
             items = items.filter(t =>
                 t.metadata?.title?.toLowerCase().includes(q) ||
                 t.metadata?.artists?.some(a => a.toLowerCase().includes(q)) ||
-                t.metadata?.genre?.toLowerCase().includes(q)
+                (Array.isArray(t.metadata?.genre)
+                    ? t.metadata.genre.join(' ').toLowerCase()
+                    : String(t.metadata?.genre || '').toLowerCase()
+                ).includes(q)
             );
         }
 
@@ -172,11 +181,14 @@ export const QueueView: React.FC = () => {
             cumulativeTime += parseDuration(item.audio_specs?.duration);
             return { ...item, startTimeSeconds: startTime };
         });
-    }, [filteredQueue, currentTrack, getProgress]);
+    }, [filteredQueue, currentTrack, getProgress, clockTick]);
 
     const totalQueueDuration = useMemo(() => {
-        return nextTracksRaw.reduce((sum, t) => sum + parseDuration(t.audio_specs?.duration), 0);
-    }, [nextTracksRaw]);
+        const currentDuration = currentTrack ? parseDuration(currentTrack.audio_specs?.duration) : 0;
+        const remainingCurrent = currentTrack ? Math.max(0, currentDuration - getProgress()) : 0;
+        const upcomingDuration = nextTracksRaw.reduce((sum, t) => sum + parseDuration(t.audio_specs?.duration), 0);
+        return remainingCurrent + upcomingDuration;
+    }, [nextTracksRaw, currentTrack, getProgress, clockTick]);
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;

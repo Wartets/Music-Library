@@ -5,6 +5,7 @@ import { useUI } from '../../contexts/UIContext';
 import { Play, ListPlus, FolderPlus, FolderOpen, Hash } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
+import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
 
 interface FoldersViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -57,16 +58,25 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
     };
 
     const gridItems: GridItem[] = folders.map(folder => {
-        const hasArtworks = folder.tracks.some((t: any) => t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length);
-        const firstArtworkTrack = folder.tracks.find((t: any) => t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length);
+        const palette = getMutedVisualStyle(seedFromText(folder.path));
+        const firstArtworkTrack = folder.tracks.find((t: any) =>
+            t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length
+        );
         const artworkDetails = firstArtworkTrack?.artworks?.track_artwork?.[0] || firstArtworkTrack?.artworks?.album_artwork?.[0];
 
         return {
             id: folder.path,
             title: folder.name,
             subtitle: `${folder.tracks.length} tracks`,
-            imageDetails: hasArtworks ? artworkDetails : undefined,
-            icon: !hasArtworks ? <FolderOpen size={48} className="text-white/20 group-hover:text-dominant transition-colors group-hover:scale-110 duration-700" /> : undefined,
+            imageDetails: artworkDetails,
+            visualToken: {
+                style: {
+                    background: palette.background,
+                    borderColor: palette.borderColor
+                },
+                symbol: <FolderOpen size={44} style={{ color: palette.accentColor }} />,
+                label: 'Folder',
+            },
             onClick: () => onNavigate('AllTracks', { filter: { type: 'folder', value: folder.path } }),
             onContextMenu: (e) => onRightClick(e, folder)
         };

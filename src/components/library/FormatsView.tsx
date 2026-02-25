@@ -5,6 +5,7 @@ import { useUI } from '../../contexts/UIContext';
 import { Play, ListPlus, FolderPlus, FileAudio, Hash } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
+import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
 
 interface FormatsViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -49,25 +50,36 @@ export const FormatsView: React.FC<FormatsViewProps> = ({ onNavigate }) => {
         ]);
     };
 
-    const gridItems: GridItem[] = formats.map(fmt => ({
-        id: fmt.name,
-        title: fmt.name,
-        subtitle: `${fmt.tracks.length} tracks`,
-        icon: (
-            <div className="flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-white/20 group-hover:text-dominant transition-colors select-none">
-                    {fmt.name}
-                </span>
-                {fmt.isLossless && (
-                    <span className="mt-2 text-[10px] font-bold bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full border border-green-500/30">
-                        LOSSLESS
-                    </span>
-                )}
-            </div>
-        ),
-        onClick: () => onNavigate('AllTracks', { filter: { type: 'format', value: fmt.name } }),
-        onContextMenu: (e) => onRightClick(e, fmt)
-    }));
+    const gridItems: GridItem[] = formats.map(fmt => {
+        const palette = getMutedVisualStyle(seedFromText(fmt.name));
+        return {
+            id: fmt.name,
+            title: fmt.name,
+            subtitle: `${fmt.tracks.length} tracks`,
+            visualToken: {
+                style: {
+                    background: palette.background,
+                    borderColor: palette.borderColor
+                },
+                symbol: (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        <span className="text-3xl font-black tracking-tight" style={{ color: palette.accentColor }}>
+                            {fmt.name}
+                        </span>
+                        {fmt.isLossless && (
+                            <span className="text-[9px] font-black bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full border border-green-400/30 tracking-wider">
+                                LOSSLESS
+                            </span>
+                        )}
+                    </div>
+                ),
+                label: 'Format',
+                symbolClassName: 'text-white'
+            },
+            onClick: () => onNavigate('AllTracks', { filter: { type: 'format', value: fmt.name } }),
+            onContextMenu: (e) => onRightClick(e, fmt)
+        };
+    });
 
     return (
         <CollectionGridView

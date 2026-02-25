@@ -5,6 +5,8 @@ import { searchService } from '../services/search';
 import { persistenceService } from '../services/persistence';
 import { TrackMetadata } from '../types/music';
 import { MetadataWriteTarget } from '../services/persistence';
+import { rankTrackVersions } from '../utils/versionUtils';
+import { parseDuration } from '../utils/formatters';
 
 interface LibraryContextProps {
     state: LibraryState;
@@ -86,10 +88,8 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 });
 
                 const tracks: TrackItem[] = Array.from(groupedMap.values()).map(versions => {
-                    // Sort versions by modified date descending
-                    const sorted = [...versions].sort((a, b) =>
-                        (b.file?.epoch_modified || 0) - (a.file?.epoch_modified || 0)
-                    );
+                    // Use multi-factor ranking (semantic-like version, version-name date, file dates, quality).
+                    const sorted = rankTrackVersions(versions);
                     const primary = { ...sorted[0] };
                     primary.versions = sorted;
                     return primary;
@@ -104,12 +104,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
 
                 tracks.forEach(t => {
                     totalSizeMb += t.file?.size_mb || 0;
-                    if (t.audio_specs?.duration) {
-                        const [mins, secs] = t.audio_specs.duration.split(':').map(Number);
-                        if (!isNaN(mins) && !isNaN(secs)) {
-                            totalDuration += (mins * 60) + secs;
-                        }
-                    }
+                    totalDuration += parseDuration(t.audio_specs?.duration || '0:00');
                 });
 
                 // Calculate version to primary mapping
@@ -159,11 +154,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 const bpmB = Number(b.metadata?.bpm) || 0;
                 res = bpmA - bpmB;
             } else if (sortBy === 'duration') {
-                const parseDur = (d: string) => {
-                    const p = d.split(':').map(Number);
-                    return p.length === 2 ? p[0] * 60 + p[1] : 0;
-                };
-                res = parseDur(a.audio_specs?.duration || '0:00') - parseDur(b.audio_specs?.duration || '0:00');
+                res = parseDuration(a.audio_specs?.duration || '0:00') - parseDuration(b.audio_specs?.duration || '0:00');
             } else if (sortBy === 'bitrate') {
                 const brA = parseInt(a.audio_specs?.bitrate || '0');
                 const brB = parseInt(b.audio_specs?.bitrate || '0');

@@ -6,6 +6,7 @@ import { TrackItem } from '../../types/music';
 import { Play, ListPlus, Plus, FolderPlus, Zap, User } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
+import { getInitials, getMutedVisualStyle, seedFromArtistName } from '../../utils/collectionVisuals';
 
 
 interface ArtistGroup {
@@ -96,15 +97,33 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({ onNavigate }) => {
         ]);
     };
 
-    const gridItems: GridItem[] = artists.map(artist => ({
-        id: artist.name,
-        title: artist.name,
-        subtitle: `${artist.tracks.length} tracks reported`,
-        imageDetails: artist.tracks[0]?.artworks?.album_artwork?.[0] || artist.tracks[0]?.artworks?.track_artwork?.[0],
-        icon: <User size={48} className="text-white/20 group-hover:text-dominant transition-colors group-hover:scale-110 duration-700" />,
-        onClick: () => onNavigate('ArtistDetail', artist.name),
-        onContextMenu: (e) => onRightClick(e, artist)
-    }));
+    const gridItems: GridItem[] = artists.map(artist => {
+        const palette = getMutedVisualStyle(seedFromArtistName(artist.name));
+        const initials = getInitials(artist.name);
+        const initialsSizeClass = initials.length > 4 ? 'text-2xl' : 'text-4xl';
+        return {
+            id: artist.name,
+            title: artist.name,
+            subtitle: `${artist.tracks.length} tracks reported`,
+            visualToken: {
+                style: {
+                    background: palette.background,
+                    borderColor: palette.borderColor
+                },
+                symbol: (
+                    <div className="flex flex-col items-center gap-2">
+                        <span className={`${initialsSizeClass} font-black tracking-tight`} style={{ color: palette.accentColor }}>
+                            {initials}
+                        </span>
+                        <User size={18} style={{ color: palette.mutedTextColor }} />
+                    </div>
+                ),
+                label: 'Artist',
+            },
+            onClick: () => onNavigate('ArtistDetail', artist.name),
+            onContextMenu: (e) => onRightClick(e, artist)
+        };
+    });
 
     return (
         <CollectionGridView

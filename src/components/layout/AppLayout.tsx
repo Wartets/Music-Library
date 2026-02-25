@@ -7,8 +7,9 @@ import { MetadataEditor } from '../shared/MetadataEditor';
 import { ContextPanel } from './ContextPanel';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ContextMenu } from '../shared/ContextMenu';
-import { UIProvider, useUI } from '../../contexts/UIContext';
-import { ThemeProvider, useTheme } from '../../contexts/ThemeContext';
+import { useUI } from '../../contexts/UIContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { MobileTabBar } from './MobileTabBar';
 
 export type ViewType = 'Dashboard' | 'AllTracks' | 'DetailedHistory' | 'Albums' | 'Artists' | 'Genres' | 'Years' | 'Folders' | 'Formats' | 'Favorites' | 'Playlists' | 'Settings' | 'AlbumDetail' | 'ArtistDetail' | 'SongDetail' | 'BigScreen' | 'Queue';
 
@@ -47,21 +48,17 @@ export const AppLayout: React.FC = () => {
     };
 
     return (
-        <UIProvider>
-            <ThemeProvider>
-                <AppContent
-                    history={history}
-                    historyIndex={historyIndex}
-                    currentView={currentView}
-                    viewData={viewData}
-                    navigate={navigate}
-                    goBack={goBack}
-                    goForward={goForward}
-                    showContext={showContext}
-                    setShowContext={setShowContext}
-                />
-            </ThemeProvider>
-        </UIProvider>
+        <AppContent
+            history={history}
+            historyIndex={historyIndex}
+            currentView={currentView}
+            viewData={viewData}
+            navigate={navigate}
+            goBack={goBack}
+            goForward={goForward}
+            showContext={showContext}
+            setShowContext={setShowContext}
+        />
     );
 };
 
@@ -118,10 +115,10 @@ const AppContent: React.FC<any> = ({
         <div className="h-screen w-full flex flex-col overflow-hidden bg-dominant-dark text-white selection:bg-dominant-light selection:text-white">
             <div className="flex flex-1 overflow-hidden relative">
                 <Sidebar currentView={currentView} onNavigate={(v) => navigate(v, null)} />
-                <div className="flex-1 flex flex-col overflow-hidden relative">
+                <div className={`flex-1 flex flex-col overflow-hidden relative ${currentView !== 'BigScreen' ? 'pb-[10.25rem] md:pb-0' : 'pb-0'}`}>
                     {/* Navigation Bar - Superimposed, no background, fixed position */}
                     {currentView !== 'BigScreen' && (
-                        <div className="fixed top-6 left-72 z-40 flex items-center gap-2 pointer-events-none">
+                        <div className="hidden md:flex fixed top-6 left-72 z-40 items-center gap-2 pointer-events-none">
                             <button
                                 onClick={goBack}
                                 disabled={historyIndex === 0}
@@ -145,7 +142,10 @@ const AppContent: React.FC<any> = ({
                 {showContext && <ContextPanel isOpen={showContext} onClose={() => setShowContext(false)} />}
             </div>
             {currentView !== 'BigScreen' && (
-                <PlayerBar onNavigate={navigate} onToggleContext={() => setShowContext(!showContext)} />
+                <>
+                    <PlayerBar onNavigate={navigate} onToggleContext={() => setShowContext(!showContext)} />
+                    <MobileTabBar currentView={currentView} onNavigate={(view) => navigate(view, null)} />
+                </>
             )}
             <MetadataEditor />
 

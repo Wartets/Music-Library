@@ -10,7 +10,7 @@ export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
     const versions = track.versions || [track];
 
     return (
-        <div className="h-full flex flex-col p-8 overflow-y-auto custom-scrollbar">
+        <div className="h-full flex flex-col px-8 pb-8 pt-24 overflow-y-auto custom-scrollbar">
             <div className="flex flex-col md:flex-row gap-12 mb-12">
                 <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/5 flex-shrink-0">
                     <ArtworkImage details={artwork} alt={track.metadata?.title} className="w-full h-full object-cover" />

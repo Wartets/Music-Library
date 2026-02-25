@@ -5,6 +5,7 @@ import { useUI } from '../../contexts/UIContext';
 import { Play, ListPlus, FolderPlus, Calendar, Hash } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
+import { getMutedVisualStyle, seedFromYear } from '../../utils/collectionVisuals';
 
 interface YearsViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -98,15 +99,29 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
         ]);
     };
 
-    const gridItems: GridItem[] = years.map(yearGroup => ({
-        id: yearGroup.name,
-        title: yearGroup.name,
-        subtitle: `${yearGroup.tracks.length} tracks`,
-        isTextIcon: true,
-        imageDetails: yearGroup.name === 'Unknown Year' ? '?' : yearGroup.name.slice(-2),
-        onClick: () => onNavigate('AllTracks', { filter: { type: 'year', value: yearGroup.name } }),
-        onContextMenu: (e) => onRightClick(e, yearGroup)
-    }));
+    const gridItems: GridItem[] = years.map(yearGroup => {
+        const palette = getMutedVisualStyle(seedFromYear(yearGroup.name));
+        return {
+            id: yearGroup.name,
+            title: yearGroup.name,
+            subtitle: `${yearGroup.tracks.length} tracks`,
+            visualToken: {
+                style: {
+                    background: palette.background,
+                    borderColor: palette.borderColor
+                },
+                symbol: (
+                    <span className="font-black tracking-tight" style={{ color: palette.accentColor }}>
+                        {yearGroup.name === 'Unknown Year' ? '?' : yearGroup.name.slice(-2)}
+                    </span>
+                ),
+                label: yearGroup.name === 'Unknown Year' ? 'Unknown' : 'Year',
+                symbolClassName: 'text-5xl leading-none'
+            },
+            onClick: () => onNavigate('AllTracks', { filter: { type: 'year', value: yearGroup.name } }),
+            onContextMenu: (e) => onRightClick(e, yearGroup)
+        };
+    });
 
     return (
         <CollectionGridView

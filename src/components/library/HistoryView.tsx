@@ -6,6 +6,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { TrackItem } from '../../types/music';
 import { VirtualList } from '../shared/VirtualList';
 import { persistenceService } from '../../services/persistence';
+import { ArtworkImage } from '../shared/ArtworkImage';
 
 
 interface HistoryViewProps {
@@ -67,7 +68,11 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                                     const art = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
                                     return (
                                         <div className="w-8 h-8 rounded-md bg-white/5 overflow-hidden">
-                                            {art ? <img src={'file://' + art.path} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px]">♪</div>}
+                                            {art ? (
+                                                <ArtworkImage details={art} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-[10px]">?</div>
+                                            )}
                                         </div>
                                     );
                                 case 'title':

@@ -1,9 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
 import { PlayerState, TrackItem } from '../types/music';
-import { audioEngine } from '../services/audioEngine';
+import { audioEngine, AudioPlaybackError } from '../services/audioEngine';
 import { persistenceService } from '../services/persistence';
 import { useLibrary } from './LibraryContext';
 import { useUI } from './UIContext';
+import { rankTrackVersions } from '../utils/versionUtils';
+
+interface PlayTrackOptions {
+    skipHistoryPush?: boolean;
+    suppressHistoryLog?: boolean;
+    recoveryAttempt?: boolean;
+}
 
 interface PlayerContextProps {
     state: PlayerState;
@@ -59,11 +66,32 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const progressRef = useRef(0);
     const getProgress = useCallback(() => progressRef.current, []);
+    const playTrackLogicRef = useRef<(track: TrackItem, queue?: TrackItem[], options?: PlayTrackOptions) => void>(() => { });
+    const handlePlaybackFailureRef = useRef<(error: Error, failedTrack?: TrackItem | null) => void>(() => { });
+    const recoveryRef = useRef<{ attempted: Set<string>; lastErrorAt: number; lastErrorKey: string }>({
+        attempted: new Set(),
+        lastErrorAt: 0,
+        lastErrorKey: ''
+    });
 
     // Handle initial state restoration from persistence
     const [isRestored, setIsRestored] = useState(false);
     const { state: libState } = useLibrary();
     const { showToast } = useUI();
+
+    const resetRecoveryState = useCallback(() => {
+        recoveryRef.current.attempted.clear();
+        recoveryRef.current.lastErrorAt = 0;
+        recoveryRef.current.lastErrorKey = '';
+    }, []);
+
+    const resolveVersionGroup = useCallback((track: TrackItem): TrackItem[] => {
+        const hash = track.logic?.hash_sha256;
+        const primaryHash = libState.versionToPrimaryMap[hash] || hash;
+        const primary = libState.tracks.find(t => t.logic.hash_sha256 === primaryHash) || track;
+        const versions = primary.versions && primary.versions.length > 0 ? primary.versions : [primary];
+        return rankTrackVersions(versions);
+    }, [libState.tracks, libState.versionToPrimaryMap]);
 
     useEffect(() => {
         if (libState.isLoading || isRestored) return;
@@ -107,13 +135,18 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return () => clearInterval(timer);
     }, [isRestored]);
 
-    const playTrackLogic = useCallback((track: TrackItem, queue?: TrackItem[]) => {
+    const playTrackLogic = useCallback((track: TrackItem, queue?: TrackItem[], options: PlayTrackOptions = {}) => {
         const currentState = stateRef.current;
         const newQueue = queue || currentState.queue;
+        const { skipHistoryPush = false, suppressHistoryLog = false, recoveryAttempt = false } = options;
 
         const history = [...currentState.history];
-        if (currentState.currentTrack && currentState.currentTrack.logic.hash_sha256 !== track.logic.hash_sha256) {
+        if (!skipHistoryPush && currentState.currentTrack && currentState.currentTrack.logic.hash_sha256 !== track.logic.hash_sha256) {
             history.push(currentState.currentTrack);
+        }
+
+        if (!recoveryAttempt) {
+            resetRecoveryState();
         }
 
         progressRef.current = 0;
@@ -125,11 +158,148 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             history,
         }));
 
-        persistenceService.addToHistory(track.logic.hash_sha256);
-        audioEngine.play(track).catch(_err => {
-            // Already handled by onError but good for safety
+        if (!suppressHistoryLog) {
+            persistenceService.addToHistory(track.logic.hash_sha256);
+        }
+
+        audioEngine.play(track).catch((err) => {
+            handlePlaybackFailureRef.current(err as Error, track);
         });
+    }, [resetRecoveryState]);
+
+    useEffect(() => {
+        playTrackLogicRef.current = playTrackLogic;
+    }, [playTrackLogic]);
+
+    const describePlaybackError = useCallback((error: Error): { title: string; message: string } => {
+        if (error instanceof AudioPlaybackError) {
+            switch (error.code) {
+                case 'autoplay_blocked':
+                    return {
+                        title: 'Playback blocked',
+                        message: 'Browser autoplay policy blocked playback. Click Play again to continue.'
+                    };
+                case 'format_unsupported':
+                    return {
+                        title: 'Unsupported format',
+                        message: 'This file format is not supported here. Trying an alternative when available.'
+                    };
+                case 'media_network':
+                    return {
+                        title: 'Source unavailable',
+                        message: 'The audio file could not be reached. Trying another version.'
+                    };
+                case 'media_decode':
+                    return {
+                        title: 'Decode failed',
+                        message: 'The file appears corrupted or unreadable. Trying another version.'
+                    };
+                case 'playback_interrupted':
+                    return {
+                        title: 'Playback interrupted',
+                        message: 'Playback was interrupted unexpectedly. Retrying on another source.'
+                    };
+                default:
+                    return {
+                        title: 'Playback error',
+                        message: error.message || 'An unknown playback error occurred.'
+                    };
+            }
+        }
+
+        const lower = (error.message || '').toLowerCase();
+        if (lower.includes('network')) {
+            return { title: 'Network issue', message: 'Could not access the audio source. Trying fallback track.' };
+        }
+        if (lower.includes('decode')) {
+            return { title: 'Decode issue', message: 'Audio decode failed. Trying fallback track.' };
+        }
+        if (lower.includes('not supported')) {
+            return { title: 'Unsupported format', message: 'Format unsupported. Trying another version if possible.' };
+        }
+
+        return { title: 'Playback error', message: error.message || 'Unexpected playback failure.' };
     }, []);
+
+    const handlePlaybackFailure = useCallback((error: Error, failedTrack?: TrackItem | null) => {
+        const cur = stateRef.current;
+        const failed = failedTrack || cur.currentTrack;
+
+        if (!failed) {
+            const fallback = describePlaybackError(error);
+            showToast(fallback.message, 'error', { title: fallback.title });
+            return;
+        }
+
+        const failedHash = failed.logic.hash_sha256;
+        const now = Date.now();
+        const errKey = `${failedHash}|${error.name}|${error.message}`;
+        if (
+            recoveryRef.current.lastErrorKey === errKey &&
+            now - recoveryRef.current.lastErrorAt < 1200
+        ) {
+            return;
+        }
+        recoveryRef.current.lastErrorKey = errKey;
+        recoveryRef.current.lastErrorAt = now;
+        recoveryRef.current.attempted.add(failedHash);
+
+        const versions = resolveVersionGroup(failed);
+        const nextVersion = versions.find(version => {
+            const hash = version.logic.hash_sha256;
+            return hash !== failedHash && !recoveryRef.current.attempted.has(hash);
+        });
+
+        if (nextVersion) {
+            recoveryRef.current.attempted.add(nextVersion.logic.hash_sha256);
+            showToast(
+                `${failed.metadata?.title || failed.logic.track_name} failed, trying another version.`,
+                'warning',
+                { title: 'Playback issue', subtle: true, dedupeKey: `version-fallback-${failedHash}`, durationMs: 2000 }
+            );
+            playTrackLogicRef.current(nextVersion, cur.queue, {
+                skipHistoryPush: true,
+                suppressHistoryLog: true,
+                recoveryAttempt: true
+            });
+            return;
+        }
+
+        const currentIndex = cur.currentTrack
+            ? cur.queue.findIndex(t => t.logic.hash_sha256 === cur.currentTrack?.logic.hash_sha256)
+            : -1;
+        const nextQueueTrack = cur.queue
+            .slice(currentIndex + 1)
+            .find(track => !recoveryRef.current.attempted.has(track.logic.hash_sha256));
+
+        if (nextQueueTrack) {
+            recoveryRef.current.attempted.add(nextQueueTrack.logic.hash_sha256);
+            showToast(
+                `${failed.metadata?.title || failed.logic.track_name} is unavailable, skipping to next track.`,
+                'warning',
+                { title: 'Track skipped', subtle: true, dedupeKey: `queue-skip-${failedHash}`, durationMs: 2200 }
+            );
+            playTrackLogicRef.current(nextQueueTrack, cur.queue, {
+                skipHistoryPush: true,
+                suppressHistoryLog: true,
+                recoveryAttempt: true
+            });
+            return;
+        }
+
+        const fallback = describePlaybackError(error);
+        showToast(
+            `${fallback.message} No playable fallback was found.`,
+            'error',
+            { title: fallback.title, dedupeKey: `playback-stop-${failedHash}`, durationMs: 4500 }
+        );
+        audioEngine.pause();
+        setState(prev => ({ ...prev, isPlaying: false }));
+    }, [describePlaybackError, resolveVersionGroup, showToast]);
+
+    useEffect(() => {
+        handlePlaybackFailureRef.current = handlePlaybackFailure;
+    }, [handlePlaybackFailure]);
 
     useEffect(() => {
         // Tie to audioEngine events
@@ -141,7 +311,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             const cur = stateRef.current;
             if (cur.repeat === 'one' && cur.currentTrack) {
                 audioEngine.seek(0);
-                audioEngine.play();
+                audioEngine.play().catch(err => {
+                    handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
+                });
                 return;
             }
 
@@ -158,14 +330,16 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             }
         };
 
-        audioEngine.onPlay = () => setState(prev => ({ ...prev, isPlaying: true }));
+        audioEngine.onPlay = () => {
+            resetRecoveryState();
+            setState(prev => ({ ...prev, isPlaying: true }));
+        };
         audioEngine.onPause = () => setState(prev => ({ ...prev, isPlaying: false }));
 
         audioEngine.onError = (error) => {
-            showToast(error.message, 'error');
-            setState(prev => ({ ...prev, isPlaying: false }));
+            handlePlaybackFailureRef.current(error, stateRef.current.currentTrack);
         };
-    }, [playTrackLogic, showToast]);
+    }, [playTrackLogic, resetRecoveryState]);
 
     const playTrack = useCallback((track: TrackItem, queue?: TrackItem[]) => {
         playTrackLogic(track, queue);
@@ -176,7 +350,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (cur.isPlaying) {
             audioEngine.pause();
         } else if (cur.currentTrack) {
-            audioEngine.play();
+            audioEngine.play().catch(err => {
+                handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
+            });
         }
     }, []);
 
@@ -185,7 +361,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         if (cur.repeat === 'one' && cur.currentTrack) {
             audioEngine.seek(0);
-            audioEngine.play();
+            audioEngine.play().catch(err => {
+                handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
+            });
             return;
         }
 
@@ -219,7 +397,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 queue,
                 history: newHistory
             }));
-            audioEngine.play(prevTrack);
+            audioEngine.play(prevTrack).catch(err => {
+                handlePlaybackFailureRef.current(err as Error, prevTrack);
+            });
         }
     }, []);
 

@@ -135,7 +135,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
     return (
         <footer
-            className={`${isCompact ? 'h-20' : 'h-24'} backdrop-blur-3xl border-t border-white/5 flex flex-col z-50 transition-all duration-1000 relative overflow-hidden`}
+            className={`${isCompact ? 'h-20' : 'h-24'} fixed md:static bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[60] transition-all duration-1000 overflow-hidden`}
             style={{ backgroundColor: `${currentPalette.dominantDark}bb` }}
         >
             {/* Subtle bottom glow */}
@@ -248,7 +248,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={toggleShuffle}
                             disabled={!track}
-                            className={`transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`hidden sm:inline-flex transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
                         >
                             <IconShuffle active={state.shuffle} />
@@ -299,7 +299,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
                             disabled={!track}
-                            className={`transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`hidden sm:inline-flex transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Repeat: ${state.repeat}`}
                         >
                             <IconRepeat mode={state.repeat} />
