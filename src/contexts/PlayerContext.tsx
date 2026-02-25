@@ -65,7 +65,10 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, [state]);
 
     const progressRef = useRef(0);
-    const getProgress = useCallback(() => progressRef.current, []);
+    const getProgress = useCallback(() => {
+        const value = Number(progressRef.current);
+        return Number.isFinite(value) ? value : 0;
+    }, []);
     const playTrackLogicRef = useRef<(track: TrackItem, queue?: TrackItem[], options?: PlayTrackOptions) => void>(() => { });
     const handlePlaybackFailureRef = useRef<(error: Error, failedTrack?: TrackItem | null) => void>(() => { });
     const recoveryRef = useRef<{ attempted: Set<string>; lastErrorAt: number; lastErrorKey: string }>({
@@ -98,9 +101,20 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         const saved = persistenceService.getPlaybackState();
         if (saved) {
-            const track = libState.tracks.find((t: TrackItem) => t.logic.hash_sha256 === saved.trackId);
-            const queue = saved.queueIds.map((id: string) => libState.tracks.find((t: TrackItem) => t.logic.hash_sha256 === id)).filter(Boolean) as TrackItem[];
-            const history = saved.historyIds.map((id: string) => libState.tracks.find((t: TrackItem) => t.logic.hash_sha256 === id)).filter(Boolean) as TrackItem[];
+            const toPrimaryId = (id: string | null | undefined) => id ? (libState.versionToPrimaryMap[id] || id) : null;
+            const findTrackByAnyId = (id: string | null | undefined) => {
+                const primaryId = toPrimaryId(id);
+                if (!primaryId) return null;
+                return libState.tracks.find((t: TrackItem) => t.logic.hash_sha256 === primaryId) || null;
+            };
+
+            const track = findTrackByAnyId(saved.trackId);
+            const queue = saved.queueIds
+                .map((id: string) => findTrackByAnyId(id))
+                .filter(Boolean) as TrackItem[];
+            const history = saved.historyIds
+                .map((id: string) => findTrackByAnyId(id))
+                .filter(Boolean) as TrackItem[];
 
             setState(prev => ({
                 ...prev,
@@ -112,12 +126,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
             if (track) {
                 audioEngine.setVolume(saved.volume ?? state.volume);
-                audioEngine.load(track, saved.position);
-                progressRef.current = saved.position;
+                const savedPosition = Number(saved.position);
+                const safePosition = Number.isFinite(savedPosition) ? Math.max(0, savedPosition) : 0;
+                audioEngine.load(track, safePosition);
+                progressRef.current = safePosition;
             }
         }
         setIsRestored(true);
-    }, [libState.isLoading, libState.tracks, isRestored]);
+    }, [libState.isLoading, libState.tracks, libState.versionToPrimaryMap, isRestored]);
 
     // Save state effect
     useEffect(() => {
@@ -304,7 +320,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     useEffect(() => {
         // Tie to audioEngine events
         audioEngine.onTimeUpdate = (currentTime) => {
-            progressRef.current = currentTime;
+            const safeTime = Number(currentTime);
+            progressRef.current = Number.isFinite(safeTime) ? Math.max(0, safeTime) : 0;
         };
 
         audioEngine.onEnded = () => {

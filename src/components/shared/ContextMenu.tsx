@@ -51,26 +51,46 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
     const handleMouseEnter = (item: ContextMenuItem, _index: number, e: React.MouseEvent) => {
         if (item.subItems) {
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setActiveSubMenu({
-                items: item.subItems,
-                y: rect.top,
-                x: rect.right
+            setActiveSubMenu(prev => {
+                if (prev?.items === item.subItems) return prev;
+                return {
+                    items: item.subItems!,
+                    y: rect.top,
+                    x: rect.right
+                };
             });
         } else {
             setActiveSubMenu(null);
         }
     };
 
+    const handleMenuMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        const related = e.relatedTarget as Node | null;
+        if (related && subMenuRef.current?.contains(related)) {
+            return;
+        }
+        setActiveSubMenu(null);
+    };
+
+    const handleSubMenuMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        const related = e.relatedTarget as Node | null;
+        if (related && menuRef.current?.contains(related)) {
+            return;
+        }
+        setActiveSubMenu(null);
+    };
+
     return (
         <>
             <div
                 ref={menuRef}
-                className="fixed z-[100] w-56 bg-[#1a1a1a]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-150"
+                className="fixed z-[100] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
                 style={{
                     left: adjustedX,
                     top: adjustedY,
                     maxHeight: 'calc(100vh - 40px)'
                 }}
+                onMouseLeave={handleMenuMouseLeave}
             >
                 {items.map((item, idx) => (
                     <React.Fragment key={idx}>
@@ -88,7 +108,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                 onMouseEnter={(e) => handleMouseEnter(item, idx, e)}
                                 disabled={item.disabled}
                                 className={`
-                                    w-full flex items-center gap-3 px-3 py-2 text-xs font-bold transition-all relative group
+                                    w-full flex items-center gap-3 px-3 py-2 text-xs font-bold transition-colors relative group
                                     ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-300 hover:bg-white/10 hover:text-white'}
                                     ${item.disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
                                 `}
@@ -108,12 +128,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
             {activeSubMenu && (
                 <div
                     ref={subMenuRef}
-                    className="fixed z-[101] w-56 bg-[#1a1a1a]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-left-2 duration-150"
+                    className="fixed z-[101] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
                     style={{
                         left: Math.min(activeSubMenu.x - 4, window.innerWidth - menuWidth - 10),
                         top: Math.min(activeSubMenu.y, window.innerHeight - (activeSubMenu.items.length * 36 + 20)),
                         maxHeight: 'calc(100vh - 40px)'
                     }}
+                    onMouseLeave={handleSubMenuMouseLeave}
                 >
                     {activeSubMenu.items.map((sub, sidx) => (
                         <button
@@ -123,7 +144,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                 sub.onClick();
                                 onClose();
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
                         >
                             <span className="flex-1 text-left truncate">{sub.label}</span>
                         </button>

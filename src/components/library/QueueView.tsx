@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { useLibrary } from '../../contexts/LibraryContext';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import {
     Play, Trash2, GripVertical, ListMusic, History,
@@ -9,6 +10,7 @@ import {
 import { formatDuration, parseDuration } from '../../utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUI } from '../../contexts/UIContext';
+import { persistenceService } from '../../services/persistence';
 import {
     DndContext,
     closestCenter,
@@ -51,6 +53,11 @@ const SortableTrackItem: React.FC<SortableItemProps> = ({ track, index, curIdx, 
         zIndex: isDragging ? 100 : 1,
     };
 
+    const artwork = track.artworks?.track_artwork?.[0]
+        || track.artworks?.album_artwork?.[0]
+        || track.versions?.find((v: any) => v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0])?.artworks?.track_artwork?.[0]
+        || track.versions?.find((v: any) => v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0])?.artworks?.album_artwork?.[0];
+
     return (
         <motion.div
             ref={setNodeRef}
@@ -72,7 +79,7 @@ const SortableTrackItem: React.FC<SortableItemProps> = ({ track, index, curIdx, 
             </button>
 
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/5 group-hover:border-white/10 transition-colors shadow-lg">
-                <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} />
+                <ArtworkImage details={artwork} alt={track.metadata?.title || track.logic.track_name} />
             </div>
 
             <div className="flex-1 min-w-0">
@@ -116,6 +123,7 @@ export const QueueView: React.FC = () => {
         setAutoplay,
         saveQueueAsPlaylist
     } = usePlayer();
+    const { state: libState } = useLibrary();
     const { showToast } = useUI();
 
     const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue');
@@ -137,13 +145,33 @@ export const QueueView: React.FC = () => {
 
     const currentTrack = playerState.currentTrack;
     const queue = playerState.queue;
-    const history = playerState.history;
+    const history = useMemo(() => {
+        const historyIds = persistenceService.getHistoryIds();
+        const trackMap = new Map<string, any>();
+        libState.tracks.forEach(track => {
+            trackMap.set(track.logic.hash_sha256, track);
+        });
+
+        return historyIds
+            .map(id => {
+                const primaryId = libState.versionToPrimaryMap[id] || id;
+                return trackMap.get(primaryId) || null;
+            })
+            .filter((track): track is any => Boolean(track));
+    }, [libState.tracks, libState.versionToPrimaryMap, playerState.history]);
 
     const curIdx = currentTrack
         ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256)
         : -1;
 
     const nextTracksRaw = curIdx !== -1 ? queue.slice(curIdx + 1) : queue;
+
+    const getArtworkForTrack = (track: any) => {
+        const fromTrack = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
+        if (fromTrack) return fromTrack;
+        const fromVersion = track.versions?.find((v: any) => v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0]);
+        return fromVersion?.artworks?.track_artwork?.[0] || fromVersion?.artworks?.album_artwork?.[0];
+    };
 
     const filteredQueue = useMemo(() => {
         let items = nextTracksRaw.map((track, i) => ({ ...track, originalIndex: i, id: track.logic.hash_sha256 + '-' + i }));
@@ -171,7 +199,8 @@ export const QueueView: React.FC = () => {
 
     const queueWithTime = useMemo(() => {
         let cumulativeTime = 0;
-        const currentProgress = getProgress();
+        const currentProgressRaw = getProgress();
+        const currentProgress = Number.isFinite(currentProgressRaw) ? currentProgressRaw : 0;
         const currentDuration = currentTrack ? parseDuration(currentTrack.audio_specs?.duration) : 0;
         const remainingCurrent = Math.max(0, currentDuration - currentProgress);
         cumulativeTime = remainingCurrent;
@@ -185,7 +214,9 @@ export const QueueView: React.FC = () => {
 
     const totalQueueDuration = useMemo(() => {
         const currentDuration = currentTrack ? parseDuration(currentTrack.audio_specs?.duration) : 0;
-        const remainingCurrent = currentTrack ? Math.max(0, currentDuration - getProgress()) : 0;
+        const progressRaw = getProgress();
+        const progress = Number.isFinite(progressRaw) ? progressRaw : 0;
+        const remainingCurrent = currentTrack ? Math.max(0, currentDuration - progress) : 0;
         const upcomingDuration = nextTracksRaw.reduce((sum, t) => sum + parseDuration(t.audio_specs?.duration), 0);
         return remainingCurrent + upcomingDuration;
     }, [nextTracksRaw, currentTrack, getProgress, clockTick]);
@@ -329,7 +360,7 @@ export const QueueView: React.FC = () => {
                                     <div className="bg-white/5 border border-white/10 rounded-3xl p-6 flex items-center gap-8 shadow-2xl overflow-hidden relative group">
                                         <div className="absolute inset-0 bg-dominant/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                         <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 ring-1 ring-white/10 relative z-10">
-                                            <ArtworkImage details={currentTrack.artworks?.track_artwork?.[0] || currentTrack.artworks?.album_artwork?.[0]} />
+                                            <ArtworkImage details={getArtworkForTrack(currentTrack)} alt={currentTrack.metadata?.title || currentTrack.logic.track_name} />
                                         </div>
                                         <div className="flex-1 min-w-0 relative z-10">
                                             <h3 className="text-3xl font-black text-white truncate leading-tight">{currentTrack.metadata?.title || currentTrack.logic.track_name}</h3>
@@ -412,7 +443,7 @@ export const QueueView: React.FC = () => {
                                         onClick={() => playTrack(track)}
                                     >
                                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
-                                            <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} />
+                                            <ArtworkImage details={getArtworkForTrack(track)} alt={track.metadata?.title || track.logic.track_name} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-sm font-bold text-white truncate">{track.metadata?.title || track.logic.track_name}</div>

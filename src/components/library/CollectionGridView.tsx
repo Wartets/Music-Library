@@ -105,6 +105,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                             ) : item.imageDetails ? (
                                 <ArtworkImage
                                     details={item.imageDetails}
+                                    alt={item.title}
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                 />
                             ) : usesVisualToken ? (

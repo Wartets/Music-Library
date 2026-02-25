@@ -72,6 +72,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
                             <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
                                 <ArtworkImage
                                     details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]}
+                                    alt={track.metadata?.title || track.logic.track_name}
                                     className="w-full h-full object-cover"
                                 />
                             </div>

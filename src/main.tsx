@@ -25,3 +25,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </ErrorBoundary>
     </React.StrictMode>
 );
+
+if (typeof window !== 'undefined') {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker
+                .register(`${import.meta.env.BASE_URL}sw.js`)
+                .catch(() => {
+                    // Ignore service-worker registration errors in unsupported environments.
+                });
+        });
+    }
+
+    if ('storage' in navigator && 'persist' in navigator.storage) {
+        navigator.storage.persist().catch(() => {
+            // Persistence is best-effort.
+        });
+    }
+}

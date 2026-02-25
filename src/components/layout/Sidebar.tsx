@@ -123,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                                                 }}
                                             >
                                                 <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
-                                                    <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} />
+                                                    <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-white text-xs font-bold truncate">{track.metadata?.title || track.logic.track_name}</div>

@@ -50,7 +50,7 @@ export const MainView: React.FC<MainViewProps> = ({ currentView, viewData, onNav
             case 'Settings':
                 return <SettingsView initialTab={viewData?.tab} />;
             case 'BigScreen':
-                return <BigScreenView onBack={() => onNavigate('Dashboard')} />;
+                return <BigScreenView onBack={() => onNavigate('Dashboard')} onNavigate={onNavigate} />;
             case 'Queue':
                 return <QueueView />;
             default:

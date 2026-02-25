@@ -401,7 +401,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                                         <div className="flex items-center min-w-0 flex-1 gap-5">
                                                             <div className="w-12 h-12 rounded-xl bg-black/50 overflow-hidden flex items-center justify-center text-xs text-white/30 flex-shrink-0 border border-white/10 group-hover:border-white/20 transition-all">
-                                                                <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} />
+                                                                <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} />
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <h4 className="text-white font-black text-sm truncate group-hover:text-dominant-light transition-colors">{track.metadata?.title || track.logic.track_name}</h4>

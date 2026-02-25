@@ -69,7 +69,7 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
             title: folder.name,
             subtitle: `${folder.tracks.length} tracks`,
             imageDetails: artworkDetails,
-            visualToken: {
+            visualToken: artworkDetails ? undefined : {
                 style: {
                     background: palette.background,
                     borderColor: palette.borderColor

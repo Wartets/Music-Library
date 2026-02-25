@@ -145,6 +145,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                 <div key={col.id} className={`${responsiveClass} w-10 h-10 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/5 group-hover:border-white/20 transition-all`}>
                                     <ArtworkImage
                                         details={item.artworks?.track_artwork?.[0] || item.artworks?.album_artwork?.[0]}
+                                        alt={item.metadata?.title || item.logic?.track_name}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                     />
                                 </div>
@@ -261,7 +262,11 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
             <div className={`mb-10 flex flex-col md:flex-row items-center md:items-end gap-8 ${artworkPath ? 'mb-12' : 'mb-6'}`}>
                 {artworkPath ? (
                     <div className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 group relative">
-                        <img src={artworkPath} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <ArtworkImage
+                            src={artworkPath}
+                            alt={title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                 ) : headerIcon ? (

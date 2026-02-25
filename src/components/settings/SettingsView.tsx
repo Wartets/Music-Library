@@ -307,6 +307,45 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${persistenceService.get('ui_compact_player') === true ? 'left-7 bg-black' : 'left-1'}`}></div>
                                             </button>
                                         </div>
+                                        <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
+                                            <div>
+                                                <div className="font-bold text-sm text-white">Now Playing Notifications</div>
+                                                <div className="text-[10px] text-gray-500">Show track notifications while the app is in background.</div>
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    const current = persistenceService.get('ui_now_playing_notifications') === true;
+                                                    if (current) {
+                                                        persistenceService.set('ui_now_playing_notifications', false);
+                                                        window.dispatchEvent(new Event('storage'));
+                                                        return;
+                                                    }
+
+                                                    if (!('Notification' in window)) {
+                                                        alert('Notifications are not supported in this browser.');
+                                                        return;
+                                                    }
+
+                                                    if (Notification.permission === 'denied') {
+                                                        alert('Notifications are blocked for this site. Please re-enable them in browser settings.');
+                                                        return;
+                                                    }
+
+                                                    if (Notification.permission === 'default') {
+                                                        const permission = await Notification.requestPermission();
+                                                        if (permission !== 'granted') {
+                                                            return;
+                                                        }
+                                                    }
+
+                                                    persistenceService.set('ui_now_playing_notifications', true);
+                                                    window.dispatchEvent(new Event('storage'));
+                                                }}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${persistenceService.get('ui_now_playing_notifications') === true ? 'bg-dominant' : 'bg-white/10'}`}
+                                            >
+                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${persistenceService.get('ui_now_playing_notifications') === true ? 'left-7 bg-black' : 'left-1'}`}></div>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -455,7 +494,23 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                 </div>
 
                                 <div className="mb-4">
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Track Selection</label>
+                                    <div className="flex items-center justify-between gap-3 mb-2">
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Track Selection</label>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setSelectedHashes(new Set(metadataCandidates.map(t => t.logic.hash_sha256)))}
+                                                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                                            >
+                                                Select visible
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedHashes(new Set())}
+                                                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-all"
+                                            >
+                                                Clear
+                                            </button>
+                                        </div>
+                                    </div>
                                     <input
                                         type="text"
                                         value={metadataSearch}
@@ -489,13 +544,26 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
 
                                 <div className="mt-6 flex items-center justify-between gap-4">
                                     <p className="text-xs text-gray-500">{selectedHashes.size} track(s) selected</p>
-                                    <button
-                                        onClick={openMetadataEditor}
-                                        disabled={selectedHashes.size === 0}
-                                        className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${selectedHashes.size === 0 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-dominant text-on-dominant hover:bg-dominant-light'}`}
-                                    >
-                                        Open Advanced Editor
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {playerState.currentTrack && (
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedHashes(new Set([playerState.currentTrack!.logic.hash_sha256]));
+                                                    setEditingTracks([playerState.currentTrack!]);
+                                                }}
+                                                className="px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-white/5 text-gray-300 hover:bg-white/10"
+                                            >
+                                                Edit Now Playing
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={openMetadataEditor}
+                                            disabled={selectedHashes.size === 0}
+                                            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${selectedHashes.size === 0 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-dominant text-on-dominant hover:bg-dominant-light'}`}
+                                        >
+                                            Open Advanced Editor
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

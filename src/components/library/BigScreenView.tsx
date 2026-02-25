@@ -3,9 +3,11 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { Visualizer } from '../player/Visualizer';
 import { Maximize2, Minimize2, X } from 'lucide-react';
 import { formatDuration } from '../../utils/formatters';
+import { ViewType } from '../layout/AppLayout';
+import { ArtworkImage } from '../shared/ArtworkImage';
 
-export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { state, togglePlay, playNext, playPrevious, seek, getProgress } = usePlayer();
+export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: ViewType, data?: any) => void }> = ({ onBack, onNavigate }) => {
+    const { state, togglePlay, playNext, playPrevious, seek, getProgress, toggleShuffle, setRepeat, seekForward, seekBackward } = usePlayer();
     const track = state.currentTrack;
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [localProgress, setLocalProgress] = useState(0);
@@ -47,6 +49,14 @@ export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onBack]);
 
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(Boolean(document.fullscreenElement));
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
     if (!track) {
         return (
             <div className="h-full flex flex-col items-center justify-center bg-black text-white">
@@ -68,11 +78,17 @@ export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
     };
 
-    const artworkPath = track.artworks?.track_artwork?.[0]?.path || track.artworks?.album_artwork?.[0]?.path;
+    const handleBackgroundDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a, input, textarea')) return;
+        toggleFullscreen();
+    };
+
+    const artworkDetails = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
     const dominantColor = track.artworks?.track_artwork?.[0]?.dominant_color || track.artworks?.album_artwork?.[0]?.dominant_color || '#121212';
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden select-none">
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden select-none" onDoubleClick={handleBackgroundDoubleClick}>
             {/* Background Glow */}
             <div
                 className="absolute inset-0 opacity-40 blur-[120px] transition-colors duration-1000 scale-150"
@@ -112,11 +128,11 @@ export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     {/* Artwork & Visualizer Container */}
                     <div className="relative group perspective-1000">
                         <div className="w-80 h-80 md:w-[450px] md:h-[450px] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 transition-transform duration-700 group-hover:rotate-y-6 group-hover:scale-105">
-                            {artworkPath ? (
-                                <img src={artworkPath} alt="Artwork" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-white/5 flex items-center justify-center text-8xl">♪</div>
-                            )}
+                            <ArtworkImage
+                                details={artworkDetails}
+                                alt={track.metadata?.title || track.logic.track_name}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
 
                         {/* Overlay Visualizer Rings or similar could go here */}
@@ -124,12 +140,18 @@ export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
                     {/* Info & Metadata */}
                     <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl">
-                        <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4 line-clamp-2">
+                        <button
+                            onClick={() => onNavigate('SongDetail', track)}
+                            className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4 line-clamp-2 hover:text-dominant-light transition-colors text-center lg:text-left"
+                        >
                             {track.metadata?.title || track.logic.track_name}
-                        </h1>
-                        <p className="text-xl md:text-3xl text-white/50 font-medium mb-8">
+                        </button>
+                        <button
+                            onClick={() => onNavigate('ArtistDetail', track.metadata?.artists?.[0] || 'Unknown Artist')}
+                            className="text-xl md:text-3xl text-white/50 font-medium mb-8 hover:text-white transition-colors"
+                        >
                             {track.metadata?.artists?.join(', ') || 'Unknown Artist'}
-                        </p>
+                        </button>
 
                         {/* Progress Bar (Big) */}
                         <div className="w-full h-2 bg-white/10 rounded-full mb-4 relative cursor-pointer group" onClick={(e) => {
@@ -187,7 +209,21 @@ export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
 
             {/* Controls (Floating/Overlay) */}
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-10 z-20 opacity-40 hover:opacity-100 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-10 py-5 rounded-full border border-white/10">
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 z-20 opacity-40 hover:opacity-100 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10">
+                <button
+                    onClick={toggleShuffle}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${state.shuffle ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    title="Shuffle"
+                >
+                    SHUF
+                </button>
+                <button
+                    onClick={seekBackward}
+                    className="text-white hover:scale-110 active:scale-95 transition-all"
+                    title="Back 10 seconds"
+                >
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M11 17l-5-5 5-5" /><path d="M18 17l-5-5 5-5" /></svg>
+                </button>
                 <button onClick={playPrevious} className="text-white hover:scale-110 active:scale-95 transition-all">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
                 </button>
@@ -201,7 +237,22 @@ export const BigScreenView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <button onClick={playNext} className="text-white hover:scale-110 active:scale-95 transition-all">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
                 </button>
+                <button
+                    onClick={seekForward}
+                    className="text-white hover:scale-110 active:scale-95 transition-all"
+                    title="Forward 10 seconds"
+                >
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13 17l5-5-5-5" /><path d="M6 17l5-5-5-5" /></svg>
+                </button>
+                <button
+                    onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${state.repeat !== 'none' ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    title={`Repeat: ${state.repeat}`}
+                >
+                    {state.repeat === 'one' ? 'R1' : 'R'}
+                </button>
             </div>
         </div>
     );
 };
+

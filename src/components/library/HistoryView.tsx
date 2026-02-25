@@ -20,8 +20,17 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
     // Map history IDs to actual tracks
     const historyTracks = React.useMemo(() => {
         const historyIds = persistenceService.getHistoryIds();
-        return historyIds.map(id => libState.tracks.find(t => t.logic.hash_sha256 === id)).filter((t): t is TrackItem => !!t);
-    }, [libState.tracks, playerState.history]);
+        const trackMap = new Map<string, TrackItem>();
+        libState.tracks.forEach(track => {
+            trackMap.set(track.logic.hash_sha256, track);
+        });
+        return historyIds
+            .map(id => {
+                const primaryId = libState.versionToPrimaryMap[id] || id;
+                return trackMap.get(primaryId) || null;
+            })
+            .filter((t): t is TrackItem => !!t);
+    }, [libState.tracks, libState.versionToPrimaryMap, playerState.history]);
 
     const handlePlay = (track: TrackItem) => {
         playTrack(track, historyTracks);
@@ -65,11 +74,17 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                             switch (col.id) {
                                 case 'number': return index + 1;
                                 case 'artwork':
-                                    const art = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
+                                    const fallbackVersionWithArtwork = track.versions?.find(v =>
+                                        v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0]
+                                    );
+                                    const art = track.artworks?.track_artwork?.[0]
+                                        || track.artworks?.album_artwork?.[0]
+                                        || fallbackVersionWithArtwork?.artworks?.track_artwork?.[0]
+                                        || fallbackVersionWithArtwork?.artworks?.album_artwork?.[0];
                                     return (
                                         <div className="w-8 h-8 rounded-md bg-white/5 overflow-hidden">
                                             {art ? (
-                                                <ArtworkImage details={art} className="w-full h-full object-cover" />
+                                                <ArtworkImage details={art} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-[10px]">?</div>
                                             )}

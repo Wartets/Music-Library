@@ -11,8 +11,26 @@ interface ArtworkImageProps {
 
 const ABSOLUTE_URL_REGEX = /^[a-z][a-z0-9+.-]*:\/\//i;
 const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
+const ARTWORK_CACHE_NAME = 'music-library-artwork-v1';
 const resolvedArtworkCache = new Map<string, string>();
 const failedArtworkCandidates = new Set<string>();
+
+const hashText = (value: string): number => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+        hash = ((hash << 5) - hash) + value.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+};
+
+const createFallbackVisual = (seedText: string) => {
+    const seed = hashText(seedText || 'track');
+    const hue = seed % 360;
+    const background = `linear-gradient(145deg, hsla(${hue}, 38%, 38%, 0.9), hsla(${(hue + 28) % 360}, 32%, 24%, 0.92))`;
+    const letter = (seedText.match(/[\p{L}\p{N}]/u)?.[0] || '?').toUpperCase();
+    return { background, letter };
+};
 
 const safeEncodeSegment = (segment: string): string => {
     if (!segment) return segment;
@@ -89,6 +107,8 @@ const buildSrcCandidates = (pathValue: string): string[] => {
 export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 'Artwork', className = 'w-full h-full', fallback }) => {
     const [hasError, setHasError] = React.useState(false);
     const [candidateIndex, setCandidateIndex] = React.useState(0);
+    const [cachedSrc, setCachedSrc] = React.useState<string | null>(null);
+    const blobUrlRef = React.useRef<string | null>(null);
     const cacheKey = src || details?.path || '';
 
     const srcCandidates = React.useMemo(() => {
@@ -113,13 +133,63 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
     React.useEffect(() => {
         setHasError(false);
         setCandidateIndex(0);
+        setCachedSrc(null);
     }, [cacheKey]);
 
+    React.useEffect(() => {
+        let cancelled = false;
+
+        if (!displaySrc || typeof window === 'undefined' || !('caches' in window)) {
+            return () => {
+                cancelled = true;
+                if (blobUrlRef.current) {
+                    URL.revokeObjectURL(blobUrlRef.current);
+                    blobUrlRef.current = null;
+                }
+            };
+        }
+
+        if (blobUrlRef.current) {
+            URL.revokeObjectURL(blobUrlRef.current);
+            blobUrlRef.current = null;
+        }
+
+        caches.open(ARTWORK_CACHE_NAME)
+            .then(cache => cache.match(displaySrc))
+            .then(response => response ? response.blob() : null)
+            .then(blob => {
+                if (!blob || cancelled) return;
+                const blobUrl = URL.createObjectURL(blob);
+                blobUrlRef.current = blobUrl;
+                setCachedSrc(blobUrl);
+            })
+            .catch(() => {
+                // Ignore cache read failures and continue with network source.
+            });
+
+        return () => {
+            cancelled = true;
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+                blobUrlRef.current = null;
+            }
+        };
+    }, [displaySrc]);
+
     if (!displaySrc || hasError) {
+        const fallbackSeed = (alt && alt !== 'Artwork')
+            ? alt
+            : (details?.name || 'Track');
+        const fallbackVisual = createFallbackVisual(fallbackSeed);
         return (
-            <div className={`flex items-center justify-center bg-white/5 text-white/20 ${className}`}>
+            <div
+                className={`flex items-center justify-center text-white/90 ${className}`}
+                style={{ background: fallbackVisual.background }}
+            >
                 {fallback || (
-                    <svg width="40%" height="40%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9 12v-2"></path><path d="M15 12v-2"></path><path d="M12 15v.01"></path></svg>
+                    <span className="text-2xl font-black tracking-tight select-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]">
+                        {fallbackVisual.letter}
+                    </span>
                 )}
             </div>
         );
@@ -127,7 +197,7 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
 
     return (
         <img
-            src={displaySrc}
+            src={cachedSrc || displaySrc}
             alt={alt}
             className={`object-cover ${className}`}
             loading="lazy"
@@ -135,6 +205,21 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
             onLoad={() => {
                 if (cacheKey) {
                     resolvedArtworkCache.set(cacheKey, displaySrc);
+                }
+
+                if (displaySrc && typeof window !== 'undefined' && 'caches' in window) {
+                    caches.open(ARTWORK_CACHE_NAME)
+                        .then(cache => cache.match(displaySrc).then(match => ({ cache, match })))
+                        .then(({ cache, match }) => {
+                            if (match) return;
+                            return fetch(displaySrc, { cache: 'force-cache' }).then(response => {
+                                if (!response.ok) return;
+                                return cache.put(displaySrc, response.clone());
+                            });
+                        })
+                        .catch(() => {
+                            // Ignore cache write failures.
+                        });
                 }
             }}
             onError={() => {

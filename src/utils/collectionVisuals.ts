@@ -32,9 +32,9 @@ export const seedFromArtistName = (artistName: string): number => {
 
 export const getMutedVisualStyle = (seed: number) => {
     const hue = positiveModulo(seed * 37, 360);
-    const saturation = 26 + positiveModulo(seed * 11, 14); // 26..39
-    const startLightness = 37 + positiveModulo(seed * 7, 8); // 37..44
-    const endLightness = 22 + positiveModulo(seed * 5, 8); // 22..29
+    const saturation = 26 + positiveModulo(seed * 11, 14);
+    const startLightness = 37 + positiveModulo(seed * 7, 8);
+    const endLightness = 22 + positiveModulo(seed * 5, 8);
 
     return {
         background: `linear-gradient(145deg, hsla(${hue}, ${saturation}%, ${startLightness}%, 0.88) 0%, hsla(${positiveModulo(hue + 28, 360)}, ${Math.max(20, saturation - 8)}%, ${endLightness}%, 0.92) 100%)`,
@@ -45,9 +45,14 @@ export const getMutedVisualStyle = (seed: number) => {
 };
 
 export const getInitials = (value: string, maxLetters?: number): string => {
-    const tokens = ((value || '').match(/[A-Za-z0-9À-ÖØ-öø-ÿ]+/g) || [])
+    const stopWords = new Set(['and', '&', 'feat', 'ft', 'featuring', 'the', 'x', 'vs']);
+    const tokens = ((value || '').match(/[\p{L}\p{N}]+/gu) || [])
         .map(token => token.trim())
-        .filter(Boolean);
+        .filter((token, index) => {
+            if (!token) return false;
+            if (index === 0) return true;
+            return !stopWords.has(token.toLowerCase());
+        });
 
     if (tokens.length === 0) {
         return '?';
@@ -57,6 +62,6 @@ export const getInitials = (value: string, maxLetters?: number): string => {
         ? tokens.slice(0, maxLetters)
         : tokens;
 
-    const initials = selectedTokens.map(token => token[0]).join('');
+    const initials = selectedTokens.map(token => Array.from(token)[0] || '').join('');
     return initials.toUpperCase();
 };
