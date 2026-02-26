@@ -84,6 +84,21 @@
 }
 
 .vertical-range {
-  -webkit-appearance: slider-vertical;
-  appearance: slider-vertical;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.vertical-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+}
+
+.vertical-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
 }

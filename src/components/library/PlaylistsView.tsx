@@ -4,7 +4,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
 import { TrackItem } from '../../types/music';
-import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus, Edit3, Clock, Database } from 'lucide-react';
+import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus, Edit3, Clock, Database, Copy, Download } from 'lucide-react';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { SmartPlaylistBuilder } from './SmartPlaylistBuilder';
@@ -100,6 +100,47 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                 label: 'Edit Playlist',
                 icon: <Pencil size={14} />,
                 onClick: () => setEditingPlaylist(pl)
+            },
+            {
+                label: 'Duplicate Playlist',
+                icon: <Copy size={14} />,
+                onClick: () => {
+                    const clone = persistenceService.createPlaylist(`${pl.name} (Copy)`, pl.description);
+                    pl.trackIds.forEach(hash => persistenceService.addTrackToPlaylist(clone.id, hash));
+                    if (pl.customImage) {
+                        persistenceService.updatePlaylist(clone.id, { customImage: pl.customImage });
+                    }
+                    setPlaylists(persistenceService.getPlaylists());
+                    showToast('Playlist duplicated', 'success');
+                }
+            },
+            {
+                label: 'Clear Tracks',
+                icon: <ListMinus size={14} />,
+                onClick: () => {
+                    if (!confirm(`Remove all tracks from \"${pl.name}\"?`)) return;
+                    persistenceService.updatePlaylist(pl.id, { trackIds: [] });
+                    const updated = persistenceService.getPlaylists();
+                    setPlaylists(updated);
+                    const refreshed = updated.find(p => p.id === pl.id);
+                    if (refreshed) setSelectedPlaylist(refreshed);
+                    showToast('Playlist cleared', 'success');
+                }
+            },
+            {
+                label: 'Export as JSON',
+                icon: <Download size={14} />,
+                onClick: () => {
+                    const payload = JSON.stringify(pl, null, 2);
+                    const blob = new Blob([payload], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${pl.name}.playlist.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast(`Exported \"${pl.name}.playlist.json\"`, 'success');
+                }
             },
             {
                 label: 'Delete Playlist',
@@ -259,7 +300,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                     <div className="flex items-center gap-4">
                                         {pl.customImage ? (
                                             <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
-                                                <img src={pl.customImage} alt={pl.name} className="w-full h-full object-cover" />
+                                                <ArtworkImage src={pl.customImage} alt={pl.name} className="w-full h-full object-cover" />
                                             </div>
                                         ) : (
                                             <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 border border-white/10 text-white/20">
@@ -288,8 +329,8 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                 <div className="mb-10 flex flex-col md:flex-row items-start md:items-end gap-8 pb-10 border-b border-white/5 relative group">
                                     <div className="w-48 h-48 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 flex-shrink-0 relative">
                                         {(selectedPlaylist as Playlist).customImage || isSmartPlaylist(selectedPlaylist) ? (
-                                            <img
-                                                src={isSmartPlaylist(selectedPlaylist) ? '' : (selectedPlaylist as Playlist).customImage}
+                                            <ArtworkImage
+                                                src={isSmartPlaylist(selectedPlaylist) ? undefined : (selectedPlaylist as Playlist).customImage}
                                                 alt={selectedPlaylist.name}
                                                 className={`w-full h-full object-cover ${isSmartPlaylist(selectedPlaylist) ? 'opacity-0' : ''}`}
                                             />

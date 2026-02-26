@@ -38,6 +38,8 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
     });
     const [crossfadeEnabled, setCrossfadeEnabled] = useState(() => persistenceService.getPreferences().crossfadeEnabled || false);
     const [crossfadeDuration, setCrossfadeDuration] = useState(() => persistenceService.getPreferences().crossfadeDuration || 3);
+    const [normalizationEnabled, setNormalizationEnabled] = useState(() => persistenceService.getPreferences().normalizationEnabled || false);
+    const [normalizationStrength, setNormalizationStrength] = useState(() => persistenceService.getPreferences().normalizationStrength || 45);
 
     const freqs = ['32', '64', '125', '250', '500', '1K', '2K', '4K', '8K', '16K'];
     const presets = {
@@ -63,10 +65,16 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                 eqEnabled,
                 eqBands,
                 crossfadeEnabled,
-                crossfadeDuration
+                crossfadeDuration,
+                normalizationEnabled,
+                normalizationStrength
             });
         }
-    }, [eqEnabled, eqBands, crossfadeEnabled, crossfadeDuration]);
+    }, [eqEnabled, eqBands, crossfadeEnabled, crossfadeDuration, normalizationEnabled, normalizationStrength]);
+
+    useEffect(() => {
+        audioEngine.setVolumeNormalization(normalizationEnabled, normalizationStrength);
+    }, [normalizationEnabled, normalizationStrength]);
 
     const handleBandChange = (index: number, value: number) => {
         const newBands = [...eqBands];
@@ -135,15 +143,8 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
 
     const clearHistory = () => {
         if (confirm('Are you sure you want to clear your playback history and play counts?')) {
-            const prefs = persistenceService.getPreferences();
-            localStorage.setItem('user_data', JSON.stringify({
-                history: [],
-                playlists: persistenceService.getPlaylists(),
-                preferences: prefs,
-                playCounts: {},
-                metadataOverrides: persistenceService.getMetadataOverrides()
-            }));
-            alert('History cleared. Please refresh the application.');
+            persistenceService.clearHistory();
+            alert('History cleared.');
         }
     };
 
@@ -393,7 +394,14 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                         <input
                                                             type="range" min="-12" max="12" step="0.1" value={val}
                                                             onChange={(e) => handleBandChange(idx, parseFloat(e.target.value))}
-                                                            className="absolute inset-x-0 w-full h-full opacity-0 cursor-pointer z-20 vertical-range"
+                                                            className="absolute opacity-0 cursor-pointer z-20 vertical-range"
+                                                            style={{
+                                                                width: 168,
+                                                                height: 36,
+                                                                left: '50%',
+                                                                top: '50%',
+                                                                transform: 'translate(-50%, -50%) rotate(-90deg)'
+                                                            }}
                                                         />
                                                         <div className="absolute w-1.5 bg-dominant rounded-full shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)]"
                                                             style={{ height: `${(Math.abs(val) / 24) * 100}%`, bottom: val >= 0 ? '50%' : `calc(50% + ${(val / 24) * 100}%)`, top: val < 0 ? '50%' : 'auto' }}
@@ -431,6 +439,31 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                 <input
                                                     type="range" min="1" max="15" step="1" value={crossfadeDuration}
                                                     onChange={(e) => setCrossfadeDuration(parseInt(e.target.value))}
+                                                    className="w-full accent-dominant h-1.5 bg-white/5 rounded-full"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-xl font-black text-white mb-2">Volume Normalization</h3>
+                                            <p className="text-sm text-gray-500 mb-6">Smoothly levels loud and quiet tracks during playback.</p>
+                                            <div className="flex items-center justify-between mb-6">
+                                                <span className="text-xs font-bold text-gray-300">Enabled</span>
+                                                <button
+                                                    onClick={() => setNormalizationEnabled(!normalizationEnabled)}
+                                                    className={`w-12 h-6 rounded-full transition-all relative ${normalizationEnabled ? 'bg-dominant' : 'bg-white/10'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${normalizationEnabled ? 'left-7' : 'left-1'}`}></div>
+                                                </button>
+                                            </div>
+                                            <div className={`space-y-4 ${normalizationEnabled ? '' : 'opacity-20 pointer-events-none'}`}>
+                                                <div className="flex justify-between items-end">
+                                                    <span className="text-[10px] font-black text-gray-500 uppercase">Strength</span>
+                                                    <span className="text-lg font-black text-dominant">{normalizationStrength}%</span>
+                                                </div>
+                                                <input
+                                                    type="range" min="5" max="100" step="1" value={normalizationStrength}
+                                                    onChange={(e) => setNormalizationStrength(parseInt(e.target.value))}
                                                     className="w-full accent-dominant h-1.5 bg-white/5 rounded-full"
                                                 />
                                             </div>
@@ -680,6 +713,19 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                         <button className="w-full mt-3 flex items-center justify-center gap-3 py-4 bg-white/5 text-gray-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5">
                                             <RefreshCcw size={16} /> Restore Backup
                                         </button>
+                                        <div className="mt-4 p-3 rounded-xl border border-white/10 bg-black/20">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Codec Compatibility Helper</div>
+                                            <p className="text-[10px] text-gray-500 mb-2">Generate AAC-compatible copies (keeps originals) for unsupported ALAC tracks.</p>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText('powershell -ExecutionPolicy Bypass -File .\\scripts\\fix_codecs.ps1');
+                                                    alert('PowerShell command copied. Run it from the project root.');
+                                                }}
+                                                className="w-full py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                Copy Fix Command
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="bg-white/5 border border-white/5 p-8 rounded-3xl">

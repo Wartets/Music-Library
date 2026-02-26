@@ -6,9 +6,9 @@
        "nickname":  "Wartets",
        "full_name":  "Colin Bossu Réaubourg"
       },
-    "date":  "2026-02-24 21:55:02",
-    "total_tracks_versions":  184,
-    "execution_time_ms":  108745
+    "date":  "2026-02-26 11:44:22",
+    "total_tracks_versions":  188,
+    "execution_time_ms":  89382
    },
  "items":  [
     {
@@ -10542,10 +10542,65 @@
     {
      "id":  158,
      "logic":  {
+         "hash_sha256":  "4F319023C116CFF3B4979D616BE0A57AEACC0C27E8365175F43905D9AECCE422",
+         "track_name":  "Projet 16",
+         "version_name":  "Projet 16 1.0",
+         "total_versions_in_folder":  2,
+         "is_single":  false,
+         "hierarchy":  {
+             "group":  "Album 6 (2025)",
+             "album":  "Album 6.1",
+             "folder":  "Projet 16"
+            }
+        },
+     "file":  {
+        "name":  "Projet 16 1.0.m4a",
+        "ext":  "M4A",
+        "path":  "Album 6 (2025)\\Album 6.1\\Projet 16\\Projet 16 1.0.m4a",
+        "dir":  "Album 6 (2025)\\Album 6.1\\Projet 16",
+        "size_bytes":  7776099,
+        "size_mb":  7.42,
+        "created":  "2026-02-26 00:21:35",
+        "modified":  "2026-02-26 00:22:27",
+        "epoch_created":  1772065295,
+        "epoch_modified":  1772065347
+       },
+     "metadata":  {
+         "title":  "Projet 16",
+         "artists":  "Colin Bossu Réaubourg",
+         "album_artist":  "Colin Bossu Réaubourg",
+         "composer":  "Colin Bossu Réaubourg",
+         "album":  "Album 6.1",
+         "genre":  "Electro",
+         "year":  "2025",
+         "track_number":  "",
+         "bpm":  "",
+         "comment":  "",
+         "description":  ""
+        },
+     "audio_specs":  {
+          "is_lossless":  false,
+          "duration":  "00:03:46",
+          "bitrate":  "‎273 Kbits/s",
+          "sample_rate":  "",
+          "channels":  ""
+         },
+     "artworks":  {
+         "track_artwork":  [
+
+              ],
+         "album_artwork":  [
+
+              ]
+        }
+    },
+    {
+     "id":  159,
+     "logic":  {
          "hash_sha256":  "93E977833B12E8627EFC48ADBD06952778B39B34192EF2FACEBD4BDB2AE97CEA",
          "track_name":  "Projet 16",
          "version_name":  "Projet 16",
-         "total_versions_in_folder":  1,
+         "total_versions_in_folder":  2,
          "is_single":  false,
          "hierarchy":  {
              "group":  "Album 6 (2025)",
@@ -10595,12 +10650,177 @@
         }
     },
     {
-     "id":  159,
+     "id":  160,
+     "logic":  {
+         "hash_sha256":  "DFBB3364F21AC95DD653065E9E29D1C3670E45E397172611EA8B3DA11CC9C9BC",
+         "track_name":  "Projet 19",
+         "version_name":  "Projet 19 1.0",
+         "total_versions_in_folder":  4,
+         "is_single":  false,
+         "hierarchy":  {
+             "group":  "Album 6 (2025)",
+             "album":  "Album 6.1",
+             "folder":  "Projet 19"
+            }
+        },
+     "file":  {
+        "name":  "Projet 19 1.0.m4a",
+        "ext":  "M4A",
+        "path":  "Album 6 (2025)\\Album 6.1\\Projet 19\\Projet 19 1.0.m4a",
+        "dir":  "Album 6 (2025)\\Album 6.1\\Projet 19",
+        "size_bytes":  39663769,
+        "size_mb":  37.83,
+        "created":  "2025-06-30 18:08:26",
+        "modified":  "2026-02-24 21:44:05",
+        "epoch_created":  1751306906,
+        "epoch_modified":  1771969446
+       },
+     "metadata":  {
+         "title":  "Projet 19.1",
+         "artists":  "Colin Bossu Réaubourg",
+         "album_artist":  "Colin Bossu Réaubourg",
+         "composer":  "Colin Bossu Réaubourg",
+         "album":  "Album 6.1",
+         "genre":  "Electro",
+         "year":  "2025",
+         "track_number":  "",
+         "bpm":  "",
+         "comment":  "",
+         "description":  ""
+        },
+     "audio_specs":  {
+          "is_lossless":  false,
+          "duration":  "00:06:24",
+          "bitrate":  "‎825 Kbits/s",
+          "sample_rate":  "",
+          "channels":  ""
+         },
+     "artworks":  {
+         "track_artwork":  [
+
+              ],
+         "album_artwork":  [
+
+              ]
+        }
+    },
+    {
+     "id":  161,
+     "logic":  {
+         "hash_sha256":  "1B1FCE1ADD488C681F21BA3103A76D7156503B8B78305F2CCFDA17BAF522ACD5",
+         "track_name":  "Projet 19",
+         "version_name":  "Projet 19 1.0b",
+         "total_versions_in_folder":  4,
+         "is_single":  false,
+         "hierarchy":  {
+             "group":  "Album 6 (2025)",
+             "album":  "Album 6.1",
+             "folder":  "Projet 19"
+            }
+        },
+     "file":  {
+        "name":  "Projet 19 1.0b.m4a",
+        "ext":  "M4A",
+        "path":  "Album 6 (2025)\\Album 6.1\\Projet 19\\Projet 19 1.0b.m4a",
+        "dir":  "Album 6 (2025)\\Album 6.1\\Projet 19",
+        "size_bytes":  13163780,
+        "size_mb":  12.55,
+        "created":  "2026-02-26 00:25:08",
+        "modified":  "2026-02-24 21:44:05",
+        "epoch_created":  1772065508,
+        "epoch_modified":  1771969446
+       },
+     "metadata":  {
+         "title":  "Projet 19.1",
+         "artists":  "Colin Bossu Réaubourg",
+         "album_artist":  "Colin Bossu Réaubourg",
+         "composer":  "Colin Bossu Réaubourg",
+         "album":  "Album 6.1",
+         "genre":  "Electro",
+         "year":  "2025",
+         "track_number":  "",
+         "bpm":  "",
+         "comment":  "",
+         "description":  ""
+        },
+     "audio_specs":  {
+          "is_lossless":  false,
+          "duration":  "00:06:24",
+          "bitrate":  "‎272 Kbits/s",
+          "sample_rate":  "",
+          "channels":  ""
+         },
+     "artworks":  {
+         "track_artwork":  [
+
+              ],
+         "album_artwork":  [
+
+              ]
+        }
+    },
+    {
+     "id":  162,
+     "logic":  {
+         "hash_sha256":  "62E1618228404C729574AA0C83405A75A02247E6354FCF99C99D0E10091709A7",
+         "track_name":  "Projet 19",
+         "version_name":  "Projet 19 b",
+         "total_versions_in_folder":  4,
+         "is_single":  false,
+         "hierarchy":  {
+             "group":  "Album 6 (2025)",
+             "album":  "Album 6.1",
+             "folder":  "Projet 19"
+            }
+        },
+     "file":  {
+        "name":  "Projet 19 b.m4a",
+        "ext":  "M4A",
+        "path":  "Album 6 (2025)\\Album 6.1\\Projet 19\\Projet 19 b.m4a",
+        "dir":  "Album 6 (2025)\\Album 6.1\\Projet 19",
+        "size_bytes":  9910123,
+        "size_mb":  9.45,
+        "created":  "2026-02-26 00:24:02",
+        "modified":  "2026-02-24 21:44:05",
+        "epoch_created":  1772065442,
+        "epoch_modified":  1771969446
+       },
+     "metadata":  {
+         "title":  "Projet 19",
+         "artists":  "Colin Bossu Réaubourg",
+         "album_artist":  "Colin Bossu Réaubourg",
+         "composer":  "Colin Bossu Réaubourg",
+         "album":  "Album 6.1",
+         "genre":  "Electro",
+         "year":  "2025",
+         "track_number":  "",
+         "bpm":  "",
+         "comment":  "",
+         "description":  ""
+        },
+     "audio_specs":  {
+          "is_lossless":  false,
+          "duration":  "00:04:48",
+          "bitrate":  "‎273 Kbits/s",
+          "sample_rate":  "",
+          "channels":  ""
+         },
+     "artworks":  {
+         "track_artwork":  [
+
+              ],
+         "album_artwork":  [
+
+              ]
+        }
+    },
+    {
+     "id":  163,
      "logic":  {
          "hash_sha256":  "CD00CCF77AFC902E40D6C41E50C28D5DD189966A6C159EC6DA7E49F850AF56B6",
          "track_name":  "Projet 19",
          "version_name":  "Projet 19",
-         "total_versions_in_folder":  2,
+         "total_versions_in_folder":  4,
          "is_single":  false,
          "hierarchy":  {
              "group":  "Album 6 (2025)",
@@ -10650,62 +10870,7 @@
         }
     },
     {
-     "id":  160,
-     "logic":  {
-         "hash_sha256":  "DFBB3364F21AC95DD653065E9E29D1C3670E45E397172611EA8B3DA11CC9C9BC",
-         "track_name":  "Projet 19",
-         "version_name":  "Projet 19_1",
-         "total_versions_in_folder":  2,
-         "is_single":  false,
-         "hierarchy":  {
-             "group":  "Album 6 (2025)",
-             "album":  "Album 6.1",
-             "folder":  "Projet 19"
-            }
-        },
-     "file":  {
-        "name":  "Projet 19_1.m4a",
-        "ext":  "M4A",
-        "path":  "Album 6 (2025)\\Album 6.1\\Projet 19\\Projet 19_1.m4a",
-        "dir":  "Album 6 (2025)\\Album 6.1\\Projet 19",
-        "size_bytes":  39663769,
-        "size_mb":  37.83,
-        "created":  "2025-06-30 18:08:26",
-        "modified":  "2026-02-24 21:44:05",
-        "epoch_created":  1751306906,
-        "epoch_modified":  1771969446
-       },
-     "metadata":  {
-         "title":  "Projet 19.1",
-         "artists":  "Colin Bossu Réaubourg",
-         "album_artist":  "Colin Bossu Réaubourg",
-         "composer":  "Colin Bossu Réaubourg",
-         "album":  "Album 6.1",
-         "genre":  "Electro",
-         "year":  "2025",
-         "track_number":  "",
-         "bpm":  "",
-         "comment":  "",
-         "description":  ""
-        },
-     "audio_specs":  {
-          "is_lossless":  false,
-          "duration":  "00:06:24",
-          "bitrate":  "‎825 Kbits/s",
-          "sample_rate":  "",
-          "channels":  ""
-         },
-     "artworks":  {
-         "track_artwork":  [
-
-              ],
-         "album_artwork":  [
-
-              ]
-        }
-    },
-    {
-     "id":  161,
+     "id":  164,
      "logic":  {
          "hash_sha256":  "805BB0EB29A8684FF57818C1AA45AF812FC852F49E0F4143F675A80B7F92C681",
          "track_name":  "Projet 2",
@@ -10760,7 +10925,7 @@
         }
     },
     {
-     "id":  162,
+     "id":  165,
      "logic":  {
          "hash_sha256":  "FA32B7194EAB099C6E747C7DD1B95685242AD7B14D8DD4757821559933C11E47",
          "track_name":  "Projet 3",
@@ -10815,7 +10980,7 @@
         }
     },
     {
-     "id":  163,
+     "id":  166,
      "logic":  {
          "hash_sha256":  "F0D04B65B8D45F74E86F4F11C592401D98595DB457C20FE13C93CADB44408FD5",
          "track_name":  "Projet 4",
@@ -10870,7 +11035,7 @@
         }
     },
     {
-     "id":  164,
+     "id":  167,
      "logic":  {
          "hash_sha256":  "EF9505B64D0D684637B9F375EE5E4ED692032A80E565C4DDD64E5F3B8B2E7050",
          "track_name":  "Projet 5",
@@ -10925,7 +11090,7 @@
         }
     },
     {
-     "id":  165,
+     "id":  168,
      "logic":  {
          "hash_sha256":  "9BFAF140B3A1FA5C1B5368430C2A12A50F7A7573440E70E6D0B735BFDEB849A9",
          "track_name":  "Projet 8",
@@ -10980,7 +11145,7 @@
         }
     },
     {
-     "id":  166,
+     "id":  169,
      "logic":  {
          "hash_sha256":  "72325E632A25153F40711143209548747A4E5BA913299184050C5BC23658256A",
          "track_name":  "Projet 8",
@@ -11035,7 +11200,7 @@
         }
     },
     {
-     "id":  167,
+     "id":  170,
      "logic":  {
          "hash_sha256":  "6019729025DF3BC7E8972268AE1789FBC3E0F31E02BBAC77614707556E748000",
          "track_name":  "Projet 8",
@@ -11090,7 +11255,7 @@
         }
     },
     {
-     "id":  168,
+     "id":  171,
      "logic":  {
          "hash_sha256":  "7923D3ACC10F7DBCF9E4224AF5A4F76D908D0A4EDD03437446AC3836AAC2C0A6",
          "track_name":  "Projet 8",
@@ -11145,7 +11310,7 @@
         }
     },
     {
-     "id":  169,
+     "id":  172,
      "logic":  {
          "hash_sha256":  "793250037237B789B70A5BCADB48169C57780CB5DFE349A2029979DE5E6495F1",
          "track_name":  "Projet 8",
@@ -11200,7 +11365,7 @@
         }
     },
     {
-     "id":  170,
+     "id":  173,
      "logic":  {
          "hash_sha256":  "E683C137928FFA134C074B2889F1FE680864EA588B79C81FC1B7378A17A2E93D",
          "track_name":  "Projet 8",
@@ -11255,7 +11420,7 @@
         }
     },
     {
-     "id":  171,
+     "id":  174,
      "logic":  {
          "hash_sha256":  "D9473C2037CC3F5D945A56F3F698568303A171FA5936848BBF128F9FB9C46529",
          "track_name":  "Projet 8",
@@ -11310,7 +11475,7 @@
         }
     },
     {
-     "id":  172,
+     "id":  175,
      "logic":  {
          "hash_sha256":  "4F79E71D0D6BD8BE6EB2864E852097D7CACDC622DCDE2374A940D60B5E5E6373",
          "track_name":  "Projet 8",
@@ -11365,7 +11530,7 @@
         }
     },
     {
-     "id":  173,
+     "id":  176,
      "logic":  {
          "hash_sha256":  "FA086966EE41C12E8E5BF4B1D07B4031342AFAFC5DC6CA112A1142D2A2196741",
          "track_name":  "Projet 8",
@@ -11420,7 +11585,7 @@
         }
     },
     {
-     "id":  174,
+     "id":  177,
      "logic":  {
          "hash_sha256":  "3FBB0EC81E1A2221E09BA469B510950B7B7AC18B18E9B701DD5ABF37265CEC8C",
          "track_name":  "Projet 8",
@@ -11475,7 +11640,7 @@
         }
     },
     {
-     "id":  175,
+     "id":  178,
      "logic":  {
          "hash_sha256":  "807FAAEEAA47A767CCCA7B7E288CEFE3347EC0201EEACF853F44863532E7B9FD",
          "track_name":  "Projet 8",
@@ -11530,7 +11695,7 @@
         }
     },
     {
-     "id":  176,
+     "id":  179,
      "logic":  {
          "hash_sha256":  "E6E4FD63A8694242D772D15FC6CB2E3A36B8D8F8E69CAB4486DBC21E3BEB1245",
          "track_name":  "Projet 9",
@@ -11585,12 +11750,67 @@
         }
     },
     {
-     "id":  177,
+     "id":  180,
+     "logic":  {
+         "hash_sha256":  "AFC0F8ADD1919894BAFF730731945A18967E19E3CF03A54017A0D6B2CE26FC7E",
+         "track_name":  "Projet 27",
+         "version_name":  "Projet 27 1.1",
+         "total_versions_in_folder":  2,
+         "is_single":  false,
+         "hierarchy":  {
+             "group":  "Album 7 (2026)",
+             "album":  "Album 7.1",
+             "folder":  "Projet 27"
+            }
+        },
+     "file":  {
+        "name":  "Projet 27 1.1.m4a",
+        "ext":  "M4A",
+        "path":  "Album 7 (2026)\\Album 7.1\\Projet 27\\Projet 27 1.1.m4a",
+        "dir":  "Album 7 (2026)\\Album 7.1\\Projet 27",
+        "size_bytes":  3978129,
+        "size_mb":  3.79,
+        "created":  "2026-02-26 00:26:33",
+        "modified":  "2026-02-24 21:44:06",
+        "epoch_created":  1772065594,
+        "epoch_modified":  1771969446
+       },
+     "metadata":  {
+         "title":  "Projet 27",
+         "artists":  "Colin Bossu Réaubourg",
+         "album_artist":  "Colin Bossu Réaubourg",
+         "composer":  "Colin Bossu Réaubourg",
+         "album":  "Album 7.1",
+         "genre":  "Electro",
+         "year":  "2026",
+         "track_number":  "",
+         "bpm":  "",
+         "comment":  "",
+         "description":  ""
+        },
+     "audio_specs":  {
+          "is_lossless":  false,
+          "duration":  "00:02:00",
+          "bitrate":  "‎263 Kbits/s",
+          "sample_rate":  "",
+          "channels":  ""
+         },
+     "artworks":  {
+         "track_artwork":  [
+
+              ],
+         "album_artwork":  [
+
+              ]
+        }
+    },
+    {
+     "id":  181,
      "logic":  {
          "hash_sha256":  "B849DE5B69E63748A1E489D63491C72444DA55397C55CCB465FA74675B49239C",
          "track_name":  "Projet 27",
          "version_name":  "Projet 27",
-         "total_versions_in_folder":  1,
+         "total_versions_in_folder":  2,
          "is_single":  false,
          "hierarchy":  {
              "group":  "Album 7 (2026)",
@@ -11640,7 +11860,7 @@
         }
     },
     {
-     "id":  178,
+     "id":  182,
      "logic":  {
          "hash_sha256":  "2ACD4516A26BA5808CA332C909D91744D54326D47183B10471A608109A2940DC",
          "track_name":  "Ayrton farfadet malicieux",
@@ -11703,7 +11923,7 @@
         }
     },
     {
-     "id":  179,
+     "id":  183,
      "logic":  {
          "hash_sha256":  "21C2024577D750C5A05E65C34E2969CFB4237B58FD2AC5056B6DC18AB83E4B53",
          "track_name":  "Corazóni",
@@ -11758,7 +11978,7 @@
         }
     },
     {
-     "id":  180,
+     "id":  184,
      "logic":  {
          "hash_sha256":  "DE337100B7345D0BE497B9837D119036D69617EAB7139FF113B88A122E0B30F6",
          "track_name":  "La limace",
@@ -11813,7 +12033,7 @@
         }
     },
     {
-     "id":  181,
+     "id":  185,
      "logic":  {
          "hash_sha256":  "7078EF6CBD3BC785102F22F015EBCF07846D47C61B4AA634A874BF8F68BDD58F",
          "track_name":  "ouia",
@@ -11868,7 +12088,7 @@
         }
     },
     {
-     "id":  182,
+     "id":  186,
      "logic":  {
          "hash_sha256":  "C3CF2E5400A3D64898A80D9A4669A8ED785D5D0D021FAE45796B657AC1AC338E",
          "track_name":  "Projet max",
@@ -11923,7 +12143,7 @@
         }
     },
     {
-     "id":  183,
+     "id":  187,
      "logic":  {
          "hash_sha256":  "8979D5A8B4B1E3987DAAEB8FC6060AD3DBCF658B32CCD957DA89B98A3369E5C9",
          "track_name":  "quatro",
@@ -11978,7 +12198,7 @@
         }
     },
     {
-     "id":  184,
+     "id":  188,
      "logic":  {
          "hash_sha256":  "C59DE239FD088177E0938971BD72A63C0E4E2DAF769525E1BDEDA42750BA1D7F",
          "track_name":  "quatro",

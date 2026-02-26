@@ -37,6 +37,12 @@ export class AudioEngine {
     private currentTrack: TrackItem | null = null;
     private nextTrackPreloaded: TrackItem | null = null;
     private activeAudioElement: 1 | 2 = 1;
+    private normalizationEnabled: boolean = false;
+    private normalizationStrength: number = 45;
+    private normalizationMultiplier: number = 1;
+    private normalizationBuffer: Uint8Array | null = null;
+    private lastNormalizationAt: number = 0;
+    private userVolume: number = 1;
 
     public getAnalyser(): AnalyserNode | null {
         return this.analyserNode;
@@ -64,6 +70,7 @@ export class AudioEngine {
         const setupForElement = (el: HTMLAudioElement) => {
             el.addEventListener('timeupdate', () => {
                 if (this.getActiveElement() === el) {
+                    this.updateNormalization();
                     if (this.onTimeUpdate) {
                         this.onTimeUpdate(el.currentTime, el.duration || 0);
                     }
@@ -95,6 +102,70 @@ export class AudioEngine {
         setupForElement(this.secondaryAudioElement);
     }
 
+    private clamp(value: number, min: number, max: number): number {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private getEffectiveVolume(): number {
+        const normalization = this.normalizationEnabled ? this.normalizationMultiplier : 1;
+        return this.clamp(this.userVolume * normalization, 0, 1);
+    }
+
+    private applyOutputVolume(): void {
+        const effective = this.getEffectiveVolume();
+        this.audioElement.volume = effective;
+        this.secondaryAudioElement.volume = effective;
+
+        if (this.gainNode) {
+            this.gainNode.gain.setValueAtTime(effective, this.audioContext?.currentTime || 0);
+        }
+        if (this.secondaryGainNode) {
+            this.secondaryGainNode.gain.setValueAtTime(effective, this.audioContext?.currentTime || 0);
+        }
+    }
+
+    private updateNormalization(): void {
+        if (!this.normalizationEnabled) {
+            if (this.normalizationMultiplier !== 1) {
+                this.normalizationMultiplier = 1;
+                this.applyOutputVolume();
+            }
+            return;
+        }
+
+        const now = Date.now();
+        if (now - this.lastNormalizationAt < 220) return;
+        this.lastNormalizationAt = now;
+
+        if (!this.analyserNode) return;
+        if (!this.normalizationBuffer || this.normalizationBuffer.length !== this.analyserNode.fftSize) {
+            this.normalizationBuffer = new Uint8Array(this.analyserNode.fftSize);
+        }
+
+        this.analyserNode.getByteTimeDomainData(this.normalizationBuffer as any);
+
+        let sumSquares = 0;
+        for (let i = 0; i < this.normalizationBuffer.length; i++) {
+            const normalized = (this.normalizationBuffer[i] - 128) / 128;
+            sumSquares += normalized * normalized;
+        }
+        const rms = Math.sqrt(sumSquares / this.normalizationBuffer.length);
+        if (!Number.isFinite(rms)) return;
+
+        const targetRms = 0.13;
+        const desired = rms > 0.01 ? this.clamp(targetRms / rms, 0.65, 1.5) : 1;
+        const strengthFactor = this.clamp(this.normalizationStrength / 100, 0, 1);
+        const weightedDesired = 1 + (desired - 1) * strengthFactor;
+        const smoothing = 0.12;
+        this.normalizationMultiplier = this.clamp(
+            this.normalizationMultiplier + (weightedDesired - this.normalizationMultiplier) * smoothing,
+            0.55,
+            1.6
+        );
+
+        this.applyOutputVolume();
+    }
+
     private getActiveElement(): HTMLAudioElement {
         return this.activeAudioElement === 1 ? this.audioElement : this.secondaryAudioElement;
     }
@@ -105,6 +176,43 @@ export class AudioEngine {
 
     private getActiveGainNode(): GainNode | null {
         return this.activeAudioElement === 1 ? this.gainNode : this.secondaryGainNode;
+    }
+
+    private buildCompatibleFallbackSrc(track: TrackItem): string | null {
+        const ext = (track.file?.ext || '').toLowerCase();
+        if (ext !== 'm4a') return null;
+        const path = track.file?.path || '';
+        if (!path || /_compatible_aac\.m4a$/i.test(path)) return null;
+        const compatiblePath = path.replace(/\.m4a$/i, '_compatible_aac.m4a');
+        return dbService.getRelativePath(compatiblePath);
+    }
+
+    private async playElement(el: HTMLAudioElement, track?: TrackItem): Promise<void> {
+        try {
+            await el.play();
+            return;
+        } catch (e) {
+            const playbackError = this.normalizePlaybackException(e);
+            if (playbackError.code === 'format_unsupported' && track) {
+                const fallbackSrc = this.buildCompatibleFallbackSrc(track);
+                if (fallbackSrc && el.src !== fallbackSrc) {
+                    const previousSrc = el.src;
+                    try {
+                        el.src = fallbackSrc;
+                        await el.play();
+                        return;
+                    } catch (fallbackError) {
+                        el.src = previousSrc;
+                        const normalizedFallbackError = this.normalizePlaybackException(fallbackError);
+                        if (this.onError) this.onError(normalizedFallbackError);
+                        throw normalizedFallbackError;
+                    }
+                }
+            }
+
+            if (this.onError) this.onError(playbackError);
+            throw playbackError;
+        }
     }
 
 
@@ -252,13 +360,7 @@ export class AudioEngine {
                         }
                     }
 
-                    try {
-                        await fadeInEl.play();
-                    } catch (e) {
-                        const playbackError = this.normalizePlaybackException(e);
-                        if (this.onError) this.onError(playbackError);
-                        throw playbackError;
-                    }
+                    await this.playElement(fadeInEl, track);
                 } else {
                     // Normal play (not preloaded)
                     const relativePath = dbService.getRelativePath(track.file.path);
@@ -289,13 +391,7 @@ export class AudioEngine {
                             setTimeout(() => { fadeOutEl.pause(); }, crossfadeDuration * 1000);
                         }
 
-                        try {
-                            await fadeInEl.play();
-                        } catch (e) {
-                            const playbackError = this.normalizePlaybackException(e);
-                            if (this.onError) this.onError(playbackError);
-                            throw playbackError;
-                        }
+                        await this.playElement(fadeInEl, track);
                     } else {
                         const activeEl = this.getActiveElement();
                         const activeGain = this.getActiveGainNode();
@@ -306,34 +402,16 @@ export class AudioEngine {
                             activeGain.gain.setValueAtTime(activeEl.volume, this.audioContext.currentTime);
                         }
 
-                        try {
-                            await activeEl.play();
-                        } catch (e) {
-                            const playbackError = this.normalizePlaybackException(e);
-                            if (this.onError) this.onError(playbackError);
-                            throw playbackError;
-                        }
+                        await this.playElement(activeEl, track);
                     }
                 }
             } else {
                 // Same track, just resume
-                try {
-                    await this.getActiveElement().play();
-                } catch (e) {
-                    const playbackError = this.normalizePlaybackException(e);
-                    if (this.onError) this.onError(playbackError);
-                    throw playbackError;
-                }
+                await this.playElement(this.getActiveElement(), track);
             }
         } else {
             // General resume
-            try {
-                await this.getActiveElement().play();
-            } catch (e) {
-                const playbackError = this.normalizePlaybackException(e);
-                if (this.onError) this.onError(playbackError);
-                throw playbackError;
-            }
+            await this.playElement(this.getActiveElement(), this.currentTrack || undefined);
         }
 
         if (this.audioContext && this.audioContext.state === 'suspended') {
@@ -365,17 +443,17 @@ export class AudioEngine {
      * @param level - Volume level between 0.0 and 1.0
      */
     setVolume(level: number): void {
-        this.audioElement.volume = level;
-        this.secondaryAudioElement.volume = level;
+        this.userVolume = this.clamp(level, 0, 1);
+        this.applyOutputVolume();
+    }
 
-        // When not crossfading, keep gain nodes at sync with volume level
-        // (If crossfading, gain Nodes are being changed by AudioParam ramps, so we don't immediately override)
-        if (this.gainNode) {
-            this.gainNode.gain.setValueAtTime(level, this.audioContext?.currentTime || 0);
+    setVolumeNormalization(enabled: boolean, strength: number): void {
+        this.normalizationEnabled = enabled;
+        this.normalizationStrength = this.clamp(strength, 0, 100);
+        if (!enabled) {
+            this.normalizationMultiplier = 1;
         }
-        if (this.secondaryGainNode) {
-            this.secondaryGainNode.gain.setValueAtTime(level, this.audioContext?.currentTime || 0);
-        }
+        this.applyOutputVolume();
     }
 
     /**

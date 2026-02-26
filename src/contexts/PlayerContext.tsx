@@ -53,7 +53,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             shuffle: initialPrefs.shuffle,
             shuffleMode: initialPrefs.shuffleMode,
             repeat: initialPrefs.repeat,
-            autoplay: true,
+            autoplay: persistenceService.get('ui_autoplay') !== false,
             queueLimit: 0, // 0 means no limit
         };
     });
@@ -86,6 +86,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         recoveryRef.current.attempted.clear();
         recoveryRef.current.lastErrorAt = 0;
         recoveryRef.current.lastErrorKey = '';
+    }, []);
+
+    useEffect(() => {
+        const prefs = persistenceService.getPreferences();
+        audioEngine.setVolumeNormalization(
+            !!prefs.normalizationEnabled,
+            Number.isFinite(prefs.normalizationStrength) ? prefs.normalizationStrength : 45
+        );
     }, []);
 
     const resolveVersionGroup = useCallback((track: TrackItem): TrackItem[] => {
@@ -198,7 +206,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 case 'format_unsupported':
                     return {
                         title: 'Unsupported format',
-                        message: 'This file format is not supported here. Trying an alternative when available.'
+                        message: 'This codec is unsupported in browser playback. Trying an alternative version when available.'
                     };
                 case 'media_network':
                     return {
@@ -231,7 +239,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             return { title: 'Decode issue', message: 'Audio decode failed. Trying fallback track.' };
         }
         if (lower.includes('not supported')) {
-            return { title: 'Unsupported format', message: 'Format unsupported. Trying another version if possible.' };
+            return { title: 'Unsupported format', message: 'Codec unsupported here. Trying another version if possible.' };
         }
 
         return { title: 'Playback error', message: error.message || 'Unexpected playback failure.' };
@@ -309,6 +317,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             'error',
             { title: fallback.title, dedupeKey: `playback-stop-${failedHash}`, durationMs: 4500 }
         );
+        if (fallback.title === 'Unsupported format') {
+            showToast(
+                'Tip: run scripts/fix_codecs.ps1 to create compatible AAC copies while preserving originals.',
+                'info',
+                { title: 'Compatibility helper', durationMs: 5200 }
+            );
+        }
         audioEngine.pause();
         setState(prev => ({ ...prev, isPlaying: false }));
     }, [describePlaybackError, resolveVersionGroup, showToast]);
@@ -331,6 +346,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 audioEngine.play().catch(err => {
                     handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
                 });
+                return;
+            }
+
+            if (!cur.autoplay) {
+                audioEngine.pause();
+                setState(prev => ({ ...prev, isPlaying: false }));
                 return;
             }
 
@@ -357,6 +378,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             handlePlaybackFailureRef.current(error, stateRef.current.currentTrack);
         };
     }, [playTrackLogic, resetRecoveryState]);
+
+    useEffect(() => {
+        const handleHistoryCleared = () => {
+            setState(prev => ({ ...prev, history: [] }));
+        };
+        window.addEventListener('music-history-cleared', handleHistoryCleared);
+        return () => window.removeEventListener('music-history-cleared', handleHistoryCleared);
+    }, []);
 
     const playTrack = useCallback((track: TrackItem, queue?: TrackItem[]) => {
         playTrackLogic(track, queue);
@@ -560,6 +589,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, []);
 
     const setAutoplay = useCallback((enabled: boolean) => {
+        persistenceService.set('ui_autoplay', enabled);
         setState(prev => ({ ...prev, autoplay: enabled }));
     }, []);
 

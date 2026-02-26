@@ -6,6 +6,7 @@ export const Visualizer: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { state } = usePlayer();
     const rafRef = useRef<number | null>(null);
+    const dataRef = useRef<Uint8Array | null>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -23,7 +24,8 @@ export const Visualizer: React.FC = () => {
         const dominantVar = computedStyle.getPropertyValue('--color-dominant').trim();
         const baseColor = dominantVar ? `rgb(${dominantVar})` : 'rgba(255, 255, 255, 0.7)';
 
-        const draw = () => {
+        let lastFrame = 0;
+        const draw = (ts: number) => {
             if (!state.isPlaying) {
                 rafRef.current = null;
                 return;
@@ -35,26 +37,36 @@ export const Visualizer: React.FC = () => {
                 return;
             }
 
+            if (ts - lastFrame < 33) {
+                rafRef.current = requestAnimationFrame(draw);
+                return;
+            }
+            lastFrame = ts;
+
             // Only clear and draw if context is active
             ctx.clearRect(0, 0, width, height);
 
             const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            analyser.getByteFrequencyData(dataArray);
+            if (!dataRef.current || dataRef.current.length !== bufferLength) {
+                dataRef.current = new Uint8Array(bufferLength);
+            }
+            analyser.getByteFrequencyData(dataRef.current as any);
 
-            const barWidth = (width / bufferLength) * 2.5;
+            const maxBars = Math.min(64, bufferLength);
+            const step = Math.max(1, Math.floor(bufferLength / maxBars));
+            const barWidth = width / maxBars;
             let x = 0;
 
             ctx.fillStyle = baseColor;
 
-            for (let i = 0; i < bufferLength; i++) {
-                const val = dataArray[i];
+            for (let i = 0; i < bufferLength; i += step) {
+                const val = dataRef.current[i];
                 const barHeight = (val / 255) * height;
 
                 ctx.globalAlpha = 0.4 + (val / 255) * 0.4;
-                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                ctx.fillRect(x, height - barHeight, Math.max(1, barWidth - 1), barHeight);
 
-                x += barWidth + 1;
+                x += barWidth;
             }
 
             rafRef.current = requestAnimationFrame(draw);

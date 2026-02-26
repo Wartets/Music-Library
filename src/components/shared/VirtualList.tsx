@@ -16,6 +16,8 @@ export const VirtualList: React.FC<VirtualListProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(600); // Default fallback
+    const rafRef = useRef<number | null>(null);
+    const lastScrollTopRef = useRef(0);
 
     useEffect(() => {
         if (containerRef.current) {
@@ -33,8 +35,22 @@ export const VirtualList: React.FC<VirtualListProps> = ({
         }
     }, []);
 
+    useEffect(() => {
+        return () => {
+            if (rafRef.current !== null) {
+                window.cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, []);
+
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        setScrollTop(e.currentTarget.scrollTop);
+        lastScrollTopRef.current = e.currentTarget.scrollTop;
+        if (rafRef.current !== null) return;
+        rafRef.current = window.requestAnimationFrame(() => {
+            setScrollTop(lastScrollTopRef.current);
+            rafRef.current = null;
+        });
     }, []);
 
     const totalHeight = items.length * rowHeight;

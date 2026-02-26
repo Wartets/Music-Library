@@ -34,13 +34,13 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<ToastItem[]>([]);
     const timersRef = useRef<Record<string, number>>({});
 
-    const showContextMenu = (x: number, y: number, items: ContextMenuItem[]) => {
+    const showContextMenu = useCallback((x: number, y: number, items: ContextMenuItem[]) => {
         setContextMenu({ x, y, items });
-    };
+    }, []);
 
-    const closeContextMenu = () => {
+    const closeContextMenu = useCallback(() => {
         setContextMenu(null);
-    };
+    }, []);
 
     const removeToast = useCallback((id: string) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
@@ -102,8 +102,15 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         }
     }), []);
 
+    const contextValue = useMemo(() => ({
+        showContextMenu,
+        closeContextMenu,
+        contextMenu,
+        showToast
+    }), [showContextMenu, closeContextMenu, contextMenu, showToast]);
+
     return (
-        <UIContext.Provider value={{ showContextMenu, closeContextMenu, contextMenu, showToast }}>
+        <UIContext.Provider value={contextValue}>
             {children}
             {toasts.length > 0 && (
                 <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+6.25rem)] md:bottom-24 z-[200] flex flex-col items-center gap-2 pointer-events-none w-[min(92vw,560px)]">

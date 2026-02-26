@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { Visualizer } from '../player/Visualizer';
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { Maximize2, Minimize2, Repeat, Repeat1, Shuffle, X } from 'lucide-react';
 import { formatDuration } from '../../utils/formatters';
 import { ViewType } from '../layout/AppLayout';
 import { ArtworkImage } from '../shared/ArtworkImage';
@@ -209,13 +209,15 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
             </div>
 
             {/* Controls (Floating/Overlay) */}
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 z-20 opacity-40 hover:opacity-100 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10">
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 z-20 opacity-40 hover:opacity-100 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10 pointer-events-auto">
                 <button
                     onClick={toggleShuffle}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all ${state.shuffle ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center gap-1 ${state.shuffle ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
                     title="Shuffle"
+                    aria-pressed={state.shuffle}
                 >
-                    SHUF
+                    <Shuffle size={14} />
+                    Shuffle
                 </button>
                 <button
                     onClick={seekBackward}
@@ -246,10 +248,12 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                 </button>
                 <button
                     onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all ${state.repeat !== 'none' ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center gap-1 ${state.repeat !== 'none' ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
                     title={`Repeat: ${state.repeat}`}
+                    aria-pressed={state.repeat !== 'none'}
                 >
-                    {state.repeat === 'one' ? 'R1' : 'R'}
+                    {state.repeat === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
+                    {state.repeat === 'none' ? 'Off' : state.repeat === 'all' ? 'All' : 'One'}
                 </button>
             </div>
         </div>

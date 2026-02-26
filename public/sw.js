@@ -1,6 +1,7 @@
-const STATIC_CACHE = 'music-library-static-v1';
+const STATIC_CACHE = 'music-library-static-v2';
 const ARTWORK_CACHE = 'music-library-artwork-v1';
-const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/vite.svg'];
+const DATA_CACHE = 'music-library-data-v1';
+const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/vite.svg', '/musicBib.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -32,6 +33,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (url.pathname.endsWith('/musicBib.json') || url.pathname.endsWith('.json')) {
+    event.respondWith(
+      caches.open(DATA_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const networkPromise = fetch(request)
+          .then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => null);
+
+        if (cached) {
+          networkPromise.catch(() => {});
+          return cached;
+        }
+
+        const network = await networkPromise;
+        if (network) return network;
+        return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      })
+    );
+    return;
+  }
+
   if (request.destination === 'image') {
     event.respondWith(
       caches.open(ARTWORK_CACHE).then(async (cache) => {
@@ -46,6 +71,19 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
+    );
+    return;
+  }
+
+  if (request.destination === 'script' || request.destination === 'style' || request.destination === 'document') {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+      }).catch(() => caches.match(request))
     );
     return;
   }

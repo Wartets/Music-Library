@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { persistenceService, Playlist } from '../../services/persistence';
 import { X, Save, Image as ImageIcon, Type, FileText, Trash2 } from 'lucide-react';
+import { ArtworkImage } from '../shared/ArtworkImage';
 
 interface PlaylistEditorProps {
     playlist: Playlist;
@@ -59,7 +60,7 @@ export const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ playlist, onSave
                         <div className="flex flex-col items-center gap-4">
                             <div className="relative group overflow-hidden rounded-2xl w-32 h-32 border border-white/10 bg-black/50 shadow-2xl">
                                 {customImage ? (
-                                    <img src={customImage} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                    <ArtworkImage src={customImage} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center text-white/10">
                                         <ImageIcon size={32} />

@@ -58,6 +58,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             if (db && db.items) {
                 const overrides = persistenceService.getMetadataOverrides();
                 const artworkOverrides = persistenceService.getArtworkOverrides();
+                const hiddenTrackIds = new Set(persistenceService.getHiddenTrackIds());
 
                 const rawTracks = db.items.map((t: TrackItem) => {
                     const hash = t.logic?.hash_sha256;
@@ -75,7 +76,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                         };
                     }
                     return track;
-                });
+                }).filter(t => !hiddenTrackIds.has(t.logic?.hash_sha256));
 
                 // Group tracks by track_name and folder
                 const groupedMap = new Map<string, TrackItem[]>();

@@ -5,6 +5,7 @@ import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
 import { Play, Star } from 'lucide-react';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { parseDuration } from '../../utils/formatters';
 
 import { ViewType } from '../layout/AppLayout';
 import { ArtworkImage } from '../shared/ArtworkImage';
@@ -56,7 +57,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         averageDurationMinutes,
         losslessCount,
         ratedTracksCount,
-        averageRating
+        averageRating,
+        totalVersions,
+        singlesCount,
+        topCodec,
+        averageSampleRateKhz,
+        oldestYear,
+        newestYear,
+        historyCount,
+        favoritesCount
     } = useMemo(() => {
         const tracks = libraryState.tracks;
         const historyIds = persistenceService.getHistoryIds();
@@ -106,6 +115,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         let bitrateCount = 0;
         let totalSizeMb = 0;
         let lossless = 0;
+        let totalVersionsCount = 0;
+        let singles = 0;
+        let totalSampleRate = 0;
+        let sampleRateCount = 0;
+        const codecDist: Record<string, number> = {};
+        const years: number[] = [];
 
         tracks.forEach(t => {
             const trackGenres = t.metadata?.genre;
@@ -122,14 +137,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
             if (t.metadata?.album?.trim()) albumSet.add(t.metadata.album.trim());
             if (t.logic?.hierarchy?.folder?.trim()) folderSet.add(t.logic.hierarchy.folder.trim());
+            if (t.logic?.is_single) singles++;
+            totalVersionsCount += t.versions?.length || 1;
 
             if (t.audio_specs?.duration) {
-                const parts = t.audio_specs.duration.split(':').map(Number);
-                if (parts.length === 2) {
-                    totalTime += (parts[0] * 60) + parts[1];
-                } else if (parts.length === 3) {
-                    totalTime += (parts[0] * 3600) + (parts[1] * 60) + parts[2];
-                }
+                totalTime += parseDuration(t.audio_specs.duration);
             }
 
             if (t.audio_specs?.bitrate) {
@@ -139,6 +151,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     bitrateCount++;
                 }
             }
+
+            if (t.audio_specs?.sample_rate) {
+                const sampleRate = parseInt(String(t.audio_specs.sample_rate).replace(/[^\d]/g, ''), 10);
+                if (!isNaN(sampleRate) && sampleRate > 0) {
+                    totalSampleRate += sampleRate;
+                    sampleRateCount++;
+                }
+            }
+
+            const codec = (t.audio_specs?.codec || t.file?.ext || 'unknown').toLowerCase();
+            codecDist[codec] = (codecDist[codec] || 0) + 1;
+
+            const year = Number(t.metadata?.year);
+            if (!isNaN(year) && year > 1000) years.push(year);
 
             totalSizeMb += t.file?.size_mb || 0;
             if (t.audio_specs?.is_lossless) {
@@ -169,7 +195,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             ratedTracksCount: ratingsValues.length,
             averageRating: ratingsValues.length > 0
                 ? ratingsValues.reduce((acc, n) => acc + n, 0) / ratingsValues.length
-                : 0
+                : 0,
+            totalVersions: totalVersionsCount,
+            singlesCount: singles,
+            topCodec: Object.entries(codecDist).sort((a, b) => b[1] - a[1])[0]?.[0]?.toUpperCase() || '-',
+            averageSampleRateKhz: sampleRateCount > 0 ? (totalSampleRate / sampleRateCount) / 1000 : 0,
+            oldestYear: years.length ? Math.min(...years) : null,
+            newestYear: years.length ? Math.max(...years) : null,
+            historyCount: historyIds.length,
+            favoritesCount: favs.length
         };
     }, [libraryState.tracks, playerState.history]);
 
@@ -315,6 +349,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                 <span className="text-sm font-black text-white">{totalSizeGb.toFixed(2)} GB</span>
                             </div>
                             <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Versions</span>
+                                <span className="text-sm font-black text-white">{totalVersions}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Singles</span>
+                                <span className="text-sm font-black text-white">{singlesCount}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Top Codec</span>
+                                <span className="text-sm font-black text-white">{topCodec}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Avg. Sample Rate</span>
+                                <span className="text-sm font-black text-white">{averageSampleRateKhz.toFixed(1)} kHz</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Year Range</span>
+                                <span className="text-sm font-black text-white">{oldestYear && newestYear ? `${oldestYear}-${newestYear}` : '-'}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Lossless</span>
                                 <span className="text-sm font-black text-white">{losslessCount} ({totalTracks > 0 ? Math.round((losslessCount / totalTracks) * 100) : 0}%)</span>
                             </div>
@@ -325,6 +379,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             <div className="flex justify-between items-center group">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Folders</span>
                                 <span className="text-sm font-black text-white">{totalFolders}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">History Entries</span>
+                                <span className="text-sm font-black text-white">{historyCount}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-gray-300 transition-colors">Favorites</span>
+                                <span className="text-sm font-black text-white">{favoritesCount}</span>
                             </div>
                             <div className="pt-4 border-t border-white/5">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4">Genre Mix</h3>

@@ -20,6 +20,8 @@ export interface UserPreferences {
     eqBands: number[]; // [32Hz, 64Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz]
     crossfadeEnabled: boolean;
     crossfadeDuration: number;
+    normalizationEnabled: boolean;
+    normalizationStrength: number;
     metadataWriteTarget: MetadataWriteTarget;
 }
 
@@ -43,6 +45,7 @@ interface UserDataStore {
     artworkOverrides: Record<string, import('../types/music').ImageDetails[]>; // hash_sha256 -> artworks
     ratings: Record<string, number>; // hash_sha256 -> 0-5 stars
     favorites: string[]; // array of hash_sha256
+    hiddenTrackIds: string[]; // temporarily hidden track hashes
     playbackState?: PlaybackState;
 }
 
@@ -59,13 +62,16 @@ const DEFAULT_DATA: UserDataStore = {
         eqBands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         crossfadeEnabled: false,
         crossfadeDuration: 3,
+        normalizationEnabled: false,
+        normalizationStrength: 45,
         metadataWriteTarget: 'musicbib'
     },
     playCounts: {},
     metadataOverrides: {},
     artworkOverrides: {},
     ratings: {},
-    favorites: []
+    favorites: [],
+    hiddenTrackIds: []
 };
 
 class PersistenceService {
@@ -79,7 +85,25 @@ class PersistenceService {
         if (typeof window === 'undefined') return DEFAULT_DATA;
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : DEFAULT_DATA;
+            if (!stored) return DEFAULT_DATA;
+            const parsed = JSON.parse(stored) as Partial<UserDataStore>;
+            return {
+                ...DEFAULT_DATA,
+                ...parsed,
+                preferences: {
+                    ...DEFAULT_DATA.preferences,
+                    ...(parsed.preferences || {})
+                },
+                history: parsed.history || [],
+                playlists: parsed.playlists || [],
+                smartPlaylists: parsed.smartPlaylists || [],
+                playCounts: parsed.playCounts || {},
+                metadataOverrides: parsed.metadataOverrides || {},
+                artworkOverrides: parsed.artworkOverrides || {},
+                ratings: parsed.ratings || {},
+                favorites: parsed.favorites || [],
+                hiddenTrackIds: parsed.hiddenTrackIds || []
+            };
         } catch (e) {
             console.error("Failed to load user data", e);
             return DEFAULT_DATA;
@@ -115,6 +139,15 @@ class PersistenceService {
     // -- History
     getHistoryIds(): string[] {
         return this.data.history;
+    }
+
+    clearHistory() {
+        this.data.history = [];
+        this.data.playCounts = {};
+        this.saveData();
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('music-history-cleared'));
+        }
     }
 
     addToHistory(hash_sha256: string) {
@@ -273,6 +306,24 @@ class PersistenceService {
 
     getFavorites(): string[] {
         return this.data.favorites || [];
+    }
+
+    getHiddenTrackIds(): string[] {
+        return this.data.hiddenTrackIds || [];
+    }
+
+    hideTrack(hash_sha256: string): void {
+        if (!this.data.hiddenTrackIds) this.data.hiddenTrackIds = [];
+        if (!this.data.hiddenTrackIds.includes(hash_sha256)) {
+            this.data.hiddenTrackIds.push(hash_sha256);
+            this.saveData();
+        }
+    }
+
+    unhideTrack(hash_sha256: string): void {
+        if (!this.data.hiddenTrackIds) return;
+        this.data.hiddenTrackIds = this.data.hiddenTrackIds.filter(id => id !== hash_sha256);
+        this.saveData();
     }
 
     // -- Generic store (for UI preferences like columns)
