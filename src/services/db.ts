@@ -1,5 +1,7 @@
 import { MusicDatabase, TrackItem } from '../types/music';
 
+const ABSOLUTE_URL_REGEX = /^[a-z][a-z0-9+.-]*:\/\//i;
+
 /**
  * Database Service
  * Parses 'musicBib.json' and prepares the application for in-memory DB operations.
@@ -7,18 +9,86 @@ import { MusicDatabase, TrackItem } from '../types/music';
 export class DatabaseService {
     private database: MusicDatabase | null = null;
     private trackMap: Map<string, TrackItem> = new Map();
+    private readonly appBaseUrl = this.normalizeBaseUrl(import.meta.env.BASE_URL || '/');
+    private readonly mediaBaseUrl = this.normalizeBaseUrl(import.meta.env.VITE_MEDIA_BASE_URL || '');
+
+    private normalizeBaseUrl(base: string): string {
+        const trimmed = (base || '').trim();
+        if (!trimmed) return '';
+        if (trimmed === '/') return '/';
+        return trimmed.replace(/\/+$/, '');
+    }
+
+    private safeEncodeSegment(segment: string): string {
+        if (!segment) return segment;
+        try {
+            return encodeURIComponent(decodeURIComponent(segment)).replace(/%3A/g, ':');
+        } catch {
+            return encodeURIComponent(segment).replace(/%3A/g, ':');
+        }
+    }
+
+    private toEncodedUrlPath(pathValue: string): string {
+        return pathValue
+            .split('/')
+            .map(segment => this.safeEncodeSegment(segment))
+            .join('/');
+    }
+
+    private toRelativeLibraryPath(rawPath: string): string {
+        const normalizedRaw = rawPath.replace(/^file:\/\//i, '').replace(/\\/g, '/').trim();
+        if (!normalizedRaw) return '';
+
+        if (ABSOLUTE_URL_REGEX.test(normalizedRaw)) {
+            try {
+                const parsed = new URL(normalizedRaw);
+                return parsed.pathname.replace(/^\/+/, '');
+            } catch {
+                return normalizedRaw.replace(/^\/+/, '');
+            }
+        }
+
+        const withoutDrive = normalizedRaw.replace(/^[A-Za-z]:\//, '');
+        const libraryAnchorMatch = withoutDrive.match(/(Album\s+\d[^/]*|Single|save)\/.*/i);
+        if (libraryAnchorMatch) {
+            return libraryAnchorMatch[0].replace(/^\/+/, '');
+        }
+
+        const repoAnchor = '/Music-Library/';
+        const repoAnchorIndex = withoutDrive.toLowerCase().indexOf(repoAnchor.toLowerCase());
+        if (repoAnchorIndex >= 0) {
+            return withoutDrive.slice(repoAnchorIndex + repoAnchor.length).replace(/^\/+/, '');
+        }
+
+        return withoutDrive.replace(/^\/+/, '');
+    }
+
+    private joinBaseAndPath(base: string, encodedRelativePath: string): string {
+        if (!base || base === '/') {
+            return `/${encodedRelativePath}`;
+        }
+        return `${base}/${encodedRelativePath}`;
+    }
 
     /**
-     * Converts the absolute path from the indexation batch script to a relative URL.
+     * Converts the absolute path from the indexation batch script to a consumable URL.
      */
-    getRelativePath(absolutePath: string): string {
-        if (!absolutePath) return '';
-        const basePath = 'C:\\Users\\Colin\\Music\\Colin Bossu Réaubourg\\';
-        if (absolutePath.startsWith(basePath)) {
-            const rel = absolutePath.substring(basePath.length);
-            return '/' + rel.split('\\').join('/');
+    getRelativePath(rawPath: string): string {
+        if (!rawPath) return '';
+
+        const normalizedRaw = rawPath.replace(/^file:\/\//i, '').replace(/\\/g, '/').trim();
+        if (!normalizedRaw) return '';
+
+        if (ABSOLUTE_URL_REGEX.test(normalizedRaw)) {
+            return normalizedRaw;
         }
-        return '/' + absolutePath.split('\\').join('/');
+
+        const relativePath = this.toRelativeLibraryPath(normalizedRaw);
+        if (!relativePath) return '';
+
+        const encodedRelativePath = this.toEncodedUrlPath(relativePath);
+        const preferredBase = this.mediaBaseUrl || this.appBaseUrl;
+        return this.joinBaseAndPath(preferredBase, encodedRelativePath);
     }
 
     /**
@@ -57,16 +127,32 @@ export class DatabaseService {
                         track.audio_specs.codec = track.file.ext;
                     }
 
-                    // Normalize artwork paths
+                    // Normalize artwork paths as relative keys in the dataset.
                     if (track.artworks) {
                         if (track.artworks.track_artwork) {
                             track.artworks.track_artwork.forEach(art => {
-                                if (art.path) art.path = '/' + art.path.split('\\').join('/').replace(/^\/+/, '');
+                                if (art.path) {
+                                    const normalized = art.path.replace(/^file:\/\//i, '').replace(/\\/g, '/').trim();
+                                    if (ABSOLUTE_URL_REGEX.test(normalized)) {
+                                        art.path = normalized;
+                                    } else {
+                                        const relativePath = this.toRelativeLibraryPath(art.path);
+                                        art.path = relativePath ? `/${relativePath}` : '';
+                                    }
+                                }
                             });
                         }
                         if (track.artworks.album_artwork) {
                             track.artworks.album_artwork.forEach(art => {
-                                if (art.path) art.path = '/' + art.path.split('\\').join('/').replace(/^\/+/, '');
+                                if (art.path) {
+                                    const normalized = art.path.replace(/^file:\/\//i, '').replace(/\\/g, '/').trim();
+                                    if (ABSOLUTE_URL_REGEX.test(normalized)) {
+                                        art.path = normalized;
+                                    } else {
+                                        const relativePath = this.toRelativeLibraryPath(art.path);
+                                        art.path = relativePath ? `/${relativePath}` : '';
+                                    }
+                                }
                             });
                         }
                     }

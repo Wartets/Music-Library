@@ -10,6 +10,7 @@ import { ContextMenu } from '../shared/ContextMenu';
 import { useUI } from '../../contexts/UIContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MobileTabBar } from './MobileTabBar';
+import { dbService } from '../../services/db';
 
 export type ViewType = 'Dashboard' | 'AllTracks' | 'DetailedHistory' | 'Albums' | 'Artists' | 'Genres' | 'Years' | 'Folders' | 'Formats' | 'Favorites' | 'Playlists' | 'Settings' | 'AlbumDetail' | 'ArtistDetail' | 'SongDetail' | 'BigScreen' | 'Queue';
 
@@ -71,9 +72,10 @@ const AppContent: React.FC<any> = ({
 
     useEffect(() => {
         // Trigger theme update when track changes or component mounts
-        const currentArtworks = playerState.currentTrack?.artworks?.track_artwork;
-        if (currentArtworks && currentArtworks.length > 0) {
-            applyArtworkColors('file://' + currentArtworks[0].path);
+        const artworkPath = playerState.currentTrack?.artworks?.track_artwork?.[0]?.path
+            || playerState.currentTrack?.artworks?.album_artwork?.[0]?.path;
+        if (artworkPath) {
+            applyArtworkColors(dbService.getRelativePath(artworkPath));
         } else {
             applyArtworkColors(null);
         }

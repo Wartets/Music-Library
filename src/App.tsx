@@ -2,28 +2,17 @@ import React, { useEffect } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { usePlayer } from './contexts/PlayerContext';
 import { persistenceService } from './services/persistence';
+import { dbService } from './services/db';
 import { parseDuration } from './utils/formatters';
 
-const ABSOLUTE_URL_REGEX = /^[a-z][a-z0-9+.-]*:\/\//i;
+const DEFAULT_FAVICON = `${import.meta.env.BASE_URL}vite.svg`;
 
 const getDisplayTrackName = (track: ReturnType<typeof usePlayer>['state']['currentTrack']) => {
     if (!track) return 'Unknown Track';
     return track.logic?.track_name || track.metadata?.title || 'Unknown Track';
 };
 
-const resolveArtworkSrc = (rawPath?: string): string => {
-    if (!rawPath) return '';
-    const normalized = rawPath.replace(/^file:\/\//i, '').replace(/\\/g, '/').trim();
-    if (!normalized) return '';
-    if (ABSOLUTE_URL_REGEX.test(normalized)) return normalized;
-
-    const cleaned = normalized.replace(/^\/+/, '');
-    const encoded = cleaned
-        .split('/')
-        .map(segment => encodeURIComponent(segment))
-        .join('/');
-    return `/${encoded}`;
-};
+const resolveArtworkSrc = (rawPath?: string): string => rawPath ? dbService.getRelativePath(rawPath) : '';
 
 const App: React.FC = () => {
     const { state, togglePlay, playNext, playPrevious, seekForward, seekBackward, getProgress } = usePlayer();
@@ -48,7 +37,7 @@ const App: React.FC = () => {
                 favicon.href = artworkSrc;
             } else {
                 // Revert to default favicon
-                favicon.href = '/vite.svg';
+                favicon.href = DEFAULT_FAVICON;
             }
         }
     }, [track]);
@@ -121,7 +110,7 @@ const App: React.FC = () => {
 
         const notification = new Notification(title, {
             body: artist,
-            icon: artworkSrc || '/vite.svg',
+            icon: artworkSrc || DEFAULT_FAVICON,
             tag: `now-playing-${track.logic.hash_sha256}`,
             silent: true
         });
