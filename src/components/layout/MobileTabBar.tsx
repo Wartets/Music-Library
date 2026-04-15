@@ -44,11 +44,11 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
             {isMoreOpen && (
                 <div className="md:hidden fixed inset-0 z-[75] bg-black/70 backdrop-blur-sm" onClick={() => setIsMoreOpen(false)}>
                     <div
-                        className="absolute left-3 right-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] rounded-2xl bg-[#121212]/95 border border-white/10 p-3 shadow-2xl"
+                        className="absolute left-3 right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] rounded-2xl bg-[#121212]/95 border border-white/10 p-3.5 shadow-2xl"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">More views</div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2.5">
                             {extraTabs.map(tab => {
                                 const isActive = currentView === tab.id;
                                 return (
@@ -58,10 +58,10 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                                             onNavigate(tab.id);
                                             setIsMoreOpen(false);
                                         }}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${isActive ? 'bg-dominant/25 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                                        className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left transition-colors min-h-11 ${isActive ? 'bg-dominant/25 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
                                     >
                                         {tab.icon}
-                                        <span className="text-xs font-bold">{tab.label}</span>
+                                        <span className="text-xs font-bold leading-none">{tab.label}</span>
                                     </button>
                                 );
                             })}
@@ -74,19 +74,19 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                 role="navigation"
                 aria-label="Mobile tabs"
             >
-                <div className="h-16 grid grid-cols-6">
+                <div className="h-[4.5rem] grid grid-cols-6">
                     {tabs.map(tab => {
                         const isActive = activeTab === tab.id;
                         return (
                             <button
                                 key={tab.id}
                                 onClick={() => onNavigate(tab.id)}
-                                className={`flex flex-col items-center justify-center gap-1 transition-colors ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`flex flex-col items-center justify-center gap-1.5 transition-colors min-h-11 ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                             >
                                 <span className={isActive ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]' : ''}>
                                     {tab.icon}
                                 </span>
-                                <span className="text-[10px] font-bold tracking-wide uppercase">
+                                <span className="text-[10px] font-bold tracking-wide uppercase leading-none">
                                     {tab.label}
                                 </span>
                             </button>
@@ -94,10 +94,10 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                     })}
                     <button
                         onClick={() => setIsMoreOpen(prev => !prev)}
-                        className={`flex flex-col items-center justify-center gap-1 transition-colors ${(isMoreOpen || isMoreActive) ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex flex-col items-center justify-center gap-1.5 transition-colors min-h-11 ${(isMoreOpen || isMoreActive) ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <MoreHorizontal size={18} />
-                        <span className="text-[10px] font-bold tracking-wide uppercase">More</span>
+                        <span className="text-[10px] font-bold tracking-wide uppercase leading-none">More</span>
                     </button>
                 </div>
             </nav>

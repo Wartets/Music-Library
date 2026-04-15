@@ -257,12 +257,12 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 </div>
 
                 {/* Center: Controls */}
-                <div className="flex flex-col items-center justify-center flex-1 md:w-1/3 max-w-[400px]">
-                    <div className="flex items-center justify-center gap-2 md:gap-3">
+                <div className="flex flex-col items-center justify-center flex-1 md:w-1/3 max-w-[420px]">
+                    <div className="flex items-center justify-center gap-1.5 md:gap-3">
                         <button
                             onClick={toggleShuffle}
                             disabled={!track}
-                            className={`inline-flex items-center justify-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center transition-all rounded-full w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
                         >
                             <IconShuffle active={state.shuffle} />
@@ -271,7 +271,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={playPrevious}
                             disabled={!track}
-                            className={`transition-transform active:scale-95 py-2 px-1 ${activeClass(track, 'text-gray-200 hover:text-white')}`}
+                            className={`transition-transform active:scale-95 w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
                         >
                             <IconPrev />
                         </button>
@@ -288,7 +288,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={togglePlay}
                             disabled={!track}
-                            className={`w-12 h-12 rounded-full bg-white text-black flex items-center justify-center transition-all shadow-lg shadow-white/10 ${activeClass(track, 'hover:scale-105 active:scale-95')}`}
+                            className={`w-14 h-14 md:w-12 md:h-12 rounded-full bg-white text-black flex items-center justify-center transition-all shadow-lg shadow-white/10 ${activeClass(track, 'hover:scale-105 active:scale-95')}`}
                         >
                             {state.isPlaying ? <IconPause /> : <IconPlay />}
                         </button>
@@ -305,7 +305,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={playNext}
                             disabled={!track}
-                            className={`transition-transform active:scale-95 py-2 px-1 ${activeClass(track, 'text-gray-200 hover:text-white')}`}
+                            className={`transition-transform active:scale-95 w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
                         >
                             <IconNext />
                         </button>
@@ -313,10 +313,22 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
                             disabled={!track}
-                            className={`inline-flex items-center justify-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center transition-all rounded-full w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Repeat: ${state.repeat}`}
                         >
                             <IconRepeat mode={state.repeat} />
+                        </button>
+                    </div>
+
+                    <div className="md:hidden mt-1">
+                        <button
+                            onClick={toggleMute}
+                            disabled={!track}
+                            className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
+                            title={isMuted ? 'Unmute' : 'Mute'}
+                            aria-pressed={isMuted}
+                        >
+                            <IconVolume vol={state.volume} />
                         </button>
                     </div>
                 </div>

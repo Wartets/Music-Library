@@ -131,24 +131,29 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
 
     const resolveSubItems = (item: ContextMenuItem) => item.subItems || item.lazySubItems?.() || null;
 
-    const handleMouseEnter = (item: ContextMenuItem, _index: number, e: React.MouseEvent) => {
+    const openSubMenuForItem = (item: ContextMenuItem, target: HTMLElement) => {
         const subItems = resolveSubItems(item);
-        if (subItems) {
-            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setActiveSubMenu(prev => {
-                if (prev?.items === subItems) return prev;
-                return {
-                    source: item,
-                    items: subItems,
-                    top: rect.top,
-                    bottom: rect.bottom,
-                    left: rect.left,
-                    right: rect.right
-                };
-            });
-        } else {
+        if (!subItems) {
             setActiveSubMenu(null);
+            return;
         }
+
+        const rect = target.getBoundingClientRect();
+        setActiveSubMenu(prev => {
+            if (prev?.items === subItems) return prev;
+            return {
+                source: item,
+                items: subItems,
+                top: rect.top,
+                bottom: rect.bottom,
+                left: rect.left,
+                right: rect.right
+            };
+        });
+    };
+
+    const handleMouseEnter = (item: ContextMenuItem, _index: number, e: React.MouseEvent) => {
+        openSubMenuForItem(item, e.currentTarget as HTMLElement);
     };
 
     const handleMenuMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -201,7 +206,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (item.subItems) return;
+                                    if (item.subItems || item.lazySubItems) {
+                                        openSubMenuForItem(item, e.currentTarget as HTMLElement);
+                                        return;
+                                    }
                                     if (!item.disabled) {
                                         item.onClick();
                                         onClose();
@@ -210,7 +218,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                 onMouseEnter={(e) => handleMouseEnter(item, idx, e)}
                                 disabled={item.disabled}
                                 className={`
-                                    w-full flex items-center gap-3 px-3 py-2 text-xs font-bold transition-colors relative group
+                                    w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold transition-colors relative group min-h-11 md:min-h-0
                                     ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-300 hover:bg-white/10 hover:text-white'}
                                     ${item.disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
                                 `}
@@ -246,7 +254,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                 sub.onClick();
                                 onClose();
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer min-h-11 md:min-h-0"
                         >
                             <span className="flex-1 text-left truncate">{sub.label}</span>
                         </button>
