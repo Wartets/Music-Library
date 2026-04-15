@@ -57,10 +57,10 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
     };
 
     return (
-        <div className="h-full flex flex-col p-6 pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
-            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-4">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-4 md:mb-10 gap-3 md:gap-4">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tighter text-white">{title}</h1>
+                    <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">{title}</h1>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">{subtitle}</p>
                 </div>
                 {sortOptions.length > 0 && (
@@ -80,7 +80,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                 )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6 pb-32">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 md:gap-6 pb-28 md:pb-32">
                 {items.map((item) => {
                     const usesVisualToken = !item.isTextIcon && !item.imageDetails && !!item.visualToken;
                     const visualToken = item.visualToken;

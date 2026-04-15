@@ -257,11 +257,11 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     }, [playerState.currentTrack?.logic.hash_sha256, libraryState, gridTemplate, playTrack, tracks, onRightClick, toggleFolder]);
 
     return (
-        <div className="h-full flex flex-col pt-24 px-6 pb-0 bg-surface-primary">
+        <div className="h-full flex flex-col pt-16 md:pt-24 px-3 md:px-6 pb-0 bg-surface-primary">
             {/* Header */}
-            <div className={`mb-10 flex flex-col md:flex-row items-center md:items-end gap-8 ${artworkPath ? 'mb-12' : 'mb-6'}`}>
+            <div className={`mb-4 md:mb-10 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-8 ${artworkPath ? 'md:mb-12' : 'md:mb-6'}`}>
                 {artworkPath ? (
-                    <div className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 group relative">
+                    <div className="w-28 h-28 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 group relative">
                         <ArtworkImage
                             src={artworkPath}
                             alt={title}
@@ -270,10 +270,10 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                 ) : headerIcon ? (
-                    <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
+                    <div className="w-14 h-14 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
                         {headerIcon}
                     </div>
-                ) : <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
+                ) : <div className="w-14 h-14 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
                     <Folder size={32} />
                 </div>}
 
@@ -281,22 +281,22 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-dominant mb-3 opacity-60">
                         {subtitle || 'Collection'}
                     </span>
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-4">
+                    <h1 className="text-2xl md:text-6xl font-black tracking-tighter text-white mb-2 md:mb-4">
                         {title}
                     </h1>
                     {description && (
-                        <p className="text-gray-400 text-sm md:text-base max-w-2xl mb-6 font-medium leading-relaxed">
+                        <p className="text-gray-400 text-xs md:text-base max-w-2xl mb-4 md:mb-6 font-medium leading-relaxed">
                             {description}
                         </p>
                     )}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         <button
                             onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
-                            className="flex items-center gap-3 px-8 py-3 bg-dominant text-on-dominant rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-dominant-light transition-all shadow-xl shadow-dominant/10 active:scale-95"
+                            className="flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2.5 md:py-3 bg-dominant text-on-dominant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.16em] md:tracking-[0.2em] hover:bg-dominant-light transition-all shadow-xl shadow-dominant/10 active:scale-95"
                         >
                             <Play size={16} fill="currentColor" /> Play All
                         </button>
-                        <span className="text-gray-600 font-mono text-xs uppercase tracking-widest pl-2">
+                        <span className="hidden sm:block text-gray-600 font-mono text-xs uppercase tracking-widest pl-2">
                             {tracks.length} tracks • {(() => {
                                 let totalS = 0;
                                 tracks.forEach(t => {
@@ -316,7 +316,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
 
             {/* Table Header */}
             <div
-                className="grid px-6 py-3 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] border-b border-white/10 select-none items-center bg-white/2"
+                className="grid px-3 md:px-6 py-2.5 md:py-3 text-[10px] font-black text-white/20 uppercase tracking-[0.26em] md:tracking-[0.3em] border-b border-white/10 select-none items-center bg-white/2"
                 style={{ gridTemplateColumns: gridTemplate, gap: '1.5rem' }}
             >
                 {libraryState.columnConfig.filter(c => c.visible).map(col => {

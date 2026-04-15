@@ -182,22 +182,22 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 pt-24 overflow-hidden relative z-10 bg-surface-primary">
-            <div className="flex items-center justify-between mb-10">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 md:mb-10">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tighter text-white">Playlists</h1>
+                    <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">Playlists</h1>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">{playlists.length + smartPlaylists.length} user collections</p>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-2 md:gap-4">
                     <button
                         onClick={() => { setIsCreating(false); setIsCreatingSmart(true); }}
-                        className="bg-white/5 border border-white/10 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all shadow-lg flex items-center gap-2"
+                        className="bg-white/5 border border-white/10 text-white px-3 md:px-6 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all shadow-lg flex items-center gap-2"
                     >
                         <ScanSearch size={16} /> Smart Playlist
                     </button>
                     <button
                         onClick={() => { setIsCreatingSmart(false); setIsCreating(true); }}
-                        className="bg-dominant text-on-dominant px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-dominant-light transition-all shadow-lg"
+                        className="bg-dominant text-on-dominant px-3 md:px-6 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-dominant-light transition-all shadow-lg"
                     >
                         + Create New
                     </button>
@@ -260,9 +260,9 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                 </form>
             )}
 
-            <div className="flex-1 flex gap-10 overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-10 overflow-hidden">
                 {/* Left: List of Playlists */}
-                <div className="w-80 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 pb-8">
+                <div className="w-full md:w-80 max-h-[40vh] md:max-h-none flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 md:pr-2 pb-4 md:pb-8">
                     {playlists.length === 0 && smartPlaylists.length === 0 && !isCreating ? (
                         <div className="text-gray-600 font-bold uppercase tracking-widest text-[10px] flex flex-col h-48 items-center justify-center border-2 border-dashed border-white/5 rounded-3xl gap-4">
                             <FolderPlus size={32} className="opacity-20" />
@@ -322,12 +322,12 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* Right: Selected Playlist Details */}
-                <div className="flex-1 overflow-hidden relative">
+                <div className="flex-1 overflow-hidden relative min-h-0">
                     <AnimatePresence mode="wait">
                         {selectedPlaylist ? (
                             <div key={selectedPlaylist.id} className="h-full flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="mb-10 flex flex-col md:flex-row items-start md:items-end gap-8 pb-10 border-b border-white/5 relative group">
-                                    <div className="w-48 h-48 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 flex-shrink-0 relative">
+                                <div className="mb-4 md:mb-10 flex flex-col md:flex-row items-start md:items-end gap-4 md:gap-8 pb-4 md:pb-10 border-b border-white/5 relative group">
+                                    <div className="w-28 h-28 md:w-48 md:h-48 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 flex-shrink-0 relative">
                                         {(selectedPlaylist as Playlist).customImage || isSmartPlaylist(selectedPlaylist) ? (
                                             <ArtworkImage
                                                 src={isSmartPlaylist(selectedPlaylist) ? undefined : (selectedPlaylist as Playlist).customImage}
@@ -367,7 +367,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                 </span>
                                             )}
                                         </div>
-                                        <h2 className="text-6xl font-black text-white tracking-tighter mb-4 truncate leading-none">{selectedPlaylist.name}</h2>
+                                        <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter mb-2 md:mb-4 truncate leading-none">{selectedPlaylist.name}</h2>
 
                                         {!isSmartPlaylist(selectedPlaylist) && (selectedPlaylist as Playlist).description && (
                                             <p className="text-gray-400 font-medium text-sm max-w-2xl mb-6 line-clamp-2 italic">
@@ -387,7 +387,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                         const tracks = activeTrackIds.map(h => state.tracks.find(t => t.logic.hash_sha256 === h)).filter(Boolean) as TrackItem[];
                                                         if (tracks.length > 0) playTrack(tracks[0], tracks);
                                                     }}
-                                                    className="flex items-center gap-2 px-8 py-3 bg-dominant text-on-dominant rounded-xl text-xs font-black hover:bg-dominant-light transition-all shadow-xl shadow-dominant/20 uppercase tracking-widest"
+                                                    className="flex items-center gap-2 px-4 md:px-8 py-2.5 md:py-3 bg-dominant text-on-dominant rounded-xl text-[10px] md:text-xs font-black hover:bg-dominant-light transition-all shadow-xl shadow-dominant/20 uppercase tracking-widest"
                                                 >
                                                     <Play size={14} fill="currentColor" /> Play Mix
                                                 </button>
@@ -395,7 +395,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                 {!isSmartPlaylist(selectedPlaylist) && (
                                                     <button
                                                         onClick={() => setEditingPlaylist(selectedPlaylist as Playlist)}
-                                                        className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10"
+                                                        className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10"
                                                     >
                                                         <Pencil size={14} /> Edit Details
                                                     </button>

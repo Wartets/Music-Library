@@ -321,12 +321,12 @@ export const QueueView: React.FC = () => {
     const repeatLabel = playerState.repeat === 'one' ? 'Repeat One' : playerState.repeat === 'all' ? 'Repeat All' : 'Repeat Off';
 
     return (
-        <div className="h-full flex flex-col p-6 pt-24 overflow-hidden relative z-10 bg-surface-primary">
-            <div className="flex flex-col gap-6 mb-8">
-                <div className="flex items-center justify-between">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">
+            <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-8">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-4xl font-black tracking-tighter text-white">Playback Control</h1>
-                        <p className="text-gray-500 text-sm mt-1 flex items-center gap-4 flex-wrap">
+                        <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">Playback Control</h1>
+                        <p className="text-gray-500 text-xs md:text-sm mt-1 flex items-center gap-3 md:gap-4 flex-wrap">
                             <span className="flex items-center gap-1.5"><ListMusic size={14} /> {nextTracksRaw.length} tracks upcoming</span>
                             <span className="flex items-center gap-1.5"><Clock size={14} /> {formatDuration(totalQueueDuration)} remaining</span>
                             <span className={`text-xs font-black uppercase tracking-wider ${playerState.shuffle ? 'text-dominant-light' : 'text-gray-600'}`}>
@@ -344,9 +344,9 @@ export const QueueView: React.FC = () => {
                         <button onClick={handleSaveAsPlaylist} title="Save as Playlist" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center">
                             <Save size={18} />
                         </button>
-                        <button onClick={clearQueue} className="flex items-center justify-center gap-2 px-5 py-2 hover:bg-red-500/20 rounded-xl text-sm font-bold transition-colors border border-transparent hover:border-red-500/20 text-red-500 ml-2 h-10">
+                        <button onClick={clearQueue} className="flex items-center justify-center gap-2 px-3 md:px-5 py-2 hover:bg-red-500/20 rounded-xl text-xs md:text-sm font-bold transition-colors border border-transparent hover:border-red-500/20 text-red-500 ml-1 md:ml-2 h-10">
                             <Trash2 size={16} />
-                            Clear Queue
+                            <span className="hidden sm:inline">Clear Queue</span>
                         </button>
                     </div>
                 </div>
@@ -437,17 +437,17 @@ export const QueueView: React.FC = () => {
                         {currentTrack && (
                             <section>
                                 <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Now Spinning</h2>
-                                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 flex items-center gap-8 shadow-2xl overflow-hidden relative group">
+                                <div className="bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 flex items-center gap-4 md:gap-8 shadow-2xl overflow-hidden relative group">
                                     <div className="absolute inset-0 bg-dominant/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 ring-1 ring-white/10 relative z-10">
+                                    <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 ring-1 ring-white/10 relative z-10">
                                         <ArtworkImage details={getArtworkForTrack(currentTrack)} alt={trackTitle(currentTrack)} />
                                     </div>
                                     <div className="flex-1 min-w-0 relative z-10">
-                                        <h3 className="text-3xl font-black text-white truncate leading-tight">{trackTitle(currentTrack)}</h3>
-                                        <p className="text-dominant-light text-lg font-bold truncate mt-1.5 flex items-center gap-3">
+                                        <h3 className="text-xl md:text-3xl font-black text-white truncate leading-tight">{trackTitle(currentTrack)}</h3>
+                                        <p className="text-dominant-light text-sm md:text-lg font-bold truncate mt-1.5 flex items-center gap-2 md:gap-3">
                                             {currentTrack.metadata?.artists?.join(', ')}
                                             <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                                            <span className="text-gray-500 text-sm font-medium">{currentTrack.metadata?.album}</span>
+                                            <span className="text-gray-500 text-xs md:text-sm font-medium">{currentTrack.metadata?.album}</span>
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-end gap-1 relative z-10">

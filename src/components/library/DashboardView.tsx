@@ -270,7 +270,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-24 px-8 pb-32">
+        <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-16 md:pt-24 px-3 md:px-8 pb-24 md:pb-32">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Main Content: Recently & Most Played */}
                 <div className="lg:col-span-2 space-y-12">

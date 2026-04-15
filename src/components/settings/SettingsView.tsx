@@ -168,17 +168,17 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
     };
 
     return (
-        <div className="h-full flex flex-col p-8 pt-24 bg-surface-primary overflow-hidden">
+        <div className="h-full flex flex-col p-3 md:p-8 pt-16 md:pt-24 bg-surface-primary overflow-hidden">
             <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
                 {/* Header */}
-                <div className="flex items-end justify-between mb-8">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-8">
                     <div>
-                        <h1 className="text-4xl font-black tracking-tighter text-white">Settings</h1>
-                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">Personalize your experience</p>
+                        <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">Settings</h1>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1 md:mt-2">Personalize your experience</p>
                     </div>
 
                     {/* Main Tabs */}
-                    <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl">
+                    <div className="flex w-full md:w-auto bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl overflow-x-auto no-scrollbar">
                         {[
                             { id: 'interface', label: 'Interface', icon: <Palette size={16} /> },
                             { id: 'audio', label: 'Audio Engine', icon: <Volume2 size={16} /> },
@@ -188,7 +188,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab.id ? 'bg-dominant text-on-dominant shadow-dominant/20 shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`flex items-center gap-2 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-widest whitespace-nowrap ${activeTab === tab.id ? 'bg-dominant text-on-dominant shadow-dominant/20 shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
                             >
                                 {tab.icon}
                                 <span className="hidden md:inline">{tab.label}</span>

@@ -39,11 +39,11 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
     }, [artistTracks]);
 
     return (
-        <div className="h-full flex flex-col p-8 pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-8 pt-16 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
 
-            <div className="flex flex-col mb-12">
+            <div className="flex flex-col mb-4 md:mb-12">
                 <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/30 mb-2">Artist Profile</span>
-                <h1 className="text-6xl font-black tracking-tighter text-white mb-4">{artistName}</h1>
+                <h1 className="text-3xl md:text-6xl font-black tracking-tighter text-white mb-3 md:mb-4">{artistName}</h1>
                 <div className="flex items-center gap-4 text-sm text-gray-400">
                     <span className="bg-white/5 px-3 py-1 rounded-full">{artistAlbums.length} Albums</span>
                     <span className="bg-white/5 px-3 py-1 rounded-full">{artistTracks.length} Tracks</span>

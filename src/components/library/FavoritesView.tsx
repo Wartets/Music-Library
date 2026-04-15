@@ -28,18 +28,18 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
-            <div className="flex items-end justify-between mb-10">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-10">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tighter text-white flex items-center gap-3">
-                        <Heart size={32} className="text-red-400 fill-red-400" /> Favorites
+                    <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white flex items-center gap-3">
+                        <Heart size={24} className="text-red-400 fill-red-400 md:w-8 md:h-8" /> Favorites
                     </h1>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">{favoriteTracks.length} tracks</p>
                 </div>
                 {favoriteTracks.length > 0 && (
                     <button
                         onClick={() => playTrack(favoriteTracks[0], favoriteTracks)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-dominant text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-dominant-light transition-all shadow-lg shadow-dominant/10"
+                        className="flex items-center gap-2 px-4 md:px-5 py-2.5 bg-dominant text-black rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-dominant-light transition-all shadow-lg shadow-dominant/10"
                     >
                         <Play size={14} fill="currentColor" /> Play All
                     </button>

@@ -10,14 +10,14 @@ export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
     const versions = track.versions || [track];
 
     return (
-        <div className="h-full flex flex-col px-8 pb-8 pt-32 md:pt-28 overflow-y-auto custom-scrollbar">
-            <div className="flex flex-col md:flex-row gap-12 mb-12">
-                <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/5 flex-shrink-0">
+        <div className="h-full flex flex-col px-3 md:px-8 pb-6 md:pb-8 pt-16 md:pt-28 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-12">
+                <div className="w-40 h-40 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/5 flex-shrink-0">
                     <ArtworkImage details={artwork} alt={track.metadata?.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col justify-end">
-                    <h1 className="text-5xl font-black tracking-tight mb-4 text-white">{track.metadata?.title || track.logic.track_name}</h1>
-                    <p className="text-2xl text-white/50 font-medium mb-4">{track.metadata?.artists?.join(', ')}</p>
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3 md:mb-4 text-white">{track.metadata?.title || track.logic.track_name}</h1>
+                    <p className="text-lg md:text-2xl text-white/50 font-medium mb-3 md:mb-4">{track.metadata?.artists?.join(', ')}</p>
                     <div className="flex items-center gap-3">
                         <span className="text-xs font-bold bg-white/10 px-3 py-1 rounded-full text-gray-400">
                             {track.logic.track_name}

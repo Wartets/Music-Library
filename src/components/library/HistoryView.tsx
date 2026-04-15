@@ -117,13 +117,13 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
     };
 
     return (
-        <div className="h-full flex flex-col pt-24 px-6 pb-0 overflow-hidden">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="h-full flex flex-col pt-16 md:pt-24 px-3 md:px-6 pb-0 overflow-hidden">
+            <div className="mb-4 md:mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
                         <Clock className="text-dominant" /> Playback History
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">Tracks you've listened to recently across all sessions.</p>
+                    <p className="text-gray-500 text-xs md:text-sm mt-1">Tracks you've listened to recently across all sessions.</p>
                 </div>
 
                 <div className="flex items-center gap-2">
