@@ -7,6 +7,7 @@ import {
     BigScreenView, HistoryView, QueueView
 } from '../library';
 import { SettingsView } from '../settings/SettingsView';
+import { SearchResultsView } from '../library/SearchResultsView';
 
 interface MainViewProps {
     currentView: ViewType;
@@ -21,6 +22,8 @@ export const MainView: React.FC<MainViewProps> = ({ currentView, viewData, onNav
         switch (currentView) {
             case 'Dashboard':
                 return <DashboardView onNavigate={onNavigate} />;
+            case 'SearchResults':
+                return <SearchResultsView query={viewData?.query} sourceView={viewData?.sourceView} onNavigate={onNavigate} />;
             case 'DetailedHistory':
                 return <HistoryView onNavigate={onNavigate} />;
             case 'AllTracks':

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { getTrackCollectionLabel } from '../../utils/collectionLabels';
 
 const HighlightText: React.FC<{ text: string, query: string }> = ({ text, query }) => {
     if (!query.trim()) return <>{text}</>;
@@ -190,7 +191,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                         case 'album':
                             return (
                                 <div key={col.id} className={`${responsiveClass} truncate text-xs text-gray-500 pr-2 group-hover:text-gray-300 transition-colors`}>
-                                    <HighlightText text={item.metadata?.album || 'Unknown Album'} query={libraryState.searchQuery} />
+                                    <HighlightText text={getTrackCollectionLabel(item)} query={libraryState.searchQuery} />
                                 </div>
                             );
                         case 'genre':
@@ -257,11 +258,11 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     }, [playerState.currentTrack?.logic.hash_sha256, libraryState, gridTemplate, playTrack, tracks, onRightClick, toggleFolder]);
 
     return (
-        <div className="h-full flex flex-col pt-16 md:pt-24 px-3 md:px-6 pb-0 bg-surface-primary">
+        <div className="h-full flex flex-col pt-14 md:pt-20 px-3 md:px-6 pb-0 bg-surface-primary">
             {/* Header */}
-            <div className={`mb-4 md:mb-10 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-8 ${artworkPath ? 'md:mb-12' : 'md:mb-6'}`}>
+            <div className={`mb-4 md:mb-8 flex flex-col sm:flex-row items-center sm:items-end gap-4 md:gap-8 ${artworkPath ? 'md:mb-10' : 'md:mb-6'}`}>
                 {artworkPath ? (
-                    <div className="w-28 h-28 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 group relative">
+                    <div className="w-20 h-20 md:w-56 md:h-56 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 group relative">
                         <ArtworkImage
                             src={artworkPath}
                             alt={title}
@@ -270,22 +271,22 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                 ) : headerIcon ? (
-                    <div className="w-14 h-14 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
+                    <div className="w-12 h-12 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
                         {headerIcon}
                     </div>
-                ) : <div className="w-14 h-14 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
+                ) : <div className="w-12 h-12 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-dominant border border-white/5 shadow-xl">
                     <Folder size={32} />
                 </div>}
 
-                <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
+                <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-dominant mb-3 opacity-60">
                         {subtitle || 'Collection'}
                     </span>
-                    <h1 className="text-2xl md:text-6xl font-black tracking-tighter text-white mb-2 md:mb-4">
+                    <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-white mb-2 md:mb-3">
                         {title}
                     </h1>
                     {description && (
-                        <p className="text-gray-400 text-xs md:text-base max-w-2xl mb-4 md:mb-6 font-medium leading-relaxed">
+                        <p className="text-gray-400 text-xs md:text-base max-w-2xl mb-3 md:mb-5 font-medium leading-relaxed">
                             {description}
                         </p>
                     )}

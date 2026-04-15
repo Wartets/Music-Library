@@ -248,10 +248,11 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={toggleShuffle}
                             disabled={!track}
-                            className={`hidden sm:inline-flex transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
                         >
                             <IconShuffle active={state.shuffle} />
+                            <span className="hidden sm:inline ml-1.5 text-[11px] font-black uppercase tracking-widest">Shuffle</span>
                         </button>
 
                         <button
@@ -299,10 +300,11 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
                             disabled={!track}
-                            className={`hidden sm:inline-flex transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Repeat: ${state.repeat}`}
                         >
                             <IconRepeat mode={state.repeat} />
+                            <span className="hidden sm:inline ml-1.5 text-[11px] font-black uppercase tracking-widest">Repeat</span>
                         </button>
                     </div>
                 </div>

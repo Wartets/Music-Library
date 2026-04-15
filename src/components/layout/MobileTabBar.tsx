@@ -27,6 +27,7 @@ const extraTabs: { id: ViewType; label: string; icon: React.ReactNode }[] = [
 ];
 
 const getTabFromView = (view: ViewType): ViewType => {
+    if (view === 'SearchResults') return 'AllTracks';
     if (view === 'AlbumDetail') return 'Albums';
     if (view === 'ArtistDetail') return 'Artists';
     if (view === 'SongDetail') return 'AllTracks';

@@ -11,7 +11,7 @@ import { useUI } from '../../contexts/UIContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MobileTabBar } from './MobileTabBar';
 
-export type ViewType = 'Dashboard' | 'AllTracks' | 'DetailedHistory' | 'Albums' | 'Artists' | 'Genres' | 'Years' | 'Folders' | 'Formats' | 'Favorites' | 'Playlists' | 'Settings' | 'AlbumDetail' | 'ArtistDetail' | 'SongDetail' | 'BigScreen' | 'Queue';
+export type ViewType = 'Dashboard' | 'SearchResults' | 'AllTracks' | 'DetailedHistory' | 'Albums' | 'Artists' | 'Genres' | 'Years' | 'Folders' | 'Formats' | 'Favorites' | 'Playlists' | 'Settings' | 'AlbumDetail' | 'ArtistDetail' | 'SongDetail' | 'BigScreen' | 'Queue';
 
 export const AppLayout: React.FC = () => {
     const [history, setHistory] = useState<{ view: ViewType, data: any }[]>(() => {
@@ -114,11 +114,11 @@ const AppContent: React.FC<any> = ({
     return (
         <div className="h-screen w-full flex flex-col overflow-hidden bg-dominant-dark text-white selection:bg-dominant-light selection:text-white">
             <div className="flex flex-1 overflow-hidden relative">
-                <Sidebar currentView={currentView} onNavigate={(v) => navigate(v, null)} />
+                <Sidebar currentView={currentView} onNavigate={navigate} />
                 <div className={`flex-1 flex flex-col overflow-hidden relative ${currentView !== 'BigScreen' ? 'pb-[10.25rem] md:pb-0' : 'pb-0'}`}>
                     {/* Navigation Bar - Superimposed, no background, fixed position */}
                     {currentView !== 'BigScreen' && (
-                        <div className="hidden md:flex fixed top-6 left-72 z-40 items-center gap-2 pointer-events-none">
+                        <div className="hidden md:flex fixed top-4 left-24 xl:left-72 z-40 items-center gap-2 pointer-events-none">
                             <button
                                 onClick={goBack}
                                 disabled={historyIndex === 0}

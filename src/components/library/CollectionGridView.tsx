@@ -57,7 +57,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
     };
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-14 md:pt-20 overflow-y-auto custom-scrollbar bg-surface-primary">
             <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-4 md:mb-10 gap-3 md:gap-4">
                 <div>
                     <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">{title}</h1>
@@ -70,7 +70,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                                 <button
                                     key={opt.id}
                                     onClick={() => onSortChange(opt.id)}
-                                    className={`px-4 py-2 flex-shrink-0 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${currentSort === opt.id ? 'bg-white/10 text-white shadow' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`px-3 md:px-4 py-2 flex-shrink-0 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${currentSort === opt.id ? 'bg-white/10 text-white shadow' : 'text-gray-500 hover:text-gray-300'}`}
                                 >
                                     {opt.icon} {opt.label}
                                 </button>
@@ -80,7 +80,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                 )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 md:gap-6 pb-28 md:pb-32">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 md:gap-6 pb-24 md:pb-28">
                 {items.map((item) => {
                     const usesVisualToken = !item.isTextIcon && !item.imageDetails && !!item.visualToken;
                     const visualToken = item.visualToken;

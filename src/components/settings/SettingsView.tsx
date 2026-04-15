@@ -16,10 +16,11 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
     const { state: playerState, setShuffleMode } = usePlayer();
     const { settings: themeSettings, updateSettings, currentPalette, reportBadPalette } = useTheme();
 
-    const [activeTab, setActiveTab] = useState<'interface' | 'audio' | 'metadata' | 'maintenance'>(() => {
+    const [activeTab, setActiveTab] = useState<'interface' | 'audio' | 'metadata' | 'maintenance' | 'stats'>(() => {
         if (initialTab === 'maintenance') return 'maintenance';
         if (initialTab === 'audio') return 'audio';
         if (initialTab === 'metadata') return 'metadata';
+        if (initialTab === 'stats') return 'stats';
         return 'interface';
     });
     const [maintenanceTab, setMaintenanceTab] = useState<'duplicates' | 'health' | 'data'>('duplicates');
@@ -183,6 +184,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                             { id: 'interface', label: 'Interface', icon: <Palette size={16} /> },
                             { id: 'audio', label: 'Audio Engine', icon: <Volume2 size={16} /> },
                             { id: 'metadata', label: 'Metadata', icon: <FileText size={16} /> },
+                            { id: 'stats', label: 'Stats', icon: <BarChart3 size={16} /> },
                             { id: 'maintenance', label: 'Maintenance', icon: <Database size={16} /> }
                         ].map(tab => (
                             <button
@@ -745,6 +747,39 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'stats' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl backdrop-blur-md">
+                                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+                                    <div>
+                                        <h2 className="text-2xl font-black text-white flex items-center gap-3">
+                                            <BarChart3 className="text-dominant" size={24} />
+                                            Library Stats
+                                        </h2>
+                                        <p className="text-sm text-gray-500">A compact view of your collection health and scale.</p>
+                                    </div>
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                        Updated from the loaded library snapshot
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {[
+                                        { label: 'Tracks', value: libState.stats.totalTracks.toLocaleString() },
+                                        { label: 'Duration', value: `${Math.round(libState.stats.totalDuration / 60).toLocaleString()} min` },
+                                        { label: 'Size', value: `${libState.stats.totalSizeMb.toFixed(1)} MB` },
+                                        { label: 'Lossless', value: libState.tracks.filter(t => t.audio_specs?.is_lossless).length.toLocaleString() },
+                                    ].map(card => (
+                                        <div key={card.label} className="p-5 rounded-2xl bg-black/25 border border-white/5">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">{card.label}</div>
+                                            <div className="text-2xl font-black text-white truncate">{card.value}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

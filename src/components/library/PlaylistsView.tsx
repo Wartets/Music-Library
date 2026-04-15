@@ -162,6 +162,32 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
         setSelectedPlaylist(selectedPlaylist?.id === pl.id ? null : pl);
     };
 
+    const reorderSelectedPlaylist = (mode: 'shuffle' | 'alpha' | 'dedupe') => {
+        if (!selectedPlaylist || isSmartPlaylist(selectedPlaylist)) return;
+        const current = selectedPlaylist as Playlist;
+        const resolvedTracks = current.trackIds
+            .map(hash => state.tracks.find(t => t.logic.hash_sha256 === hash))
+            .filter((track): track is TrackItem => Boolean(track));
+
+        let nextTrackIds = [...current.trackIds];
+        if (mode === 'shuffle') {
+            nextTrackIds = [...current.trackIds].sort(() => Math.random() - 0.5);
+        } else if (mode === 'alpha') {
+            nextTrackIds = resolvedTracks
+                .slice()
+                .sort((a, b) => (a.metadata?.title || a.logic.track_name).localeCompare(b.metadata?.title || b.logic.track_name))
+                .map(track => track.logic.hash_sha256);
+        } else {
+            nextTrackIds = Array.from(new Set(current.trackIds));
+        }
+
+        persistenceService.updatePlaylist(current.id, { trackIds: nextTrackIds });
+        const updated = persistenceService.getPlaylists().find(p => p.id === current.id);
+        if (updated) setSelectedPlaylist(updated);
+        setPlaylists(persistenceService.getPlaylists());
+        showToast(mode === 'shuffle' ? 'Playlist shuffled' : mode === 'alpha' ? 'Playlist sorted A–Z' : 'Duplicates removed', 'success');
+    };
+
     const isSmartPlaylist = (pl: any): pl is SmartPlaylistDefinition => {
         return 'group' in pl;
     };
@@ -260,9 +286,9 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                 </form>
             )}
 
-            <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-10 overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row gap-4 md:gap-10 overflow-hidden">
                 {/* Left: List of Playlists */}
-                <div className="w-full md:w-80 max-h-[40vh] md:max-h-none flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 md:pr-2 pb-4 md:pb-8">
+                <div className="w-full lg:w-80 max-h-[32vh] lg:max-h-none flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 md:pr-2 pb-4 md:pb-8">
                     {playlists.length === 0 && smartPlaylists.length === 0 && !isCreating ? (
                         <div className="text-gray-600 font-bold uppercase tracking-widest text-[10px] flex flex-col h-48 items-center justify-center border-2 border-dashed border-white/5 rounded-3xl gap-4">
                             <FolderPlus size={32} className="opacity-20" />
@@ -326,8 +352,8 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                     <AnimatePresence mode="wait">
                         {selectedPlaylist ? (
                             <div key={selectedPlaylist.id} className="h-full flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="mb-4 md:mb-10 flex flex-col md:flex-row items-start md:items-end gap-4 md:gap-8 pb-4 md:pb-10 border-b border-white/5 relative group">
-                                    <div className="w-28 h-28 md:w-48 md:h-48 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 flex-shrink-0 relative">
+                                <div className="mb-4 md:mb-8 flex flex-col sm:flex-row items-start sm:items-end gap-4 md:gap-8 pb-4 md:pb-8 border-b border-white/5 relative group">
+                                    <div className="w-24 h-24 md:w-44 md:h-44 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 flex-shrink-0 relative">
                                         {(selectedPlaylist as Playlist).customImage || isSmartPlaylist(selectedPlaylist) ? (
                                             <ArtworkImage
                                                 src={isSmartPlaylist(selectedPlaylist) ? undefined : (selectedPlaylist as Playlist).customImage}
@@ -367,7 +393,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                 </span>
                                             )}
                                         </div>
-                                        <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter mb-2 md:mb-4 truncate leading-none">{selectedPlaylist.name}</h2>
+                                        <h2 className="text-2xl md:text-5xl font-black text-white tracking-tighter mb-2 md:mb-4 truncate leading-none">{selectedPlaylist.name}</h2>
 
                                         {!isSmartPlaylist(selectedPlaylist) && (selectedPlaylist as Playlist).description && (
                                             <p className="text-gray-400 font-medium text-sm max-w-2xl mb-6 line-clamp-2 italic">
@@ -391,14 +417,21 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                 >
                                                     <Play size={14} fill="currentColor" /> Play Mix
                                                 </button>
-
                                                 {!isSmartPlaylist(selectedPlaylist) && (
-                                                    <button
-                                                        onClick={() => setEditingPlaylist(selectedPlaylist as Playlist)}
-                                                        className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10"
-                                                    >
-                                                        <Pencil size={14} /> Edit Details
-                                                    </button>
+                                                    <>
+                                                        <button onClick={() => setEditingPlaylist(selectedPlaylist as Playlist)} className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10">
+                                                            <Pencil size={14} /> Edit Details
+                                                        </button>
+                                                        <button onClick={() => reorderSelectedPlaylist('alpha')} className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10">
+                                                            <ListMusic size={14} /> Sort A–Z
+                                                        </button>
+                                                        <button onClick={() => reorderSelectedPlaylist('shuffle')} className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10">
+                                                            <ScanSearch size={14} /> Shuffle
+                                                        </button>
+                                                        <button onClick={() => reorderSelectedPlaylist('dedupe')} className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10">
+                                                            <Copy size={14} /> Deduplicate
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>

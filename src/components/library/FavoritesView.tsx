@@ -6,6 +6,7 @@ import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
+import { getTrackCollectionLabel } from '../../utils/collectionLabels';
 
 interface FavoritesViewProps {
     onNavigate?: (view: any, data?: any) => void;
@@ -85,7 +86,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
                                 </div>
                             </div>
                             <div className="hidden md:block text-xs text-gray-500 truncate w-32">
-                                {track.metadata?.album || 'Single'}
+                                {getTrackCollectionLabel(track)}
                             </div>
                             {rating > 0 && (
                                 <div className="text-xs text-yellow-500 font-bold">

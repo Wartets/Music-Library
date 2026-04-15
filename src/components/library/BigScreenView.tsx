@@ -13,17 +13,18 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
     const [localProgress, setLocalProgress] = useState(0);
     const [isControlsVisible, setIsControlsVisible] = useState(true);
     const [isButtonHovered, setIsButtonHovered] = useState(false);
+    const isButtonHoveredRef = useRef(false);
     const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const resetInactivity = useCallback(() => {
         setIsControlsVisible(true);
         if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
         inactivityTimeoutRef.current = setTimeout(() => {
-            if (!isButtonHovered) {
+            if (!isButtonHoveredRef.current) {
                 setIsControlsVisible(false);
             }
         }, 3000);
-    }, [isButtonHovered]);
+    }, []);
 
     useEffect(() => {
         window.addEventListener('mousemove', resetInactivity);
@@ -103,8 +104,8 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
             <div className={`relative z-10 flex items-center justify-between p-8 transition-opacity duration-1000 ${isControlsVisible || isButtonHovered ? 'opacity-100' : 'opacity-40'}`}>
                 <button
                     onClick={onBack}
-                    onMouseEnter={() => setIsButtonHovered(true)}
-                    onMouseLeave={() => setIsButtonHovered(false)}
+                    onMouseEnter={() => { isButtonHoveredRef.current = true; setIsButtonHovered(true); }}
+                    onMouseLeave={() => { isButtonHoveredRef.current = false; setIsButtonHovered(false); }}
                     className={`group flex items-center bg-white/10 hover:bg-white/20 rounded-full transition-all duration-700 ease-in-out border border-white/10 hover:border-white/20 shadow-2xl backdrop-blur-md active:scale-95 overflow-hidden h-[44px] ${!isControlsVisible && !isButtonHovered ? 'w-[44px]' : 'w-[200px]'}`}
                 >
                     <div className="flex items-center justify-center w-[44px] h-[44px] flex-shrink-0">
@@ -212,12 +213,11 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 z-20 opacity-40 hover:opacity-100 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10 pointer-events-auto">
                 <button
                     onClick={toggleShuffle}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center gap-1 ${state.shuffle ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center justify-center gap-1 min-w-10 ${state.shuffle ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
                     title="Shuffle"
                     aria-pressed={state.shuffle}
                 >
                     <Shuffle size={14} />
-                    Shuffle
                 </button>
                 <button
                     onClick={seekBackward}
@@ -248,12 +248,11 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                 </button>
                 <button
                     onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center gap-1 ${state.repeat !== 'none' ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center justify-center gap-1 min-w-10 ${state.repeat !== 'none' ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
                     title={`Repeat: ${state.repeat}`}
                     aria-pressed={state.repeat !== 'none'}
                 >
                     {state.repeat === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
-                    {state.repeat === 'none' ? 'Off' : state.repeat === 'all' ? 'All' : 'One'}
                 </button>
             </div>
         </div>

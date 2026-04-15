@@ -9,7 +9,7 @@ import { persistenceService } from '../../services/persistence';
 
 interface SidebarProps {
     currentView: ViewType;
-    onNavigate: (view: ViewType) => void;
+    onNavigate: (view: ViewType, data?: any) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
@@ -17,6 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
     const { playTrack, state: playerState } = usePlayer();
     const { currentPalette } = useTheme();
     const [isFocused, React_setIsFocused] = React.useState(false);
+    const searchInputRef = React.useRef<HTMLInputElement>(null);
     const trackHashes = new Set(libState.tracks.map(track => track.logic.hash_sha256));
     const hasFavorites = persistenceService.getFavorites().some(id => {
         const primaryId = libState.versionToPrimaryMap[id] || id;
@@ -100,9 +101,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                         size={16}
                     />
                     <input
+                        ref={searchInputRef}
                         type="text"
                         value={libState.searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                onNavigate('SearchResults', { query: libState.searchQuery, sourceView: currentView });
+                            }
+                        }}
                         placeholder="Search library..."
                         className="relative z-10 w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-dominant/50 focus:bg-white/10 transition-all font-medium shadow-2xl backdrop-blur-xl"
                     />
@@ -135,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                                     {libState.filteredTracks.length > 5 && (
                                         <div
                                             className="p-3 text-center text-[10px] font-black text-dominant uppercase tracking-[0.2em] cursor-pointer hover:bg-white/5 transition-colors"
-                                            onClick={() => onNavigate('AllTracks')}
+                                            onClick={() => onNavigate('SearchResults', { query: libState.searchQuery, sourceView: currentView })}
                                         >
                                             View all {libState.filteredTracks.length} results
                                         </div>

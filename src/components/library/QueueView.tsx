@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { TrackItem } from '../../types/music';
 import {
     Play, Trash2, GripVertical, ListMusic, History,
     Search, Download, Save,
@@ -11,6 +12,7 @@ import { formatDuration, parseDuration } from '../../utils/formatters';
 import { useUI } from '../../contexts/UIContext';
 import { persistenceService } from '../../services/persistence';
 import { VirtualList } from '../shared/VirtualList';
+import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import {
     DndContext,
     closestCenter,
@@ -46,6 +48,7 @@ interface SortableItemProps {
     playTrack: any;
     removeFromQueue: any;
     originalQueue: any[];
+    onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 const getArtworkForTrack = (track: any) => {
@@ -57,7 +60,7 @@ const getArtworkForTrack = (track: any) => {
 
 const trackTitle = (track: any) => track.metadata?.title || track.logic.track_name;
 
-const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue }) => {
+const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
     const {
         attributes,
         listeners,
@@ -80,6 +83,7 @@ const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, inde
             ref={setNodeRef}
             style={style}
             className={`group flex items-center gap-5 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 relative ${isDragging ? 'opacity-50 shadow-2xl bg-white/10' : ''}`}
+            onContextMenu={onContextMenu}
         >
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
@@ -134,10 +138,11 @@ const QueueListItem: React.FC<{
     playTrack: any;
     removeFromQueue: any;
     originalQueue: any[];
-}> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue }) => {
+    onContextMenu?: (e: React.MouseEvent) => void;
+}> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
     const artwork = getArtworkForTrack(track);
     return (
-        <div className="group flex items-center gap-5 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 relative h-full">
+        <div className="group flex items-center gap-5 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 relative h-full" onContextMenu={onContextMenu}>
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="text-[10px] font-black text-white/10 w-6 text-center font-mono">{(index + 1).toString().padStart(2, '0')}</div>
             <button
@@ -183,6 +188,7 @@ export const QueueView: React.FC = () => {
     } = usePlayer();
     const { state: libState } = useLibrary();
     const { showToast } = useUI();
+    const { openTrackContextMenu } = useTrackContextMenu();
 
     const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue');
     const [searchQuery, setSearchQuery] = useState('');
@@ -219,7 +225,7 @@ export const QueueView: React.FC = () => {
                 return trackMap.get(primaryId) || null;
             })
             .filter((track): track is any => Boolean(track));
-    }, [libState.tracks, libState.versionToPrimaryMap, playerState.history, clockTick]);
+    }, [libState.tracks, libState.versionToPrimaryMap, playerState.history]);
 
     const curIdx = currentTrack
         ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256)
@@ -435,7 +441,7 @@ export const QueueView: React.FC = () => {
                 {activeTab === 'queue' ? (
                     <div className="space-y-8">
                         {currentTrack && (
-                            <section>
+                            <section className="hidden md:block">
                                 <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Now Spinning</h2>
                                 <div className="bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 flex items-center gap-4 md:gap-8 shadow-2xl overflow-hidden relative group">
                                     <div className="absolute inset-0 bg-dominant/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -492,6 +498,7 @@ export const QueueView: React.FC = () => {
                                                     playTrack={playTrack}
                                                     removeFromQueue={removeFromQueue}
                                                     originalQueue={playerState.queue}
+                                                    onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
                                                 />
                                             ))}
                                         </div>
@@ -511,6 +518,7 @@ export const QueueView: React.FC = () => {
                                                     playTrack={playTrack}
                                                     removeFromQueue={removeFromQueue}
                                                     originalQueue={playerState.queue}
+                                                    onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
                                                 />
                                             </div>
                                         )}
@@ -541,6 +549,7 @@ export const QueueView: React.FC = () => {
                                                 key={`${track.logic.hash_sha256}-${index}`}
                                                 className="group flex items-center gap-4 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 cursor-pointer"
                                                 onClick={() => playTrack(track)}
+                                                onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, history, undefined)}
                                             >
                                                 <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
                                                     <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />

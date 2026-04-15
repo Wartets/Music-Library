@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 export interface ContextMenuItem {
@@ -22,6 +22,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
     const menuRef = useRef<HTMLDivElement>(null);
     const [activeSubMenu, setActiveSubMenu] = useState<{ items: ContextMenuItem[], y: number, x: number } | null>(null);
     const subMenuRef = useRef<HTMLDivElement>(null);
+    const [menuPosition, setMenuPosition] = useState({ x, y });
+    const [subMenuPosition, setSubMenuPosition] = useState({ x, y });
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -43,10 +45,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         };
     }, [onClose]);
 
-    // Adjust position to stay within viewport
-    const menuWidth = 220;
-    const adjustedX = Math.min(x, window.innerWidth - menuWidth - 10);
-    const adjustedY = Math.min(y, window.innerHeight - (items.length * 36 + 20));
+    useLayoutEffect(() => {
+        const menu = menuRef.current;
+        if (!menu) return;
+
+        const rect = menu.getBoundingClientRect();
+        const gap = 10;
+        const nextX = Math.max(gap, Math.min(x, window.innerWidth - rect.width - gap));
+        const nextY = Math.max(gap, Math.min(y, window.innerHeight - rect.height - gap));
+        setMenuPosition({ x: nextX, y: nextY });
+    }, [x, y, items.length]);
 
     const handleMouseEnter = (item: ContextMenuItem, _index: number, e: React.MouseEvent) => {
         if (item.subItems) {
@@ -72,6 +80,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         setActiveSubMenu(null);
     };
 
+    useLayoutEffect(() => {
+        const subMenu = subMenuRef.current;
+        if (!activeSubMenu || !subMenu) return;
+
+        const rect = subMenu.getBoundingClientRect();
+        const gap = 10;
+        const nextX = Math.max(gap, Math.min(activeSubMenu.x - 4, window.innerWidth - rect.width - gap));
+        const nextY = Math.max(gap, Math.min(activeSubMenu.y, window.innerHeight - rect.height - gap));
+        setSubMenuPosition({ x: nextX, y: nextY });
+    }, [activeSubMenu]);
+
     const handleSubMenuMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
         const related = e.relatedTarget as Node | null;
         if (related && menuRef.current?.contains(related)) {
@@ -86,8 +105,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                 ref={menuRef}
                 className="fixed z-[100] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
                 style={{
-                    left: adjustedX,
-                    top: adjustedY,
+                    left: menuPosition.x,
+                    top: menuPosition.y,
                     maxHeight: 'calc(100vh - 40px)'
                 }}
                 onMouseLeave={handleMenuMouseLeave}
@@ -130,8 +149,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                     ref={subMenuRef}
                     className="fixed z-[101] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
                     style={{
-                        left: Math.min(activeSubMenu.x - 4, window.innerWidth - menuWidth - 10),
-                        top: Math.min(activeSubMenu.y, window.innerHeight - (activeSubMenu.items.length * 36 + 20)),
+                        left: subMenuPosition.x,
+                        top: subMenuPosition.y,
                         maxHeight: 'calc(100vh - 40px)'
                     }}
                     onMouseLeave={handleSubMenuMouseLeave}

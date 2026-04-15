@@ -7,6 +7,7 @@ import { TrackItem } from '../../types/music';
 import { VirtualList } from '../shared/VirtualList';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 
 
 interface HistoryViewProps {
@@ -16,6 +17,7 @@ interface HistoryViewProps {
 export const HistoryView: React.FC<HistoryViewProps> = () => {
     const { state: libState } = useLibrary();
     const { state: playerState, playTrack } = usePlayer();
+    const { openTrackContextMenu } = useTrackContextMenu();
 
     // Map history IDs to actual tracks
     const historyTracks = React.useMemo(() => {
@@ -43,7 +45,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                 {columns.map(col => (
                     <div
                         key={col.id}
-                        className={`text-[10px] font-black uppercase tracking-widest text-gray-500 ${col.width === 0 ? 'flex-1' : ''}`}
+                        className={`text-[10px] font-black uppercase tracking-widest text-gray-500 ${col.width === 0 ? 'flex-1' : ''} ${['album', 'genre', 'year', 'bitrate', 'size'].includes(col.id) ? 'hidden md:block' : ''}`}
                         style={col.width !== 0 ? { width: col.width } : {}}
                     >
                         {col.label}
@@ -63,11 +65,12 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                 key={`${track.logic.hash_sha256}-${index}`}
                 className={`flex items-center px-4 py-2 hover:bg-white/5 group transition-all cursor-pointer border-b border-white/[0.02] last:border-0 ${isPlaying ? 'bg-dominant/10' : ''}`}
                 onDoubleClick={() => handlePlay(track)}
+                onContextMenu={(e) => openTrackContextMenu(e, track, historyTracks, undefined)}
             >
                 {columns.map(col => (
                     <div
                         key={col.id}
-                        className={`text-xs truncate pr-4 ${col.width === 0 ? 'flex-1' : ''} ${isPlaying ? 'text-dominant font-bold' : 'text-gray-400'}`}
+                        className={`text-xs truncate pr-4 ${col.width === 0 ? 'flex-1' : ''} ${isPlaying ? 'text-dominant font-bold' : 'text-gray-400'} ${['album', 'genre', 'year', 'bitrate', 'size'].includes(col.id) ? 'hidden md:block' : ''}`}
                         style={col.width !== 0 ? { width: col.width } : {}}
                     >
                         {(() => {
@@ -117,7 +120,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
     };
 
     return (
-        <div className="h-full flex flex-col pt-16 md:pt-24 px-3 md:px-6 pb-0 overflow-hidden">
+            <div className="h-full flex flex-col pt-14 md:pt-20 px-3 md:px-6 pb-0 overflow-hidden">
             <div className="mb-4 md:mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">

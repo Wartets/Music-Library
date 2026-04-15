@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { AlbumGroup } from '../../types/music';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { LibraryBrowser } from './LibraryBrowser';
+import { getTrackCollectionKey, getTrackCollectionLabel } from '../../utils/collectionLabels';
 
 
 interface AlbumContentsViewProps {
@@ -20,7 +21,9 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
         const albumName = typeof initialAlbum === 'string' ? initialAlbum : (initialAlbum as any)?.name;
         if (!albumName) return null;
 
-        const tracks = libraryState.tracks.filter(t => t.metadata?.album === albumName);
+        const tracks = libraryState.tracks.filter(t => {
+            return getTrackCollectionKey(t) === `album:${albumName.toLowerCase()}` || getTrackCollectionLabel(t) === albumName;
+        });
         if (tracks.length === 0) return null;
 
         return {
@@ -33,8 +36,14 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
     }, [initialAlbum, libraryState.tracks]);
 
     if (!album) return (
-        <div className="h-full flex items-center justify-center text-gray-500 font-bold uppercase tracking-widest">
-            Album not found
+        <div className="h-full flex flex-col items-center justify-center text-gray-500 font-bold uppercase tracking-widest gap-4 px-6 text-center">
+            <div>Collection not found</div>
+            <button
+                onClick={() => onNavigate('Albums', null)}
+                className="px-4 py-2 rounded-xl border border-white/10 text-white/80 hover:text-white hover:bg-white/5 transition-colors text-[10px] font-black tracking-[0.25em]"
+            >
+                Back to Albums
+            </button>
         </div>
     );
 

@@ -5,6 +5,7 @@ import { useUI } from '../../contexts/UIContext';
 import { Filter, User, Play, ListPlus, Plus, FolderPlus, Pencil, Zap } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
+import { getTrackCollectionKey, getTrackCollectionLabel } from '../../utils/collectionLabels';
 
 
 interface AlbumsViewProps {
@@ -20,16 +21,18 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
     const albums = useMemo(() => {
         const groups: Record<string, any> = {};
         libraryState.filteredTracks.forEach(track => {
-            const albumName = track.metadata?.album || 'Unknown Album';
-            if (!groups[albumName]) {
-                groups[albumName] = {
+            const key = getTrackCollectionKey(track);
+            const albumName = getTrackCollectionLabel(track);
+            if (!groups[key]) {
+                groups[key] = {
+                    id: key,
                     name: albumName,
                     artist: track.metadata?.album_artist || track.metadata?.artists?.[0] || 'Unknown Artist',
                     tracks: [],
                     artwork: track.artworks?.album_artwork?.[0] || track.artworks?.track_artwork?.[0]
                 };
             }
-            groups[albumName].tracks.push(track);
+            groups[key].tracks.push(track);
         });
         const sorted = Object.values(groups);
         if (sortBy === 'name') {
@@ -117,11 +120,11 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
     }, [addToNext, addToQueue, onNavigate, playTrack, setEditingTracks, showContextMenu, showToast]);
 
     const gridItems: GridItem[] = albums.map(album => ({
-        id: album.name,
+        id: album.id,
         title: album.name,
         subtitle: album.artist,
         imageDetails: album.artwork,
-        onClick: () => onNavigate('AlbumDetail', album.name),
+        onClick: () => onNavigate('AlbumDetail', album),
         onContextMenu: (e) => onRightClick(e, album)
     }));
 
