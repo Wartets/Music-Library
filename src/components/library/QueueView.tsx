@@ -194,6 +194,15 @@ export const QueueView: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'index' | 'duration' | 'name'>('index');
     const [clockTick, setClockTick] = useState(0);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 767px)');
+        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        setIsMobile(media.matches);
+        media.addEventListener('change', onChange);
+        return () => media.removeEventListener('change', onChange);
+    }, []);
 
     useEffect(() => {
         if (activeTab !== 'queue') return;
@@ -325,6 +334,146 @@ export const QueueView: React.FC = () => {
     };
 
     const repeatLabel = playerState.repeat === 'one' ? 'Repeat One' : playerState.repeat === 'all' ? 'Repeat All' : 'Repeat Off';
+
+    if (isMobile) {
+        return (
+            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-2 pb-28 bg-surface-primary">
+                <div className="mb-3">
+                    <h1 className="text-lg font-black tracking-tight text-white">Playback Control</h1>
+                    <p className="text-gray-500 text-[11px] mt-1 flex items-center gap-2 flex-wrap">
+                        <span className="flex items-center gap-1"><ListMusic size={12} /> {nextTracksRaw.length} upcoming</span>
+                        <span className="flex items-center gap-1"><Clock size={12} /> {formatDuration(totalQueueDuration)} left</span>
+                    </p>
+                </div>
+
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                    <button
+                        onClick={() => setActiveTab('queue')}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'queue' ? 'bg-dominant text-on-dominant' : 'bg-white/5 text-gray-300 border border-white/10'}`}
+                    >
+                        <ListMusic size={13} /> Queue
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'history' ? 'bg-dominant text-on-dominant' : 'bg-white/5 text-gray-300 border border-white/10'}`}
+                    >
+                        <History size={13} /> History
+                    </button>
+                </div>
+
+                <div className="mb-3 relative group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+                    <input
+                        type="text"
+                        placeholder="Filter queue..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-3 text-xs text-white outline-none focus:border-dominant"
+                    />
+                </div>
+
+                <div className="mb-3 flex items-center gap-2 flex-wrap">
+                    <button
+                        onClick={() => setSortBy('index')}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider ${sortBy === 'index' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-400 border border-white/10'}`}
+                    >Default</button>
+                    <button
+                        onClick={() => setSortBy('name')}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider ${sortBy === 'name' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-400 border border-white/10'}`}
+                    >Name</button>
+                    <button
+                        onClick={() => setSortBy('duration')}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider ${sortBy === 'duration' ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-400 border border-white/10'}`}
+                    >Duration</button>
+                </div>
+
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                    <button
+                        onClick={toggleShuffle}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.shuffle ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                    >Shuffle</button>
+                    <button
+                        onClick={() => setRepeat(playerState.repeat === 'none' ? 'all' : playerState.repeat === 'all' ? 'one' : 'none')}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.repeat !== 'none' ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                    >{repeatLabel}</button>
+                    <button
+                        onClick={() => setAutoplay(!playerState.autoplay)}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.autoplay ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                    >Auto {playerState.autoplay ? 'ON' : 'OFF'}</button>
+                    <button onClick={handleExport} className="p-2 bg-white/5 rounded-xl border border-white/10 text-gray-300"><Download size={14} /></button>
+                    <button onClick={handleSaveAsPlaylist} className="p-2 bg-white/5 rounded-xl border border-white/10 text-gray-300"><Save size={14} /></button>
+                    <button onClick={clearQueue} className="p-2 bg-red-500/10 rounded-xl border border-red-500/30 text-red-400"><Trash2 size={14} /></button>
+                </div>
+
+                {activeTab === 'queue' ? (
+                    <div className="space-y-2 pb-4">
+                        {queueWithTime.length === 0 ? (
+                            <div className="h-44 flex flex-col items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
+                                <ListMusic size={36} className="opacity-20 mb-2" />
+                                <p className="text-sm font-bold text-white/30">Queue empty</p>
+                            </div>
+                        ) : (
+                            queueWithTime.map((track) => (
+                                <div
+                                    key={track.id}
+                                    className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
+                                    onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
+                                >
+                                    <button onClick={() => playTrack(track as unknown as TrackItem, playerState.queue)} className="w-6 h-6 rounded-md bg-dominant/20 text-dominant flex items-center justify-center">
+                                        <Play size={12} fill="currentColor" />
+                                    </button>
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                                        <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-bold text-white truncate">{trackTitle(track)}</div>
+                                        <div className="text-[10px] text-gray-500 truncate">{track.metadata?.artists?.join(', ')}</div>
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-mono">{track.audio_specs?.duration}</div>
+                                    <button
+                                        onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
+                                        className="p-1.5 text-gray-500 hover:text-red-400"
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    <div className="space-y-2 pb-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-[10px] font-black uppercase tracking-widest text-white/30">Recently Played</h2>
+                            <button onClick={clearHistory} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400">Clear</button>
+                        </div>
+                        {history.length === 0 ? (
+                            <div className="h-40 flex items-center justify-center rounded-2xl border border-dashed border-white/10 text-gray-500 text-xs">
+                                No playback history yet.
+                            </div>
+                        ) : (
+                            history.map((track: any, index: number) => (
+                                <div
+                                    key={`${track.logic.hash_sha256}-${index}`}
+                                    className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
+                                    onClick={() => playTrack(track)}
+                                    onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, history, undefined)}
+                                >
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                                        <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-bold text-white truncate">{trackTitle(track)}</div>
+                                        <div className="text-[10px] text-gray-500 truncate">{track.metadata?.artists?.join(', ')}</div>
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-mono">{track.audio_specs?.duration}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">

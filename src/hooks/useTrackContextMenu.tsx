@@ -10,6 +10,7 @@ import {
     Play, ListPlus, User, Disc, Heart, Star, Pencil, Copy, Share, FolderPlus, Zap, Plus,
     Download, Eye, Repeat, FastForward, Info, RefreshCw, Tag, SlidersHorizontal, Trash2, EyeOff, ListMinus
 } from 'lucide-react';
+import { ContextMenuItem } from '../components/shared/ContextMenu';
 
 export const useTrackContextMenu = () => {
     const { showContextMenu, showToast } = useUI();
@@ -53,6 +54,7 @@ export const useTrackContextMenu = () => {
         const playlists = persistenceService.getPlaylists();
         const isFavorite = persistenceService.isFavorite(track.logic.hash_sha256);
         const containingPlaylists = playlists.filter(pl => pl.trackIds.includes(track.logic.hash_sha256));
+        const hasPlaylists = playlists.length > 0;
 
         const similarAlbums = Array.from(new Set(
             libraryState.tracks
@@ -66,7 +68,7 @@ export const useTrackContextMenu = () => {
                 .filter((album): album is string => Boolean(album) && album !== track.metadata?.album)
         )).slice(0, 8);
 
-        showContextMenu(e.clientX, e.clientY, [
+        const playbackActions: ContextMenuItem[] = [
             {
                 label: 'Play',
                 icon: <Play size={14} fill="currentColor" />,
@@ -125,7 +127,9 @@ export const useTrackContextMenu = () => {
                     showToast('Repeat-one enabled for this track', 'success');
                 }
             },
-            { divider: true, label: '', onClick: () => { } },
+        ];
+
+        const navigateActions: ContextMenuItem[] = [
             ...((onNavigate && track.metadata?.artists?.[0]) ? [{
                 label: 'Go to Artist',
                 icon: <User size={14} />,
@@ -150,12 +154,15 @@ export const useTrackContextMenu = () => {
                     label: album,
                     onClick: () => onNavigate?.('AlbumDetail', album)
                 }))
-            },
-            { divider: true, label: '', onClick: () => { } },
+            }
+        ];
+
+        const playlistActions: ContextMenuItem[] = [
             {
                 label: 'Add to Playlist',
                 icon: <Plus size={14} />,
                 onClick: () => { },
+                disabled: !hasPlaylists,
                 subItems: playlists.map(pl => ({
                     label: pl.name,
                     onClick: () => {
@@ -195,8 +202,10 @@ export const useTrackContextMenu = () => {
                     exportM3U(track.metadata?.title || track.logic.track_name, [track]);
                     showToast('M3U exported', 'success');
                 }
-            },
-            { divider: true, label: '', onClick: () => { } },
+            }
+        ];
+
+        const libraryActions: ContextMenuItem[] = [
             {
                 label: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
                 icon: <Heart size={14} className={isFavorite ? 'text-red-400 fill-red-400' : ''} />,
@@ -234,7 +243,9 @@ export const useTrackContextMenu = () => {
                 icon: <SlidersHorizontal size={14} />,
                 onClick: () => onNavigate?.('Settings', { tab: 'audio' })
             },
-            { divider: true, label: '', onClick: () => { } },
+        ];
+
+        const utilityActions: ContextMenuItem[] = [
             {
                 label: 'Download',
                 icon: <Download size={14} />,
@@ -262,8 +273,10 @@ export const useTrackContextMenu = () => {
                     navigator.clipboard.writeText(track.logic.hash_sha256);
                     showToast('Hash copied to clipboard');
                 }
-            },
-            { divider: true, label: '', onClick: () => { } },
+            }
+        ];
+
+        const maintenanceActions: ContextMenuItem[] = [
             {
                 label: 'Update Library / Refresh',
                 icon: <RefreshCw size={14} />,
@@ -288,7 +301,75 @@ export const useTrackContextMenu = () => {
                     showToast('Track hidden from library', 'warning');
                     window.setTimeout(() => window.location.reload(), 250);
                 }
+            }
+        ];
+
+        const groupedMenus: ContextMenuItem[] = [
+            {
+                label: 'Playback Actions',
+                icon: <Play size={14} />,
+                onClick: () => { },
+                subItems: playbackActions,
             },
+            ...(navigateActions.length > 0 ? [{
+                label: 'Go To / Explore',
+                icon: <Info size={14} />,
+                onClick: () => { },
+                subItems: navigateActions,
+            }] : []),
+            {
+                label: 'Playlists',
+                icon: <FolderPlus size={14} />,
+                onClick: () => { },
+                subItems: playlistActions,
+            },
+            {
+                label: 'Library & Metadata',
+                icon: <Tag size={14} />,
+                onClick: () => { },
+                subItems: libraryActions,
+            },
+            {
+                label: 'Utilities',
+                icon: <Copy size={14} />,
+                onClick: () => { },
+                subItems: utilityActions,
+            },
+            {
+                label: 'Maintenance',
+                icon: <RefreshCw size={14} />,
+                onClick: () => { },
+                subItems: maintenanceActions,
+            },
+        ];
+
+        showContextMenu(e.clientX, e.clientY, [
+            {
+                label: 'Play',
+                icon: <Play size={14} fill="currentColor" />,
+                onClick: () => {
+                    playTrack(track, list.length > 0 ? list : [track]);
+                    showToast(`Playing ${track.metadata?.title || track.logic.track_name}`);
+                }
+            },
+            {
+                label: 'Play Next',
+                icon: <Zap size={14} className="text-dominant-light" />,
+                onClick: () => {
+                    addToNext(track);
+                    showToast(`Added to play next: ${track.metadata?.title || 'Track'}`, 'success');
+                }
+            },
+            {
+                label: 'Add to Queue',
+                icon: <ListPlus size={14} />,
+                onClick: () => {
+                    addToQueue(track);
+                    showToast(`Added to queue: ${track.metadata?.title || 'Track'}`);
+                }
+            },
+            { divider: true, label: '', onClick: () => { } },
+            ...groupedMenus,
             ...additionalItems,
         ]);
     };
