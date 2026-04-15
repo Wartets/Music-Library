@@ -5,11 +5,12 @@ import { ViewType } from './AppLayout';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Music } from 'lucide-react';
+import { Music, Volume1, Volume2, VolumeX } from 'lucide-react';
 
 export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (view: ViewType, data?: any) => void }> = ({ onToggleContext, onNavigate }) => {
     const { state, togglePlay, playNext, playPrevious, setVolume, seek, getProgress, seekForward, seekBackward, toggleShuffle, setRepeat } = usePlayer();
     const track = state.currentTrack;
+    const previousVolumeRef = useRef<number>(state.volume > 0 ? state.volume : 0.8);
 
     const [isDragging, setIsDragging] = useState(false);
     const [localProgress, setLocalProgress] = useState(0);
@@ -94,6 +95,13 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     const isLossless = track?.audio_specs?.is_lossless;
     const sampleRate = parseInt(track?.audio_specs?.sample_rate || '44100');
     const isHiRes = isLossless && sampleRate > 48000;
+    const isMuted = state.volume === 0;
+
+    useEffect(() => {
+        if (state.volume > 0) {
+            previousVolumeRef.current = state.volume;
+        }
+    }, [state.volume]);
 
     // --- SVGs ---
     const IconPlay = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M8 5v14l11-7z" /></svg>;
@@ -120,16 +128,22 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
         </svg>
     );
     const IconVolume = ({ vol }: { vol: number }) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {vol === 0 ? (
-                <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></>
-            ) : vol < 0.5 ? (
-                <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></>
-            ) : (
-                <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></>
-            )}
-        </svg>
+        vol === 0
+            ? <VolumeX size={18} />
+            : vol < 0.5
+                ? <Volume1 size={18} />
+                : <Volume2 size={18} />
     );
+
+    const toggleMute = () => {
+        if (state.volume === 0) {
+            const restored = previousVolumeRef.current > 0 ? previousVolumeRef.current : 0.8;
+            setVolume(restored);
+        } else {
+            previousVolumeRef.current = state.volume;
+            setVolume(0);
+        }
+    };
 
     const { currentPalette } = useTheme();
 
@@ -248,11 +262,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={toggleShuffle}
                             disabled={!track}
-                            className={`inline-flex items-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
                         >
                             <IconShuffle active={state.shuffle} />
-                            <span className="hidden sm:inline ml-1.5 text-[11px] font-black uppercase tracking-widest">Shuffle</span>
                         </button>
 
                         <button
@@ -300,11 +313,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
                             disabled={!track}
-                            className={`inline-flex items-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center transition-all py-2 px-2.5 rounded-full ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Repeat: ${state.repeat}`}
                         >
                             <IconRepeat mode={state.repeat} />
-                            <span className="hidden sm:inline ml-1.5 text-[11px] font-black uppercase tracking-widest">Repeat</span>
                         </button>
                     </div>
                 </div>
@@ -329,7 +341,15 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         )}
                     </div>
                     <div className="flex items-center gap-3 w-32 group/vol relative">
-                        <IconVolume vol={state.volume} />
+                        <button
+                            onClick={toggleMute}
+                            disabled={!track}
+                            className={`flex items-center justify-center transition-colors ${activeClass(track, 'text-gray-300 hover:text-white')}`}
+                            title={isMuted ? 'Unmute' : 'Mute'}
+                            aria-pressed={isMuted}
+                        >
+                            <IconVolume vol={state.volume} />
+                        </button>
                         <div className="relative h-[4px] w-full bg-white/10 rounded-full flex-1 cursor-pointer group-hover/vol:h-[6px] transition-all">
                             <input
                                 type="range"
@@ -337,7 +357,13 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                 max={1}
                                 step={0.01}
                                 value={state.volume}
-                                onChange={(e) => setVolume(Number(e.target.value))}
+                                onChange={(e) => {
+                                    const nextVolume = Number(e.target.value);
+                                    if (nextVolume > 0) {
+                                        previousVolumeRef.current = nextVolume;
+                                    }
+                                    setVolume(nextVolume);
+                                }}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             />
                             <div
