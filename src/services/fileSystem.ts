@@ -16,6 +16,10 @@ export class FileSystemService {
         return dbService.getRelativePath(absolutePath);
     }
 
+    resolveAudioPathCandidates(absolutePath: string): string[] {
+        return dbService.getAssetCandidates(absolutePath);
+    }
+
     /**
      * Resolves the artwork image path, applying fallbacks if missing.
      * @param artworkPath - The image path from ImageDetails
@@ -24,6 +28,11 @@ export class FileSystemService {
     resolveArtworkPath(artworkPath: string | undefined): string {
         if (!artworkPath) return '';
         return dbService.getRelativePath(artworkPath);
+    }
+
+    resolveArtworkPathCandidates(artworkPath: string | undefined): string[] {
+        if (!artworkPath) return [];
+        return dbService.getAssetCandidates(artworkPath);
     }
 
     /**

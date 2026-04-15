@@ -1,5 +1,6 @@
 import React from 'react';
 import { ImageDetails } from '../../types/music';
+import { dbService } from '../../services/db';
 
 interface ArtworkImageProps {
     details?: ImageDetails;
@@ -9,8 +10,6 @@ interface ArtworkImageProps {
     fallback?: React.ReactNode;
 }
 
-const ABSOLUTE_URL_REGEX = /^[a-z][a-z0-9+.-]*:\/\//i;
-const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
 const ARTWORK_CACHE_NAME = 'music-library-artwork-v1';
 const resolvedArtworkCache = new Map<string, string>();
 const failedArtworkCandidates = new Set<string>();
@@ -32,77 +31,7 @@ const createFallbackVisual = (seedText: string) => {
     return { background, letter };
 };
 
-const safeEncodeSegment = (segment: string): string => {
-    if (!segment) return segment;
-    try {
-        return encodeURIComponent(decodeURIComponent(segment)).replace(/%3A/g, ':');
-    } catch {
-        return encodeURIComponent(segment).replace(/%3A/g, ':');
-    }
-};
-
-const toEncodedUrlPath = (pathValue: string): string => {
-    return pathValue
-        .split('/')
-        .map((segment, index) => {
-            if (index === 0 && segment === '') return '';
-            return safeEncodeSegment(segment);
-        })
-        .join('/');
-};
-
-const buildSrcCandidates = (pathValue: string): string[] => {
-    const normalizedRaw = pathValue.replace(/^file:\/\//i, '').replace(/\\/g, '/').trim();
-    if (!normalizedRaw) return [];
-    if (ABSOLUTE_URL_REGEX.test(normalizedRaw)) return [normalizedRaw];
-
-    const relativeCandidates = new Set<string>();
-    const finalCandidates = new Set<string>();
-
-    const addRelativeCandidate = (candidate: string) => {
-        const sanitized = candidate.trim().replace(/\\/g, '/').replace(/^\/+/, '');
-        if (!sanitized) return;
-        relativeCandidates.add(sanitized);
-    };
-
-    const addFinalCandidate = (candidate: string) => {
-        if (!candidate) return;
-        finalCandidates.add(candidate);
-    };
-
-    addRelativeCandidate(normalizedRaw);
-
-    const withoutDrive = normalizedRaw.replace(/^[A-Za-z]:\//, '');
-    if (withoutDrive !== normalizedRaw) {
-        addRelativeCandidate(withoutDrive);
-    }
-
-    const libraryAnchorMatch = normalizedRaw.match(/\/(Album\s+\d[^/]*|Single|save)\/.*/i);
-    if (libraryAnchorMatch) {
-        addRelativeCandidate(libraryAnchorMatch[0]);
-    }
-
-    const repoAnchor = '/Music-Library/';
-    const repoAnchorIndex = normalizedRaw.toLowerCase().indexOf(repoAnchor.toLowerCase());
-    if (repoAnchorIndex >= 0) {
-        const relToRepo = normalizedRaw.slice(repoAnchorIndex + repoAnchor.length);
-        addRelativeCandidate(relToRepo);
-    }
-
-    relativeCandidates.forEach((relativePath) => {
-        const encodedRelative = toEncodedUrlPath(relativePath);
-        addFinalCandidate(`/${encodedRelative}`);
-        if (BASE_URL !== '/') {
-            addFinalCandidate(`${BASE_URL}/${encodedRelative}`);
-        }
-    });
-
-    if (normalizedRaw.startsWith('/')) {
-        addFinalCandidate(toEncodedUrlPath(normalizedRaw));
-    }
-
-    return Array.from(finalCandidates);
-};
+const buildSrcCandidates = (pathValue: string): string[] => dbService.getAssetCandidates(pathValue);
 
 export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 'Artwork', className = 'w-full h-full', fallback }) => {
     const [hasError, setHasError] = React.useState(false);

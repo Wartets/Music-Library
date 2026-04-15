@@ -178,41 +178,55 @@ export class AudioEngine {
         return this.activeAudioElement === 1 ? this.gainNode : this.secondaryGainNode;
     }
 
-    private buildCompatibleFallbackSrc(track: TrackItem): string | null {
-        const ext = (track.file?.ext || '').toLowerCase();
-        if (ext !== 'm4a') return null;
+    private buildTrackSourceCandidates(track: TrackItem): string[] {
         const path = track.file?.path || '';
-        if (!path || /_compatible_aac\.m4a$/i.test(path)) return null;
-        const compatiblePath = path.replace(/\.m4a$/i, '_compatible_aac.m4a');
-        return dbService.getRelativePath(compatiblePath);
+        if (!path) return [];
+
+        const candidates = new Set<string>(dbService.getAssetCandidates(path));
+        const ext = (track.file?.ext || '').toLowerCase();
+
+        if (ext === 'm4a' && !/_compatible_aac\.m4a$/i.test(path)) {
+            const compatiblePath = path.replace(/\.m4a$/i, '_compatible_aac.m4a');
+            dbService.getAssetCandidates(compatiblePath).forEach(candidate => candidates.add(candidate));
+        }
+
+        return Array.from(candidates);
+    }
+
+    private shouldRetryWithAlternateSource(error: AudioPlaybackError): boolean {
+        return error.code === 'media_network' || error.code === 'media_decode' || error.code === 'format_unsupported';
     }
 
     private async playElement(el: HTMLAudioElement, track?: TrackItem): Promise<void> {
-        try {
-            await el.play();
-            return;
-        } catch (e) {
-            const playbackError = this.normalizePlaybackException(e);
-            if (playbackError.code === 'format_unsupported' && track) {
-                const fallbackSrc = this.buildCompatibleFallbackSrc(track);
-                if (fallbackSrc && el.src !== fallbackSrc) {
-                    const previousSrc = el.src;
-                    try {
-                        el.src = fallbackSrc;
-                        await el.play();
-                        return;
-                    } catch (fallbackError) {
-                        el.src = previousSrc;
-                        const normalizedFallbackError = this.normalizePlaybackException(fallbackError);
-                        if (this.onError) this.onError(normalizedFallbackError);
-                        throw normalizedFallbackError;
-                    }
-                }
+        const sourceCandidates = track ? this.buildTrackSourceCandidates(track) : [];
+        const playCandidates = sourceCandidates.length > 0 ? sourceCandidates : [el.src].filter(Boolean);
+
+        let lastError: AudioPlaybackError | null = null;
+
+        for (const candidate of playCandidates) {
+            if (!candidate) continue;
+
+            if (el.src !== candidate) {
+                el.src = candidate;
+                el.load();
             }
 
-            if (this.onError) this.onError(playbackError);
-            throw playbackError;
+            try {
+                await el.play();
+                return;
+            } catch (error) {
+                const playbackError = this.normalizePlaybackException(error);
+                lastError = playbackError;
+
+                if (!this.shouldRetryWithAlternateSource(playbackError)) {
+                    break;
+                }
+            }
         }
+
+        const finalError = lastError || new AudioPlaybackError('unknown', 'Unknown playback failure.');
+        if (this.onError) this.onError(finalError);
+        throw finalError;
     }
 
 
@@ -363,7 +377,7 @@ export class AudioEngine {
                     await this.playElement(fadeInEl, track);
                 } else {
                     // Normal play (not preloaded)
-                    const relativePath = dbService.getRelativePath(track.file.path);
+                    const relativePath = this.buildTrackSourceCandidates(track)[0] || dbService.getRelativePath(track.file.path);
 
                     if (useCrossfade && this.currentTrack && !this.getActiveElement().paused) {
                         const fadeOutEl = this.getActiveElement();
@@ -425,7 +439,7 @@ export class AudioEngine {
      */
     load(track: TrackItem, position: number = 0): void {
         this.currentTrack = track;
-        const relativePath = dbService.getRelativePath(track.file.path);
+        const relativePath = this.buildTrackSourceCandidates(track)[0] || dbService.getRelativePath(track.file.path);
         const activeEl = this.getActiveElement();
         activeEl.src = relativePath;
         activeEl.currentTime = position;
@@ -490,12 +504,13 @@ export class AudioEngine {
     prepareGapless(nextTrack: TrackItem): void {
         if (!nextTrack) return;
         this.nextTrackPreloaded = nextTrack;
-        const relativePath = dbService.getRelativePath(nextTrack.file.path);
+        const relativePath = this.buildTrackSourceCandidates(nextTrack)[0] || dbService.getRelativePath(nextTrack.file.path);
 
         // We preload into the currently inactive element
         const inactiveEl = this.getInactiveElement();
         inactiveEl.src = relativePath;
         inactiveEl.preload = 'auto';
+        inactiveEl.load();
     }
 
     /**

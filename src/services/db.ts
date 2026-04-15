@@ -1,4 +1,5 @@
 import { MusicDatabase, TrackItem } from '../types/music';
+import { resolveAssetCandidates, resolvePreferredAssetUrl, resolveRepositoryRelativePath } from './assetResolver';
 
 /**
  * Database Service
@@ -12,13 +13,15 @@ export class DatabaseService {
      * Converts the absolute path from the indexation batch script to a relative URL.
      */
     getRelativePath(absolutePath: string): string {
-        if (!absolutePath) return '';
-        const basePath = 'C:\\Users\\Colin\\Music\\Colin Bossu Réaubourg\\';
-        if (absolutePath.startsWith(basePath)) {
-            const rel = absolutePath.substring(basePath.length);
-            return '/' + rel.split('\\').join('/');
-        }
-        return '/' + absolutePath.split('\\').join('/');
+        return resolvePreferredAssetUrl(absolutePath);
+    }
+
+    getAssetCandidates(assetPath: string): string[] {
+        return resolveAssetCandidates(assetPath);
+    }
+
+    getRepositoryRelativePath(assetPath: string): string {
+        return resolveRepositoryRelativePath(assetPath);
     }
 
     /**
@@ -30,9 +33,23 @@ export class DatabaseService {
         }
 
         try {
-            const response = await fetch(`${import.meta.env.BASE_URL}musicBib.json`);
-            if (!response.ok) {
-                throw new Error(`Failed to load musicBib.json: ${response.statusText}`);
+            const manifestCandidates = resolveAssetCandidates('musicBib.json');
+            let response: Response | null = null;
+
+            for (const candidate of manifestCandidates) {
+                try {
+                    const candidateResponse = await fetch(candidate);
+                    if (candidateResponse.ok) {
+                        response = candidateResponse;
+                        break;
+                    }
+                } catch {
+                    // Try next location.
+                }
+            }
+
+            if (!response) {
+                throw new Error('Failed to load musicBib.json from GitHub or local fallback.');
             }
 
             const data: MusicDatabase = await response.json();
