@@ -18,6 +18,15 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
     const { state: libState } = useLibrary();
     const { state: playerState, playTrack } = usePlayer();
     const { openTrackContextMenu } = useTrackContextMenu();
+    const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
+
+    React.useEffect(() => {
+        const media = window.matchMedia('(max-width: 767px)');
+        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        setIsMobile(media.matches);
+        media.addEventListener('change', onChange);
+        return () => media.removeEventListener('change', onChange);
+    }, []);
 
     // Map history IDs to actual tracks
     const historyTracks = React.useMemo(() => {
@@ -118,6 +127,73 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
             </div>
         );
     };
+
+    if (isMobile) {
+        return (
+            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-2 pb-28 bg-surface-primary">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                    <div>
+                        <h1 className="text-lg font-black tracking-tight flex items-center gap-2">
+                            <Clock size={18} className="text-dominant" /> Playback History
+                        </h1>
+                        <p className="text-gray-500 text-[11px] mt-1">Recent tracks across all sessions.</p>
+                    </div>
+
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-wider text-gray-300 transition-all border border-white/10">
+                        <ArrowUpDown size={12} /> Sort
+                    </button>
+                </div>
+
+                <div className="mb-3 flex items-center justify-between">
+                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">{historyTracks.length} tracks</span>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-dominant-light transition-all">
+                        <Play size={12} /> Clear
+                    </button>
+                </div>
+
+                <div className="space-y-1.5">
+                    {historyTracks.map((track, index) => {
+                        const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
+                        const fallbackVersionWithArtwork = track.versions?.find(v =>
+                            v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0]
+                        );
+                        const art = track.artworks?.track_artwork?.[0]
+                            || track.artworks?.album_artwork?.[0]
+                            || fallbackVersionWithArtwork?.artworks?.track_artwork?.[0]
+                            || fallbackVersionWithArtwork?.artworks?.album_artwork?.[0];
+
+                        return (
+                            <div
+                                key={`${track.logic.hash_sha256}-${index}`}
+                                className={`flex items-center gap-2.5 p-2.5 rounded-xl border border-white/10 transition-colors ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'bg-white/[0.02] hover:bg-white/5'}`}
+                                onDoubleClick={() => handlePlay(track)}
+                                onContextMenu={(e) => openTrackContextMenu(e, track, historyTracks, undefined)}
+                            >
+                                <div className="w-10 h-10 rounded-lg bg-white/5 overflow-hidden border border-white/10 flex-shrink-0">
+                                    {art ? (
+                                        <ArtworkImage details={art} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[10px]">?</div>
+                                    )}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                    <div className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
+                                        {track.metadata?.title || track.logic.track_name}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 truncate">{track.metadata?.artists?.join(', ') || 'Unknown Artist'}</div>
+                                </div>
+
+                                <div className="text-[10px] text-gray-400 font-mono text-right">
+                                    {track.audio_specs.duration || '0:00'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
 
     return (
             <div className="h-full flex flex-col pt-14 md:pt-20 px-3 md:px-6 pb-0 overflow-hidden">

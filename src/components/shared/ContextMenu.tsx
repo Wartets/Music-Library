@@ -20,10 +20,72 @@ interface ContextMenuProps {
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
     const menuRef = useRef<HTMLDivElement>(null);
-    const [activeSubMenu, setActiveSubMenu] = useState<{ items: ContextMenuItem[], y: number, x: number } | null>(null);
+    const [activeSubMenu, setActiveSubMenu] = useState<{ items: ContextMenuItem[], top: number, bottom: number, left: number, right: number } | null>(null);
     const subMenuRef = useRef<HTMLDivElement>(null);
     const [menuPosition, setMenuPosition] = useState({ x, y });
     const [subMenuPosition, setSubMenuPosition] = useState({ x, y });
+
+    const placeLayer = ({
+        anchorX,
+        anchorY,
+        layerWidth,
+        layerHeight,
+        gap = 8,
+    }: {
+        anchorX: number;
+        anchorY: number;
+        layerWidth: number;
+        layerHeight: number;
+        gap?: number;
+    }) => {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        let nextX = anchorX;
+        let nextY = anchorY;
+
+        const maxX = Math.max(gap, viewportWidth - layerWidth - gap);
+        const maxY = Math.max(gap, viewportHeight - layerHeight - gap);
+
+        if (nextX > maxX) nextX = maxX;
+        if (nextY > maxY) nextY = maxY;
+        if (nextX < gap) nextX = gap;
+        if (nextY < gap) nextY = gap;
+
+        return { x: nextX, y: nextY };
+    };
+
+    const placeSubMenu = ({
+        parent,
+        layerWidth,
+        layerHeight,
+        gap = 8,
+    }: {
+        parent: { top: number; bottom: number; left: number; right: number };
+        layerWidth: number;
+        layerHeight: number;
+        gap?: number;
+    }) => {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        const spaceRight = viewportWidth - parent.right - gap;
+        const spaceLeft = parent.left - gap;
+        const openRight = spaceRight >= layerWidth || spaceRight >= spaceLeft;
+
+        const rawX = openRight
+            ? parent.right - 2
+            : parent.left - layerWidth + 2;
+        const preferredY = Math.max(gap, parent.top - 6);
+
+        const maxX = Math.max(gap, viewportWidth - layerWidth - gap);
+        const maxY = Math.max(gap, viewportHeight - layerHeight - gap);
+
+        return {
+            x: Math.max(gap, Math.min(rawX, maxX)),
+            y: Math.max(gap, Math.min(preferredY, maxY)),
+        };
+    };
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -46,15 +108,25 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
     }, [onClose]);
 
     useLayoutEffect(() => {
-        const menu = menuRef.current;
-        if (!menu) return;
+        const updateMenuPosition = () => {
+            const menu = menuRef.current;
+            if (!menu) return;
+            const rect = menu.getBoundingClientRect();
+            setMenuPosition(placeLayer({
+                anchorX: x + 2,
+                anchorY: y + 2,
+                layerWidth: rect.width,
+                layerHeight: rect.height,
+            }));
+        };
 
-        const rect = menu.getBoundingClientRect();
-        const gap = 10;
-        const nextX = Math.max(gap, Math.min(x, window.innerWidth - rect.width - gap));
-        const nextY = Math.max(gap, Math.min(y, window.innerHeight - rect.height - gap));
-        setMenuPosition({ x: nextX, y: nextY });
-    }, [x, y, items.length]);
+        updateMenuPosition();
+        window.addEventListener('resize', updateMenuPosition);
+
+        return () => {
+            window.removeEventListener('resize', updateMenuPosition);
+        };
+    }, [x, y, items]);
 
     const handleMouseEnter = (item: ContextMenuItem, _index: number, e: React.MouseEvent) => {
         if (item.subItems) {
@@ -63,8 +135,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                 if (prev?.items === item.subItems) return prev;
                 return {
                     items: item.subItems!,
-                    y: rect.top,
-                    x: rect.right
+                    top: rect.top,
+                    bottom: rect.bottom,
+                    left: rect.left,
+                    right: rect.right
                 };
             });
         } else {
@@ -85,9 +159,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         if (!activeSubMenu || !subMenu) return;
 
         const rect = subMenu.getBoundingClientRect();
-        const gap = 10;
-        const nextX = Math.max(gap, Math.min(activeSubMenu.x - 4, window.innerWidth - rect.width - gap));
-        const nextY = Math.max(gap, Math.min(activeSubMenu.y, window.innerHeight - rect.height - gap));
+        const positioned = placeSubMenu({
+            parent: activeSubMenu,
+            layerWidth: rect.width,
+            layerHeight: rect.height,
+        });
+        const nextX = positioned.x;
+        const nextY = positioned.y;
         setSubMenuPosition({ x: nextX, y: nextY });
     }, [activeSubMenu]);
 
@@ -107,7 +185,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                 style={{
                     left: menuPosition.x,
                     top: menuPosition.y,
-                    maxHeight: 'calc(100vh - 40px)'
+                    maxHeight: 'calc(100dvh - 20px)'
                 }}
                 onMouseLeave={handleMenuMouseLeave}
             >
@@ -151,7 +229,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                     style={{
                         left: subMenuPosition.x,
                         top: subMenuPosition.y,
-                        maxHeight: 'calc(100vh - 40px)'
+                        maxHeight: 'calc(100dvh - 20px)'
                     }}
                     onMouseLeave={handleSubMenuMouseLeave}
                 >

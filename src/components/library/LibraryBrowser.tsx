@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { VirtualList } from '../shared/VirtualList';
@@ -52,7 +52,16 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     const { playTrack, state: playerState } = usePlayer();
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [showColumnConfig, setShowColumnConfig] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
     const columnConfigRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 767px)');
+        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        setIsMobile(media.matches);
+        media.addEventListener('change', onChange);
+        return () => media.removeEventListener('change', onChange);
+    }, []);
 
     const moveColumn = useCallback((index: number, direction: number) => {
         const newIndex = index + direction;
@@ -256,6 +265,107 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
             />
         );
     }, [playerState.currentTrack?.logic.hash_sha256, libraryState, gridTemplate, playTrack, tracks, onRightClick, toggleFolder]);
+
+    if (isMobile) {
+        return (
+            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-2 pb-28 bg-surface-primary">
+                <div className="mb-3 flex items-center gap-3">
+                    {artworkPath ? (
+                        <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg flex-shrink-0 border border-white/10 relative">
+                            <ArtworkImage
+                                src={artworkPath}
+                                alt={title}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    ) : headerIcon ? (
+                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-dominant border border-white/5 shadow-lg">
+                            {headerIcon}
+                        </div>
+                    ) : (
+                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-dominant border border-white/5 shadow-lg">
+                            <Folder size={18} />
+                        </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                        <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-dominant/70 truncate">
+                            {subtitle || 'Collection'}
+                        </span>
+                        <h1 className="text-lg font-black tracking-tight text-white truncate">
+                            {title}
+                        </h1>
+                    </div>
+                </div>
+
+                {description && (
+                    <p className="text-gray-400 text-[11px] mb-3 font-medium leading-relaxed line-clamp-2">
+                        {description}
+                    </p>
+                )}
+
+                <div className="mb-3 flex items-center justify-between gap-2">
+                    <button
+                        onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95"
+                    >
+                        <Play size={14} fill="currentColor" /> Play All
+                    </button>
+                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
+                        {tracks.length} tracks
+                    </span>
+                </div>
+
+                <div className="space-y-1.5">
+                    {flatList.map((item: any, index: number) => {
+                        const isPlaying = playerState.currentTrack?.logic.hash_sha256 === item.logic.hash_sha256;
+                        const isVersion = item._isVersion;
+                        const artwork = item.artworks?.track_artwork?.[0] || item.artworks?.album_artwork?.[0];
+
+                        return (
+                            <div
+                                key={item.logic.hash_sha256 + (item._isVersion ? `-v-${index}` : `-${index}`)}
+                                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl border transition-colors ${isVersion ? 'ml-5 border-white/5 bg-black/20' : 'border-white/10 bg-white/[0.02]'} ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'hover:bg-white/5'}`}
+                                onClick={() => playTrack(item, tracks)}
+                                onContextMenu={(e) => onRightClick(e, item)}
+                            >
+                                {item._hasVersions && !isVersion && (
+                                    <button
+                                        onClick={(e) => toggleFolder(item._folderKey, e)}
+                                        className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                                    >
+                                        {item._isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                    </button>
+                                )}
+
+                                <div className="w-10 h-10 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/10">
+                                    <ArtworkImage
+                                        details={artwork}
+                                        alt={item.metadata?.title || item.logic?.track_name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                    <div className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
+                                        {isVersion ? (item.logic.version_name || item.file.name) : (item.logic.track_name || item.metadata?.title || 'Unknown')}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 truncate">
+                                        {item.metadata?.artists?.join(', ') || 'Unknown Artist'}
+                                    </div>
+                                </div>
+
+                                <div className="text-[10px] text-gray-400 font-mono text-right leading-tight">
+                                    <div>{item.audio_specs?.duration || '0:00'}</div>
+                                    {!isVersion && <div className="text-gray-600 truncate max-w-[90px]">{getTrackCollectionLabel(item)}</div>}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col pt-14 md:pt-20 px-3 md:px-6 pb-0 bg-surface-primary">
