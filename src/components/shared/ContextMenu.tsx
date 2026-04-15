@@ -9,6 +9,7 @@ export interface ContextMenuItem {
     divider?: boolean;
     disabled?: boolean;
     subItems?: ContextMenuItem[];
+    lazySubItems?: () => ContextMenuItem[];
 }
 
 interface ContextMenuProps {
@@ -20,7 +21,7 @@ interface ContextMenuProps {
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
     const menuRef = useRef<HTMLDivElement>(null);
-    const [activeSubMenu, setActiveSubMenu] = useState<{ items: ContextMenuItem[], top: number, bottom: number, left: number, right: number } | null>(null);
+    const [activeSubMenu, setActiveSubMenu] = useState<{ source: ContextMenuItem, items: ContextMenuItem[], top: number, bottom: number, left: number, right: number } | null>(null);
     const subMenuRef = useRef<HTMLDivElement>(null);
     const [menuPosition, setMenuPosition] = useState({ x, y });
     const [subMenuPosition, setSubMenuPosition] = useState({ x, y });
@@ -128,13 +129,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         };
     }, [x, y, items]);
 
+    const resolveSubItems = (item: ContextMenuItem) => item.subItems || item.lazySubItems?.() || null;
+
     const handleMouseEnter = (item: ContextMenuItem, _index: number, e: React.MouseEvent) => {
-        if (item.subItems) {
+        const subItems = resolveSubItems(item);
+        if (subItems) {
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             setActiveSubMenu(prev => {
-                if (prev?.items === item.subItems) return prev;
+                if (prev?.items === subItems) return prev;
                 return {
-                    items: item.subItems!,
+                    source: item,
+                    items: subItems,
                     top: rect.top,
                     bottom: rect.bottom,
                     left: rect.left,
@@ -212,8 +217,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                             >
                                 {item.icon && <span className={`text-gray-400 group-hover:text-white transition-colors ${item.danger ? 'group-hover:text-red-400' : ''}`}>{item.icon}</span>}
                                 <span className="flex-1 text-left truncate">{item.label}</span>
-                                {item.subItems && <ChevronRight size={14} className="text-gray-500 group-hover:text-white" />}
-                                {activeSubMenu && items[idx].subItems === activeSubMenu.items && (
+                                {(item.subItems || item.lazySubItems) && <ChevronRight size={14} className="text-gray-500 group-hover:text-white" />}
+                                {activeSubMenu && activeSubMenu.source === items[idx] && (
                                     <div className="absolute left-0 top-0 w-1 h-full bg-dominant"></div>
                                 )}
                             </button>

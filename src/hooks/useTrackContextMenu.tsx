@@ -56,18 +56,6 @@ export const useTrackContextMenu = () => {
         const containingPlaylists = playlists.filter(pl => pl.trackIds.includes(track.logic.hash_sha256));
         const hasPlaylists = playlists.length > 0;
 
-        const similarAlbums = Array.from(new Set(
-            libraryState.tracks
-                .filter(t => t.logic.hash_sha256 !== track.logic.hash_sha256)
-                .filter(t => {
-                    const sameArtist = (t.metadata?.artists || []).some(a => (track.metadata?.artists || []).includes(a));
-                    const sameGenre = t.metadata?.genre && track.metadata?.genre && t.metadata.genre === track.metadata.genre;
-                    return Boolean(sameArtist || sameGenre);
-                })
-                .map(t => t.metadata?.album)
-                .filter((album): album is string => Boolean(album) && album !== track.metadata?.album)
-        )).slice(0, 8);
-
         const playbackActions: ContextMenuItem[] = [
             {
                 label: 'Play',
@@ -149,11 +137,24 @@ export const useTrackContextMenu = () => {
                 label: 'View Similar Albums',
                 icon: <Disc size={14} />,
                 onClick: () => { },
-                disabled: similarAlbums.length === 0,
-                subItems: similarAlbums.map(album => ({
-                    label: album,
-                    onClick: () => onNavigate?.('AlbumDetail', album)
-                }))
+                lazySubItems: () => {
+                    const similarAlbums = Array.from(new Set(
+                        libraryState.tracks
+                            .filter(t => t.logic.hash_sha256 !== track.logic.hash_sha256)
+                            .filter(t => {
+                                const sameArtist = (t.metadata?.artists || []).some(a => (track.metadata?.artists || []).includes(a));
+                                const sameGenre = t.metadata?.genre && track.metadata?.genre && t.metadata.genre === track.metadata.genre;
+                                return Boolean(sameArtist || sameGenre);
+                            })
+                            .map(t => t.metadata?.album)
+                            .filter((album): album is string => Boolean(album) && album !== track.metadata?.album)
+                    )).slice(0, 8);
+
+                    return similarAlbums.map(album => ({
+                        label: album,
+                        onClick: () => onNavigate?.('AlbumDetail', album)
+                    }));
+                }
             }
         ];
 
