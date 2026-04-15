@@ -5,6 +5,13 @@ import { Maximize2, Minimize2, Repeat, Repeat1, Shuffle, X } from 'lucide-react'
 import { formatDuration } from '../../utils/formatters';
 import { ViewType } from '../layout/AppLayout';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { TrackItem } from '../../types/music';
+
+const getTrackArtwork = (track?: TrackItem | null) => track?.artworks?.track_artwork?.[0] || track?.artworks?.album_artwork?.[0];
+
+const getTrackDominantColor = (track?: TrackItem | null) => getTrackArtwork(track)?.dominant_color || '#121212';
+
+const getTrackTitle = (track?: TrackItem | null) => track?.metadata?.title || track?.logic.track_name || 'Unknown Track';
 
 export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: ViewType, data?: any) => void }> = ({ onBack, onNavigate }) => {
     const { state, togglePlay, playNext, playPrevious, seek, getProgress, toggleShuffle, setRepeat, seekForward, seekBackward } = usePlayer();
@@ -13,8 +20,13 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
     const [localProgress, setLocalProgress] = useState(0);
     const [isControlsVisible, setIsControlsVisible] = useState(true);
     const [isButtonHovered, setIsButtonHovered] = useState(false);
+    const [transitionTrack, setTransitionTrack] = useState<TrackItem | null>(null);
+    const [isArtworkTransitioning, setIsArtworkTransitioning] = useState(false);
     const isButtonHoveredRef = useRef(false);
     const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const transitionFrameRef = useRef<number | null>(null);
+    const previousTrackRef = useRef<TrackItem | null>(track);
 
     const resetInactivity = useCallback(() => {
         setIsControlsVisible(true);
@@ -58,6 +70,52 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
 
+    useEffect(() => {
+        const nextTrackId = track?.logic.hash_sha256 || null;
+        const previousTrack = previousTrackRef.current;
+
+        if (!track) {
+            previousTrackRef.current = null;
+            setTransitionTrack(null);
+            setIsArtworkTransitioning(false);
+            return;
+        }
+
+        const previousTrackId = previousTrack?.logic.hash_sha256 || null;
+        if (previousTrack && previousTrackId !== nextTrackId) {
+            setTransitionTrack(previousTrack);
+            setIsArtworkTransitioning(true);
+
+            if (transitionTimeoutRef.current) {
+                clearTimeout(transitionTimeoutRef.current);
+            }
+            if (transitionFrameRef.current !== null) {
+                cancelAnimationFrame(transitionFrameRef.current);
+            }
+
+            transitionFrameRef.current = requestAnimationFrame(() => {
+                setIsArtworkTransitioning(false);
+            });
+
+            transitionTimeoutRef.current = setTimeout(() => {
+                setTransitionTrack(null);
+            }, 1100);
+        }
+
+        previousTrackRef.current = track;
+    }, [track]);
+
+    useEffect(() => {
+        return () => {
+            if (transitionTimeoutRef.current) {
+                clearTimeout(transitionTimeoutRef.current);
+            }
+            if (transitionFrameRef.current !== null) {
+                cancelAnimationFrame(transitionFrameRef.current);
+            }
+        };
+    }, []);
+
     if (!track) {
         return (
             <div className="h-full flex flex-col items-center justify-center bg-black text-white">
@@ -85,20 +143,37 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
         toggleFullscreen();
     };
 
-    const artworkDetails = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
-    const dominantColor = track.artworks?.track_artwork?.[0]?.dominant_color || track.artworks?.album_artwork?.[0]?.dominant_color || '#121212';
+    const artworkDetails = getTrackArtwork(track);
+    const transitionArtworkDetails = getTrackArtwork(transitionTrack);
+    const dominantColor = getTrackDominantColor(track);
+    const transitionDominantColor = getTrackDominantColor(transitionTrack);
 
     return (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden select-none" onDoubleClick={handleBackgroundDoubleClick}>
             {/* Background Glow */}
-            <div
-                className="absolute inset-0 opacity-40 blur-[120px] transition-colors duration-1000 scale-150"
-                style={{
-                    background: `radial-gradient(circle at center, ${dominantColor} 0%, transparent 70%)`,
-                    backgroundColor: dominantColor
-                }}
-            ></div>
-            <div className="absolute inset-0 bg-black/40"></div>
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div
+                    className="absolute inset-0 transition-all duration-1000 ease-out"
+                    style={{
+                        background: `radial-gradient(circle at center, ${dominantColor} 0%, transparent 68%)`,
+                        backgroundColor: dominantColor,
+                        opacity: isArtworkTransitioning ? 0.92 : 1,
+                        transform: 'scale(1.45)'
+                    }}
+                />
+                {transitionTrack && (
+                    <div
+                        className={`absolute inset-0 transition-opacity duration-1000 ease-out ${isArtworkTransitioning ? 'opacity-[0.85]' : 'opacity-0'}`}
+                        style={{
+                            background: `radial-gradient(circle at center, ${transitionDominantColor} 0%, transparent 70%)`,
+                            backgroundColor: transitionDominantColor,
+                            transform: 'scale(1.6)'
+                        }}
+                    />
+                )}
+                <div className="absolute inset-0 bg-black/42" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_32%)] opacity-80" />
+            </div>
 
             {/* Header */}
             <div className={`relative z-10 flex items-center justify-between p-8 transition-opacity duration-1000 ${isControlsVisible || isButtonHovered ? 'opacity-100' : 'opacity-40'}`}>
@@ -127,20 +202,46 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                 <div className="flex flex-col lg:flex-row items-center justify-center gap-16 max-w-7xl w-full">
 
                     {/* Artwork & Visualizer Container */}
-                    <div className="relative group perspective-1000">
-                        <div className="w-80 h-80 md:w-[450px] md:h-[450px] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 transition-transform duration-700 group-hover:rotate-y-6 group-hover:scale-105">
-                            <ArtworkImage
-                                details={artworkDetails}
-                                alt={track.metadata?.title || track.logic.track_name}
-                                className="w-full h-full object-cover"
-                            />
+                    <div className="relative group perspective-1000 isolate">
+                        <div
+                            className="absolute -inset-12 rounded-full blur-3xl transition-all duration-1000 ease-out pointer-events-none"
+                            style={{
+                                background: `radial-gradient(circle, ${dominantColor} 0%, transparent 70%)`,
+                                opacity: isArtworkTransitioning ? 0.75 : 0.95,
+                            }}
+                        />
+                        <div className={`relative w-80 h-80 md:w-[450px] md:h-[450px] rounded-[2rem] overflow-hidden border border-white/10 bg-black/20 shadow-[0_40px_120px_rgba(0,0,0,0.55)] transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${isArtworkTransitioning ? 'scale-[1.01]' : 'scale-100'} group-hover:shadow-[0_48px_140px_rgba(0,0,0,0.62)]`}>
+                            {transitionTrack && transitionArtworkDetails && (
+                                <div className={`absolute inset-0 transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${isArtworkTransitioning ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-[0.965] blur-sm'}`}>
+                                    <ArtworkImage
+                                        details={transitionArtworkDetails}
+                                        alt={getTrackTitle(transitionTrack)}
+                                        className="w-full h-full object-cover"
+                                        loading="eager"
+                                    />
+                                </div>
+                            )}
+                            <div className={`absolute inset-0 transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${isArtworkTransitioning ? 'opacity-0 scale-[1.03] blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
+                                <ArtworkImage
+                                    details={artworkDetails}
+                                    alt={getTrackTitle(track)}
+                                    className="w-full h-full object-cover"
+                                    loading="eager"
+                                />
+                            </div>
+                            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_24%,transparent_76%,rgba(255,255,255,0.08))] opacity-60 mix-blend-soft-light pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-black/35 via-transparent to-white/5 pointer-events-none" />
+                            <div className={`absolute inset-0 transition-opacity duration-1000 pointer-events-none ${isArtworkTransitioning ? 'opacity-100' : 'opacity-60'}`}>
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.18),transparent_35%)]" />
+                                <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.12)_48%,transparent_52%)] opacity-50" />
+                            </div>
                         </div>
 
                         {/* Overlay Visualizer Rings or similar could go here */}
                     </div>
 
                     {/* Info & Metadata */}
-                    <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl">
+                    <div className={`flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl transition-all duration-700 ease-out ${isArtworkTransitioning ? 'translate-y-1 opacity-80' : 'translate-y-0 opacity-100'}`}>
                         <button
                             onClick={() => onNavigate('SongDetail', track)}
                             className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4 line-clamp-2 hover:text-dominant-light transition-colors text-center lg:text-left"

@@ -8,6 +8,7 @@ interface ArtworkImageProps {
     alt?: string;
     className?: string;
     fallback?: React.ReactNode;
+    loading?: 'lazy' | 'eager';
 }
 
 const ARTWORK_CACHE_NAME = 'music-library-artwork-v1';
@@ -33,7 +34,7 @@ const createFallbackVisual = (seedText: string) => {
 
 const buildSrcCandidates = (pathValue: string): string[] => dbService.getAssetCandidates(pathValue);
 
-export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 'Artwork', className = 'w-full h-full', fallback }) => {
+export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 'Artwork', className = 'w-full h-full', fallback, loading = 'lazy' }) => {
     const [hasError, setHasError] = React.useState(false);
     const [candidateIndex, setCandidateIndex] = React.useState(0);
     const [cachedSrc, setCachedSrc] = React.useState<string | null>(null);
@@ -129,7 +130,7 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
             src={cachedSrc || displaySrc}
             alt={alt}
             className={`object-cover ${className}`}
-            loading="lazy"
+            loading={loading}
             decoding="async"
             onLoad={() => {
                 if (cacheKey) {
