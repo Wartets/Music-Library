@@ -27,6 +27,9 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
     const [metadataWriteTarget, setMetadataWriteTarget] = useState<MetadataWriteTarget>(() => persistenceService.getPreferences().metadataWriteTarget || 'musicbib');
     const [metadataSearch, setMetadataSearch] = useState('');
     const [selectedHashes, setSelectedHashes] = useState<Set<string>>(new Set());
+    const [uiGlowEnabled, setUiGlowEnabled] = useState(() => persistenceService.get('ui_glow') !== false);
+    const [uiCompactPlayerEnabled, setUiCompactPlayerEnabled] = useState(() => persistenceService.get('ui_compact_player') === true);
+    const [uiNowPlayingNotificationsEnabled, setUiNowPlayingNotificationsEnabled] = useState(() => persistenceService.get('ui_now_playing_notifications') === true);
 
     // --- Audio Settings State ---
     const [eqEnabled, setEqEnabled] = useState(() => persistenceService.getPreferences().eqEnabled);
@@ -77,11 +80,37 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
         audioEngine.setVolumeNormalization(normalizationEnabled, normalizationStrength);
     }, [normalizationEnabled, normalizationStrength]);
 
+    useEffect(() => {
+        const syncInterfaceSettingsFromStorage = () => {
+            setUiGlowEnabled(persistenceService.get('ui_glow') !== false);
+            setUiCompactPlayerEnabled(persistenceService.get('ui_compact_player') === true);
+            setUiNowPlayingNotificationsEnabled(persistenceService.get('ui_now_playing_notifications') === true);
+        };
+
+        window.addEventListener('storage', syncInterfaceSettingsFromStorage);
+        return () => window.removeEventListener('storage', syncInterfaceSettingsFromStorage);
+    }, []);
+
+    const EQ_ZERO_SNAP_THRESHOLD = 0.5;
+
+    const snapEqBandValue = (value: number) => {
+        const rounded = Math.round(value * 10) / 10;
+        return Math.abs(rounded) <= EQ_ZERO_SNAP_THRESHOLD ? 0 : rounded;
+    };
+
+    const commitEqBandValue = (index: number, value: number) => {
+        const snapped = snapEqBandValue(value);
+        setEqBands(prev => {
+            const nextBands = [...prev];
+            nextBands[index] = snapped;
+            return nextBands;
+        });
+        if (eqEnabled) audioEngine.setEqBand(index, snapped);
+        return snapped;
+    };
+
     const handleBandChange = (index: number, value: number) => {
-        const newBands = [...eqBands];
-        newBands[index] = value;
-        setEqBands(newBands);
-        if (eqEnabled) audioEngine.setEqBand(index, value);
+        commitEqBandValue(index, value);
     };
 
     // --- Maintenance Logic ---
@@ -285,13 +314,14 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    const current = persistenceService.get('ui_glow') !== false;
+                                                    const current = uiGlowEnabled;
                                                     persistenceService.set('ui_glow', !current);
+                                                    setUiGlowEnabled(!current);
                                                     window.dispatchEvent(new Event('storage'));
                                                 }}
-                                                className={`w-12 h-6 rounded-full transition-all relative ${persistenceService.get('ui_glow') !== false ? 'bg-dominant' : 'bg-white/10'}`}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${uiGlowEnabled ? 'bg-dominant' : 'bg-white/10'}`}
                                             >
-                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${persistenceService.get('ui_glow') !== false ? 'left-7 bg-black' : 'left-1'}`}></div>
+                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${uiGlowEnabled ? 'left-7 bg-black' : 'left-1'}`}></div>
                                             </button>
                                         </div>
                                         <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
@@ -301,13 +331,14 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    const current = persistenceService.get('ui_compact_player') === true;
+                                                    const current = uiCompactPlayerEnabled;
                                                     persistenceService.set('ui_compact_player', !current);
+                                                    setUiCompactPlayerEnabled(!current);
                                                     window.dispatchEvent(new Event('storage'));
                                                 }}
-                                                className={`w-12 h-6 rounded-full transition-all relative ${persistenceService.get('ui_compact_player') === true ? 'bg-dominant' : 'bg-white/10'}`}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${uiCompactPlayerEnabled ? 'bg-dominant' : 'bg-white/10'}`}
                                             >
-                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${persistenceService.get('ui_compact_player') === true ? 'left-7 bg-black' : 'left-1'}`}></div>
+                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${uiCompactPlayerEnabled ? 'left-7 bg-black' : 'left-1'}`}></div>
                                             </button>
                                         </div>
                                         <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
@@ -317,9 +348,10 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                             </div>
                                             <button
                                                 onClick={async () => {
-                                                    const current = persistenceService.get('ui_now_playing_notifications') === true;
+                                                    const current = uiNowPlayingNotificationsEnabled;
                                                     if (current) {
                                                         persistenceService.set('ui_now_playing_notifications', false);
+                                                        setUiNowPlayingNotificationsEnabled(false);
                                                         window.dispatchEvent(new Event('storage'));
                                                         return;
                                                     }
@@ -342,11 +374,12 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                     }
 
                                                     persistenceService.set('ui_now_playing_notifications', true);
+                                                    setUiNowPlayingNotificationsEnabled(true);
                                                     window.dispatchEvent(new Event('storage'));
                                                 }}
-                                                className={`w-12 h-6 rounded-full transition-all relative ${persistenceService.get('ui_now_playing_notifications') === true ? 'bg-dominant' : 'bg-white/10'}`}
+                                                className={`w-12 h-6 rounded-full transition-all relative ${uiNowPlayingNotificationsEnabled ? 'bg-dominant' : 'bg-white/10'}`}
                                             >
-                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${persistenceService.get('ui_now_playing_notifications') === true ? 'left-7 bg-black' : 'left-1'}`}></div>
+                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${uiNowPlayingNotificationsEnabled ? 'left-7 bg-black' : 'left-1'}`}></div>
                                             </button>
                                         </div>
                                     </div>
@@ -391,11 +424,17 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                             {eqBands.map((val, idx) => (
                                                 <div key={idx} className="flex-1 flex flex-col items-center h-full group">
                                                     <div className="relative flex-1 w-full flex items-center justify-center py-2 group cursor-pointer">
-                                                        <div className="absolute top-0 bottom-0 w-1 bg-white/5 rounded-full group-hover:bg-white/10 transition-colors"></div>
-                                                        <div className="absolute top-1/2 w-4 h-[1px] bg-white/10"></div>
+                                                        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-white/5 rounded-full group-hover:bg-white/10 transition-colors"></div>
+                                                        <div className={`absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-4 h-[1px] bg-white/10 transition-all duration-150 ease-out ${Math.abs(val) <= EQ_ZERO_SNAP_THRESHOLD ? 'bg-dominant/70 shadow-[0_0_10px_rgba(var(--color-dominant-rgb),0.35)]' : ''}`}></div>
+                                                        <div
+                                                            className={`absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border pointer-events-none transition-all duration-150 ease-out ${Math.abs(val) <= EQ_ZERO_SNAP_THRESHOLD ? 'opacity-100 scale-100 border-dominant/60 bg-dominant/15 shadow-[0_0_26px_rgba(var(--color-dominant-rgb),0.38)]' : 'opacity-0 scale-50 border-transparent bg-transparent'}`}
+                                                        ></div>
                                                         <input
                                                             type="range" min="-12" max="12" step="0.1" value={val}
                                                             onChange={(e) => handleBandChange(idx, parseFloat(e.target.value))}
+                                                            onMouseUp={(e) => commitEqBandValue(idx, parseFloat((e.currentTarget as HTMLInputElement).value))}
+                                                            onTouchEnd={(e) => commitEqBandValue(idx, parseFloat((e.currentTarget as HTMLInputElement).value))}
+                                                            onPointerUp={(e) => commitEqBandValue(idx, parseFloat((e.currentTarget as HTMLInputElement).value))}
                                                             className="absolute opacity-0 cursor-pointer z-20 vertical-range"
                                                             style={{
                                                                 width: 168,
@@ -405,11 +444,11 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                                 transform: 'translate(-50%, -50%) rotate(-90deg)'
                                                             }}
                                                         />
-                                                        <div className="absolute w-1.5 bg-dominant rounded-full shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)]"
-                                                            style={{ height: `${(Math.abs(val) / 24) * 100}%`, bottom: val >= 0 ? '50%' : `calc(50% + ${(val / 24) * 100}%)`, top: val < 0 ? '50%' : 'auto' }}
+                                                        <div className="absolute w-1.5 bg-dominant rounded-full shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)] transition-all duration-150 ease-out"
+                                                            style={{ height: `${(Math.abs(val) / 24) * 100}%`, bottom: val >= 0 ? '50%' : `calc(50% + ${(val / 24) * 100}%)`, top: val < 0 ? '50%' : 'auto', opacity: Math.abs(val) <= EQ_ZERO_SNAP_THRESHOLD ? 0.9 : 1 }}
                                                         ></div>
-                                                        <div className="absolute w-3.5 h-3.5 bg-white rounded-full border-2 border-dominant shadow-xl pointer-events-none z-10"
-                                                            style={{ bottom: `calc(50% + ${(val / 24) * 100}%)`, transform: 'translateY(50%)' }}
+                                                        <div className="absolute w-3.5 h-3.5 bg-white rounded-full border-2 border-dominant shadow-xl pointer-events-none z-10 transition-all duration-150 ease-out"
+                                                            style={{ bottom: `calc(50% + ${(val / 24) * 100}%)`, transform: `translateY(50%) scale(${Math.abs(val) <= EQ_ZERO_SNAP_THRESHOLD ? 1.22 : 1})`, boxShadow: Math.abs(val) <= EQ_ZERO_SNAP_THRESHOLD ? '0 0 0 4px rgba(var(--color-dominant-rgb), 0.18), 0 0 22px rgba(var(--color-dominant-rgb), 0.45)' : '0 10px 18px rgba(0,0,0,0.35)' }}
                                                         ></div>
                                                     </div>
                                                     <span className="text-[10px] font-black text-gray-500 mt-4 group-hover:text-dominant">{freqs[idx]}</span>
