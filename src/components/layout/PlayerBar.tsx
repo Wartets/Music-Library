@@ -72,6 +72,23 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
         seek(Number(el.value));
     };
 
+    const handleSeekMouseLeave = () => {
+        if (isDragging) {
+            setIsDragging(false);
+            seek(localProgress);
+        }
+    };
+
+    const handleSeekBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!track || !durationSec) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percent = clickX / rect.width;
+        const newTime = percent * durationSec;
+        setLocalProgress(newTime);
+        seek(newTime);
+    };
+
     // Helper for HH:MM:SS / MM:SS to seconds
     const parseDurationStr = (str: string | null): number => {
         if (!str) return 0;
@@ -102,6 +119,15 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
             previousVolumeRef.current = state.volume;
         }
     }, [state.volume]);
+
+    useEffect(() => {
+        if (!isDragging && track) {
+            const currentProgress = getProgress();
+            if (Math.abs(currentProgress - localProgress) > 1) {
+                setLocalProgress(currentProgress);
+            }
+        }
+    }, [track?.logic.track_hash, getProgress, isDragging]);
 
     // --- SVGs ---
     const IconPlay = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M8 5v14l11-7z" /></svg>;
@@ -158,7 +184,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 style={{ backgroundColor: currentPalette.dominant }}
             ></div>
             {/* Seek Bar */}
-            <div className="w-full relative h-[6px] group -mt-[3px] cursor-pointer" style={{ pointerEvents: track ? 'auto' : 'none' }}>
+            <div className="w-full relative h-[6px] group -mt-[3px] cursor-pointer" style={{ pointerEvents: track ? 'auto' : 'none' }} onClick={handleSeekBarClick}>
                 <input
                     type="range"
                     min={0}
@@ -168,8 +194,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                     onChange={handleSeekChange}
                     onMouseDown={() => setIsDragging(true)}
                     onMouseUp={handleSeekEnd}
+                    onMouseLeave={handleSeekMouseLeave}
                     onTouchStart={() => setIsDragging(true)}
                     onTouchEnd={handleSeekEnd}
+                    onTouchCancel={handleSeekMouseLeave}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     disabled={!track}
                 />
