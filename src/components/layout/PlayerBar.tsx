@@ -149,7 +149,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
     return (
         <footer
-            className={`${isCompact ? 'h-20' : 'h-24'} fixed md:static bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[60] transition-all duration-1000 overflow-hidden`}
+            className={`${isCompact ? 'h-16 md:h-20' : 'h-20 md:h-24'} fixed md:static bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[60] transition-all duration-1000 overflow-hidden`}
             style={{ backgroundColor: `${currentPalette.dominantDark}bb` }}
         >
             {/* Subtle bottom glow */}
@@ -202,13 +202,13 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 )}
             </div>
 
-            <div className="flex-1 flex items-center justify-between px-2 md:px-6 pt-1">
+            <div className="flex-1 flex items-center justify-between px-2 md:px-6 pt-0.5 md:pt-1">
                 {/* Left: Track Info */}
                 <div className="flex items-center w-auto md:w-1/3 min-w-0 pr-2 md:pr-4">
                     {track ? (
                         <>
                             <div
-                                className={`${isCompact ? 'w-12 h-12' : 'w-14 h-14'} rounded-md bg-white/5 flex-shrink-0 mr-4 overflow-hidden border border-white/5 shadow-2xl relative group cursor-pointer active:scale-95 transition-transform`}
+                                className={`${isCompact ? 'w-10 h-10 md:w-12 md:h-12' : 'w-12 h-12 md:w-14 md:h-14'} rounded-md bg-white/5 flex-shrink-0 mr-3 md:mr-4 overflow-hidden border border-white/5 shadow-2xl relative group cursor-pointer active:scale-95 transition-transform`}
                                 onClick={() => onNavigate('BigScreen', track)}
                             >
                                 <ArtworkImage details={artworkDetails} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -220,7 +220,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => onNavigate('SongDetail', track)}
-                                        className="text-white font-bold text-sm truncate hover:text-dominant-light transition-colors text-left pointer-events-auto"
+                                        className="text-white font-bold text-xs md:text-sm truncate hover:text-dominant-light transition-colors text-left pointer-events-auto"
                                     >
                                         {track.metadata?.title || track.logic.track_name}
                                         {track.logic.version_name && (
@@ -237,7 +237,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                 </div>
                                 <button
                                     onClick={() => onNavigate('ArtistDetail', track.metadata?.artists?.[0])}
-                                    className="text-gray-400 text-xs truncate mt-0.5 font-medium hover:text-white transition-colors text-left"
+                                    className="text-gray-400 text-[11px] md:text-xs truncate mt-0.5 font-medium hover:text-white transition-colors text-left"
                                 >
                                     {track.metadata?.artists?.join(', ') || 'Unknown Artist'}
                                 </button>
@@ -257,12 +257,12 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 </div>
 
                 {/* Center: Controls */}
-                <div className="flex flex-col items-center justify-center flex-1 md:w-1/3 max-w-[420px]">
-                    <div className="flex items-center justify-center gap-1.5 md:gap-3">
+                <div className="flex items-center justify-center flex-1 md:w-1/3 max-w-[420px]">
+                    <div className="flex items-center justify-center gap-1 md:gap-3">
                         <button
                             onClick={toggleShuffle}
                             disabled={!track}
-                            className={`inline-flex items-center justify-center transition-all rounded-full w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center transition-all rounded-full w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
                         >
                             <IconShuffle active={state.shuffle} />
@@ -271,7 +271,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={playPrevious}
                             disabled={!track}
-                            className={`transition-transform active:scale-95 w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
+                            className={`transition-transform active:scale-95 w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
                         >
                             <IconPrev />
                         </button>
@@ -288,7 +288,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={togglePlay}
                             disabled={!track}
-                            className={`w-14 h-14 md:w-12 md:h-12 rounded-full bg-white text-black flex items-center justify-center transition-all shadow-lg shadow-white/10 ${activeClass(track, 'hover:scale-105 active:scale-95')}`}
+                            className={`w-12 h-12 md:w-12 md:h-12 rounded-full bg-white text-black flex items-center justify-center transition-all shadow-lg shadow-white/10 ${activeClass(track, 'hover:scale-105 active:scale-95')}`}
                         >
                             {state.isPlaying ? <IconPause /> : <IconPlay />}
                         </button>
@@ -305,7 +305,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={playNext}
                             disabled={!track}
-                            className={`transition-transform active:scale-95 w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
+                            className={`transition-transform active:scale-95 w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
                         >
                             <IconNext />
                         </button>
@@ -313,18 +313,16 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         <button
                             onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
                             disabled={!track}
-                            className={`inline-flex items-center justify-center transition-all rounded-full w-10 h-10 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center transition-all rounded-full w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
                             title={`Repeat: ${state.repeat}`}
                         >
                             <IconRepeat mode={state.repeat} />
                         </button>
-                    </div>
 
-                    <div className="md:hidden mt-1">
                         <button
                             onClick={toggleMute}
                             disabled={!track}
-                            className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
+                            className={`md:hidden inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
                             title={isMuted ? 'Unmute' : 'Mute'}
                             aria-pressed={isMuted}
                         >
