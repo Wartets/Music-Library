@@ -391,7 +391,7 @@ export const MetadataEditor: React.FC = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-0.5 sm:gap-2 py-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
+                            className={`flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-0.5 sm:gap-2 py-2.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
                                 ? 'bg-dominant text-on-dominant shadow-lg shadow-dominant/20'
                                 : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                                 }`}
@@ -768,7 +768,7 @@ export const MetadataEditor: React.FC = () => {
                 {/* Sticky Actions */}
                 <div className="sticky bottom-0 bg-[#111] pt-6 border-t border-white/10 mt-4 pb-2 z-10">
                     <div className="flex justify-between items-center gap-4">
-                        <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest max-w-[50%]">
+                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest max-w-[50%]">
                             * Target: {writeTarget === 'musicbib' ? 'musicBib.json export' : writeTarget === 'file' ? 'file-level override' : 'musicBib.json export + file-level override'}.
                         </p>
                         <div className="flex gap-4">

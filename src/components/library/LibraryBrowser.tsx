@@ -166,7 +166,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                     {item._hasVersions && (
                                         <button
                                             onClick={(e) => toggleFolder(item._folderKey, e)}
-                                            className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                                            className="p-1.5 sm:p-1 min-w-8 min-h-8 sm:min-w-auto sm:min-h-auto flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
                                         >
                                             {item._isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                         </button>

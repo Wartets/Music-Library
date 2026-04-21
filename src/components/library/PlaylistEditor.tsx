@@ -79,7 +79,7 @@ export const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ playlist, onSave
                                     </button>
                                 </div>
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">Cover Art</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Cover Art</span>
                         </div>
 
                         <div className="flex-1 space-y-4">

@@ -73,12 +73,12 @@ export const MaintenanceView: React.FC = () => {
                         Analyze, clean, and backup your collection · {state.tracks.length} tracks indexed
                     </p>
                 </div>
-                <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl">
+                <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl overflow-x-auto">
                     {(['duplicates', 'health', 'data'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab ? 'bg-white/10 text-white shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                            className={`px-4 sm:px-6 py-2.5 rounded-xl text-[10px] sm:text-xs font-black transition-all uppercase tracking-widest flex-shrink-0 min-w-0 ${activeTab === tab ? 'bg-white/10 text-white shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
                         >
                             {tab}
                         </button>
@@ -87,7 +87,7 @@ export const MaintenanceView: React.FC = () => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
                 <div className="bg-white/5 border border-white/5 p-6 rounded-3xl flex items-center gap-6">
                     <div className="w-14 h-14 rounded-2xl bg-dominant/20 text-dominant flex items-center justify-center shadow-inner">
                         <Zap size={24} />

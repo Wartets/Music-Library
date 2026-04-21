@@ -57,7 +57,8 @@ export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
                                     </div>
                                     <button
                                         onClick={() => playTrack(v)}
-                                        className="w-10 h-10 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                        className="w-10 h-10 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 md:group-hover:opacity-0 active:opacity-100 md:active:opacity-0"
+                                        aria-label="Play version"
                                     >
                                         <Play size={16} fill="currentColor" />
                                     </button>

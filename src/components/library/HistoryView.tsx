@@ -122,7 +122,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                 ))}
 
                 <div className="w-10 flex justify-end opacity-0 group-hover:opacity-100">
-                    <button className="p-1 hover:text-white"><MoreHorizontal size={14} /></button>
+                    <button className="p-1.5 sm:p-1 min-w-8 min-h-8 sm:min-w-auto sm:min-h-auto flex items-center justify-center hover:text-white"><MoreHorizontal size={14} /></button>
                 </div>
             </div>
         );
@@ -220,8 +220,9 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                 <div className="flex-1 overflow-hidden">
                     <VirtualList
                         items={historyTracks}
-                        rowHeight={56}
+                        rowHeight={isMobile ? 48 : 56}
                         renderRow={(track: TrackItem, idx: number) => renderRow(track, idx)}
+                        overscan={isMobile ? 3 : 5}
                     />
                 </div>
             </div>
