@@ -222,12 +222,12 @@ export const SeekBar: React.FC<SeekBarProps> = ({
                     aria-hidden="true"
                 />
 
-                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[3px] md:h-[2px] bg-white/10 group-hover:h-[6px] md:group-hover:h-[4px] transition-all pointer-events-none rounded-full" />
+                <div className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[3px] md:h-[2px] bg-white/10 group-hover:h-[6px] md:group-hover:h-[4px] transition-all pointer-events-none rounded-full" />
 
                 <div
                     ref={progressRef}
                     className={`absolute inset-y-0 left-0 bg-dominant transition-all rounded-r-full pointer-events-none top-1/2 -translate-y-1/2 h-[3px] md:h-[2px] md:group-hover:h-[4px] ${isGlowEnabled ? 'shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)]' : ''}`}
-                    style={{ width: isDragging ? `${progressPercent}%` : `${percent}%` }}
+                    style={{ width: isDragging ? `calc(${progressPercent}% - 8px)` : `calc(${percent}% - 8px)` }}
                 />
 
                 <div
@@ -273,8 +273,8 @@ export const SeekBar: React.FC<SeekBarProps> = ({
             </div>
 
             {isBuffering && (
-                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[6px] overflow-hidden pointer-events-none opacity-30">
-                    <div className="absolute inset-y-0 left-0 bg-white/30 shimmer" style={{ width: `${percent}%` }} />
+                <div className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[6px] overflow-hidden pointer-events-none opacity-30">
+                    <div className="absolute inset-y-0 left-0 bg-white/30 shimmer" style={{ width: `calc(${percent}% - 8px)` }} />
                 </div>
             )}
         </div>
