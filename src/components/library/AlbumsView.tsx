@@ -5,7 +5,6 @@ import { useUI } from '../../contexts/UIContext';
 import { Filter, User, Play, ListPlus, Plus, FolderPlus, Pencil, Zap } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
-import { getTrackCollectionKey, getTrackCollectionLabel } from '../../utils/collectionLabels';
 
 
 interface AlbumsViewProps {
