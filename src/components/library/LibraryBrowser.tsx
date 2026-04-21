@@ -5,7 +5,7 @@ import { VirtualList } from '../shared/VirtualList';
 import { TrackItem } from '../../types/music';
 import { formatSizeMb } from '../../utils/formatters';
 import {
-    ChevronDown, ChevronRight, Folder, Play, SlidersHorizontal, ChevronUp
+    ChevronDown, ChevronRight, Folder, Play, SlidersHorizontal, ChevronUp, Shuffle
 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
@@ -186,7 +186,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                                 )}
                                             </span>
                                             {item._hasVersions && !item._isExpanded && (
-                                                <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-gray-500 font-bold uppercase tracking-wider flex-shrink-0">
+                                                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-gray-500 font-bold uppercase tracking-wider flex-shrink-0">
                                                     {item._versionCount} vers.
                                                 </span>
                                             )}
@@ -268,7 +268,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
 
     if (isMobile) {
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-2 pb-28 bg-surface-primary">
+            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-3 sm:px-4 pb-28 bg-surface-primary">
                 <div className="mb-3 flex items-center gap-3">
                     {artworkPath ? (
                         <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg flex-shrink-0 border border-white/10 relative">
@@ -289,7 +289,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                     )}
 
                     <div className="min-w-0 flex-1">
-                        <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-dominant/70 truncate">
+                        <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-dominant/70 truncate">
                             {subtitle || 'Collection'}
                         </span>
                         <h1 className="text-lg font-black tracking-tight text-white truncate">
@@ -305,12 +305,27 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                 )}
 
                 <div className="mb-3 flex items-center justify-between gap-2">
-                    <button
-                        onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
-                        className="flex items-center gap-2 px-3.5 py-2 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95"
-                    >
-                        <Play size={14} fill="currentColor" /> Play All
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => {
+                                if (tracks.length > 0) {
+                                    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+                                    playTrack(shuffled[0], shuffled);
+                                }
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 bg-white/10 text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95 hover:bg-white/15"
+                            aria-label="Shuffle play"
+                        >
+                            <Shuffle size={14} /> Shuffle
+                        </button>
+                        <button
+                            onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
+                            className="flex items-center gap-2 px-3.5 py-2 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95"
+                            aria-label="Play all in order"
+                        >
+                            <Play size={14} fill="currentColor" /> Play All
+                        </button>
+                    </div>
                     <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
                         {tracks.length} tracks
                     </span>
@@ -332,9 +347,11 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                 {item._hasVersions && !isVersion && (
                                     <button
                                         onClick={(e) => toggleFolder(item._folderKey, e)}
-                                        className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                        className="p-1.5 min-w-8 min-h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white touch-manufacturer-90"
+                                        aria-label={item._isExpanded ? 'Collapse versions' : 'Expand versions'}
                                     >
-                                        {item._isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                        {item._isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                     </button>
                                 )}
 

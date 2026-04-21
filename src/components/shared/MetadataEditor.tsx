@@ -384,20 +384,20 @@ export const MetadataEditor: React.FC = () => {
                     {[
                         { id: 'general', label: 'Info', icon: <Type size={14} /> },
                         { id: 'professional', label: 'Credits', icon: <ShieldCheck size={14} /> },
-                        { id: 'organization', label: 'Organization', icon: <Tag size={14} /> },
+                        { id: 'organization', label: 'Organize', icon: <Tag size={14} /> },
                         { id: 'lyrics', label: 'Lyrics', icon: <FileText size={14} /> },
                         { id: 'external', label: 'Links', icon: <Globe size={14} /> },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
+                            className={`flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-0.5 sm:gap-2 py-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
                                 ? 'bg-dominant text-on-dominant shadow-lg shadow-dominant/20'
                                 : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                                 }`}
                         >
                             {tab.icon}
-                            <span className="hidden sm:inline">{tab.label}</span>
+                            <span className="truncate">{tab.label}</span>
                         </button>
                     ))}
                 </div>

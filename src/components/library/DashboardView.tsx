@@ -230,7 +230,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 <h3 className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
                     <HighlightText text={track.metadata?.title || track.logic.track_name} query={libraryState.searchQuery} />
                 </h3>
-                <p className="text-[10px] text-gray-500 truncate mt-0.5 font-medium">
+                <p className="text-[11px] text-gray-500 truncate mt-0.5 font-medium">
                     <HighlightText text={track.metadata?.artists?.[0] || 'Unknown Artist'} query={libraryState.searchQuery} />
                 </p>
             </div>
@@ -264,7 +264,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                         {Array.from({ length: rating }).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}
                     </div>
                 )}
-                <span className="text-[10px] font-mono text-gray-500">{track.audio_specs?.duration}</span>
+                <span className="text-[11px] font-mono text-gray-500">{track.audio_specs?.duration}</span>
             </div>
         );
     };
@@ -277,7 +277,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     <section>
                         <div className="flex items-end justify-between mb-6">
                             <h2 className="text-2xl font-black tracking-tighter text-white">Recently Played</h2>
-                            <button onClick={() => onNavigate('DetailedHistory')} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-dominant transition-colors">View All History</button>
+                            <button onClick={() => onNavigate('DetailedHistory')} className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-dominant transition-colors">View All History</button>
                         </div>
                         <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
                             {recentlyPlayed.map(track => (

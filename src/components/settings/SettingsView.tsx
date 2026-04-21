@@ -224,7 +224,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
     };
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-8 pt-16 md:pt-24 bg-surface-primary overflow-hidden">
+        <div className="h-full flex flex-col p-4 sm:p-5 md:p-8 pt-16 md:pt-24 bg-surface-primary overflow-hidden">
             <div className="max-w-[110rem] mx-auto w-full flex flex-col h-full">
                 {/* Header */}
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-8">
@@ -236,20 +236,20 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                     {/* Main Tabs */}
                     <div className="grid w-full grid-cols-3 md:grid-cols-6 gap-1 bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl">
                         {[
-                            { id: 'interface', label: 'Interface', icon: <Palette size={16} /> },
-                            { id: 'audio', label: 'Audio Engine', icon: <Volume2 size={16} /> },
-                            { id: 'metadata', label: 'Metadata', icon: <FileText size={16} /> },
-                            { id: 'stats', label: 'Stats', icon: <BarChart3 size={16} /> },
-                            { id: 'credentials', label: 'Credentials', icon: <User size={16} /> },
-                            { id: 'maintenance', label: 'Maintenance', icon: <Database size={16} /> }
+                            { id: 'interface', label: 'Interface', shortLabel: 'Interf', icon: <Palette size={16} /> },
+                            { id: 'audio', label: 'Audio Engine', shortLabel: 'Audio', icon: <Volume2 size={16} /> },
+                            { id: 'metadata', label: 'Metadata', shortLabel: 'Meta', icon: <FileText size={16} /> },
+                            { id: 'stats', label: 'Stats', shortLabel: 'Stats', icon: <BarChart3 size={16} /> },
+                            { id: 'credentials', label: 'Credentials', shortLabel: 'Creds', icon: <User size={16} /> },
+                            { id: 'maintenance', label: 'Maintenance', shortLabel: 'Maint', icon: <Database size={16} /> }
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`min-w-0 flex items-center justify-center gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab.id ? 'bg-dominant text-on-dominant shadow-dominant/20 shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-0.5 sm:gap-2 px-1 sm:px-2 md:px-3 py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab.id ? 'bg-dominant text-on-dominant shadow-dominant/20 shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
                             >
                                 {tab.icon}
-                                <span className="hidden md:inline truncate">{tab.label}</span>
+                                <span className="truncate">{tab.label}</span>
                             </button>
                         ))}
                     </div>
@@ -462,13 +462,15 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                             onMouseUp={(e) => commitEqBandValue(idx, parseFloat((e.currentTarget as HTMLInputElement).value))}
                                                             onTouchEnd={(e) => commitEqBandValue(idx, parseFloat((e.currentTarget as HTMLInputElement).value))}
                                                             onPointerUp={(e) => commitEqBandValue(idx, parseFloat((e.currentTarget as HTMLInputElement).value))}
-                                                            className="absolute opacity-0 cursor-pointer z-20 vertical-range"
+                                                            className="absolute cursor-pointer z-20 vertical-range"
                                                             style={{
-                                                                width: 168,
-                                                                height: 36,
+                                                                width: 72,
+                                                                height: 72,
                                                                 left: '50%',
                                                                 top: '50%',
-                                                                transform: 'translate(-50%, -50%) rotate(-90deg)'
+                                                                transform: 'translate(-50%, -50%) rotate(-90deg)',
+                                                                opacity: 0,
+                                                                touchAction: 'none'
                                                             }}
                                                         />
                                                         <div className="absolute w-1.5 bg-dominant rounded-full shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)] transition-all duration-150 ease-out"
@@ -507,7 +509,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                 <input
                                                     type="range" min="1" max="15" step="1" value={crossfadeDuration}
                                                     onChange={(e) => setCrossfadeDuration(parseInt(e.target.value))}
-                                                    className="w-full accent-dominant h-1.5 bg-white/5 rounded-full"
+                                                    className="w-full accent-dominant h-2 sm:h-1.5 bg-white/5 rounded-full cursor-pointer"
                                                 />
                                             </div>
                                         </div>
@@ -532,7 +534,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                                 <input
                                                     type="range" min="5" max="100" step="1" value={normalizationStrength}
                                                     onChange={(e) => setNormalizationStrength(parseInt(e.target.value))}
-                                                    className="w-full accent-dominant h-1.5 bg-white/5 rounded-full"
+                                                    className="w-full accent-dominant h-2 sm:h-1.5 bg-white/5 rounded-full cursor-pointer"
                                                 />
                                             </div>
                                         </div>

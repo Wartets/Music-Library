@@ -71,12 +71,12 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
     return (
         <>
             <div className="md:hidden fixed inset-0 z-[72] bg-black/55 backdrop-blur-[1px]" onClick={onClose} />
-            <aside className="fixed md:static z-[73] md:z-40 left-2 right-2 md:left-auto md:right-auto bottom-[calc(10.25rem+env(safe-area-inset-bottom))] md:bottom-auto w-auto md:w-80 max-h-[52vh] md:max-h-none bg-black/65 md:bg-black/40 backdrop-blur-xl border border-white/10 md:border-l md:border-white/10 md:border-t-0 md:border-r-0 rounded-2xl md:rounded-none flex flex-col h-auto md:h-full overflow-y-auto md:overflow-hidden transition-all duration-300 relative shadow-2xl md:shadow-none">
+            <aside className="fixed md:static z-[73] md:z-40 left-2 right-2 md:left-auto md:right-auto bottom-[calc(10.25rem+env(safe-area-inset-bottom))] md:bottom-auto w-auto md:w-80 max-h-[56vh] md:max-h-none bg-black/65 md:bg-black/40 backdrop-blur-xl border border-white/10 md:border-l md:border-white/10 md:border-t-0 md:border-r-0 rounded-2xl md:rounded-none flex flex-col h-auto md:h-full overflow-y-auto md:overflow-hidden transition-all duration-300 relative shadow-2xl md:shadow-none">
                 <div className="absolute inset-0 bg-dominant/5 pointer-events-none"></div>
                 <div className="relative z-10 p-3 md:p-4 md:pt-6 flex flex-col h-full">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2.5 md:pb-4 mb-2.5 md:mb-4">
                         <h2 className="text-white font-bold tracking-tight text-sm md:text-lg">Track Details</h2>
-                        <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+                        <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg hover:bg-white/5" aria-label="Close panel">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
@@ -86,7 +86,7 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                     <div className="flex-1 md:overflow-y-auto md:custom-scrollbar flex flex-col gap-3 md:gap-6 md:pr-2">
                         {/* Visualizer */}
                         <div className="bg-white/5 rounded-xl p-2.5 md:p-4 border border-white/5 shadow-inner">
-                            <h3 className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2 md:mb-4">Audio Output</h3>
+                            <h3 className="text-[10px] md:text-[11px] text-gray-500 uppercase tracking-widest font-bold mb-2 md:mb-4">Audio Output</h3>
                             <div className="bg-black/40 rounded-lg p-1.5 md:p-2 overflow-hidden border border-black">
                                 <Visualizer />
                             </div>
@@ -98,7 +98,7 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                             <>
                                 {/* Audio Specs */}
                                 <div>
-                                    <h3 className="text-[9px] md:text-[10px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">Technical Specs</h3>
+                                    <h3 className="text-[10px] md:text-[11px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">Technical Specs</h3>
                                     <ul className="space-y-2 md:space-y-2.5 text-[11px] md:text-xs">
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Codec</span>
@@ -127,7 +127,7 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
 
                                 {/* Metadata Details */}
                                 <div>
-                                    <h3 className="text-[9px] md:text-[10px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">Metadata</h3>
+                                    <h3 className="text-[10px] md:text-[11px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">Metadata</h3>
                                     <ul className="space-y-2 md:space-y-2.5 text-[11px] md:text-xs">
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">BPM</span>
@@ -148,7 +148,7 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
 
                                 {/* File Info */}
                                 <div>
-                                    <h3 className="text-[9px] md:text-[10px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">File Information</h3>
+                                    <h3 className="text-[10px] md:text-[11px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">File Information</h3>
                                     <ul className="space-y-2 md:space-y-2.5 text-[11px] md:text-xs">
                                         <li className="flex flex-col gap-1.5 bg-black/20 p-2 rounded border border-white/5">
                                             <span className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">File Path</span>
@@ -163,7 +163,7 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
 
                                 {parsedLyrics && (
                                     <div className="flex-1 flex flex-col min-h-[140px] md:min-h-[200px] mt-1 md:mt-4">
-                                        <h3 className="text-[9px] md:text-[10px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">Lyrics</h3>
+                                        <h3 className="text-[10px] md:text-[11px] text-dominant-light uppercase tracking-widest font-bold mb-2 md:mb-3 border-b border-dominant/30 pb-1 inline-block">Lyrics</h3>
                                         <div
                                             ref={lyricsRef}
                                             className="flex-1 overflow-y-auto custom-scrollbar pr-1 md:pr-2 space-y-1.5 md:space-y-2 text-xs md:text-sm"

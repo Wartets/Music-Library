@@ -71,6 +71,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                                         }
                                     }}
                                     placeholder="Search tracks, artists, albums..."
+                                    inputMode="search"
                                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-gray-500 outline-none focus:border-dominant"
                                 />
                                 <button
@@ -83,7 +84,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                         </div>
 
                         <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">More views</div>
-                        <div className="grid grid-cols-2 gap-2.5 max-h-[42vh] overflow-y-auto custom-scrollbar pr-1">
+                        <div className="grid grid-cols-2 gap-2.5 max-h-[52vh] overflow-y-auto custom-scrollbar pr-1">
                             {extraTabs.map(tab => {
                                 const isActive = currentView === tab.id;
                                 return (
@@ -121,7 +122,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                                 <span className={isActive ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]' : ''}>
                                     {tab.icon}
                                 </span>
-                                <span className="text-[10px] font-bold tracking-wide uppercase leading-none">
+                                <span className="text-[11px] sm:text-[12px] font-bold tracking-wide uppercase leading-none">
                                     {tab.label}
                                 </span>
                             </button>
@@ -132,7 +133,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                         className={`flex flex-col items-center justify-center gap-1.5 transition-colors min-h-11 ${(isMoreOpen || isMoreActive) ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <MoreHorizontal size={18} />
-                        <span className="text-[10px] font-bold tracking-wide uppercase leading-none">More</span>
+                        <span className="text-[11px] sm:text-[12px] font-bold tracking-wide uppercase leading-none">More</span>
                     </button>
                 </div>
             </nav>

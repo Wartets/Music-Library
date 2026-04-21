@@ -337,7 +337,7 @@ export const QueueView: React.FC = () => {
 
     if (isMobile) {
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-2 pb-28 bg-surface-primary">
+            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-3 sm:px-4 pb-28 bg-surface-primary">
                 <div className="mb-3">
                     <h1 className="text-lg font-black tracking-tight text-white">Playback Control</h1>
                     <p className="text-gray-500 text-[11px] mt-1 flex items-center gap-2 flex-wrap">
@@ -391,18 +391,21 @@ export const QueueView: React.FC = () => {
                     <button
                         onClick={toggleShuffle}
                         className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.shuffle ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
-                    >Shuffle</button>
+                        aria-label={playerState.shuffle ? 'Disable shuffle' : 'Enable shuffle'}
+                    >Shuffle {playerState.shuffle ? 'On' : 'Off'}</button>
                     <button
                         onClick={() => setRepeat(playerState.repeat === 'none' ? 'all' : playerState.repeat === 'all' ? 'one' : 'none')}
                         className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.repeat !== 'none' ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                        aria-label={`Repeat mode: ${repeatLabel}`}
                     >{repeatLabel}</button>
                     <button
                         onClick={() => setAutoplay(!playerState.autoplay)}
                         className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.autoplay ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                        aria-label={playerState.autoplay ? 'Disable autoplay' : 'Enable autoplay'}
                     >Auto {playerState.autoplay ? 'ON' : 'OFF'}</button>
-                    <button onClick={handleExport} className="p-2 bg-white/5 rounded-xl border border-white/10 text-gray-300"><Download size={14} /></button>
-                    <button onClick={handleSaveAsPlaylist} className="p-2 bg-white/5 rounded-xl border border-white/10 text-gray-300"><Save size={14} /></button>
-                    <button onClick={clearQueue} className="p-2 bg-red-500/10 rounded-xl border border-red-500/30 text-red-400"><Trash2 size={14} /></button>
+                    <button onClick={handleExport} className="p-2 bg-white/5 rounded-xl border border-white/10 text-gray-300" aria-label="Export queue"><Download size={14} /></button>
+                    <button onClick={handleSaveAsPlaylist} className="p-2 bg-white/5 rounded-xl border border-white/10 text-gray-300" aria-label="Save as playlist"><Save size={14} /></button>
+                    <button onClick={clearQueue} className="p-2 bg-red-500/10 rounded-xl border border-red-500/30 text-red-400" aria-label="Clear queue"><Trash2 size={14} /></button>
                 </div>
 
                 {activeTab === 'queue' ? (
@@ -419,8 +422,8 @@ export const QueueView: React.FC = () => {
                                     className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
                                     onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
                                 >
-                                    <button onClick={() => playTrack(track as unknown as TrackItem, playerState.queue)} className="w-6 h-6 rounded-md bg-dominant/20 text-dominant flex items-center justify-center">
-                                        <Play size={12} fill="currentColor" />
+                                    <button onClick={() => playTrack(track as unknown as TrackItem, playerState.queue)} className="w-9 h-9 rounded-lg bg-dominant/20 text-dominant flex items-center justify-center hover:bg-dominant/30 transition-colors" aria-label="Play track">
+                                        <Play size={14} fill="currentColor" />
                                     </button>
                                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10">
                                         <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
@@ -432,9 +435,10 @@ export const QueueView: React.FC = () => {
                                     <div className="text-[10px] text-gray-400 font-mono">{track.audio_specs?.duration}</div>
                                     <button
                                         onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
-                                        className="p-1.5 text-gray-500 hover:text-red-400"
+                                        className="p-2 min-w-9 min-h-9 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        aria-label="Remove from queue"
                                     >
-                                        <Trash2 size={13} />
+                                        <Trash2 size={14} />
                                     </button>
                                 </div>
                             ))
