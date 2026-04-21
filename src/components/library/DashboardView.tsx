@@ -271,42 +271,124 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
     return (
         <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-16 md:pt-24 px-3 md:px-8 pb-24 md:pb-32">
+            {/* Welcome Header for New Users */}
+            {totalTracks === 0 && (
+                <div className="mb-8 p-6 md:p-8 rounded-3xl bg-gradient-to-br from-dominant/20 via-dominant/10 to-transparent border border-dominant/20">
+                    <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white mb-2">
+                        Welcome to Your Music Library
+                    </h1>
+                    <p className="text-gray-400 text-sm md:text-base mb-6 max-w-xl">
+                        Start by adding your music folder. Your tracks will appear here with detailed stats and easy navigation.
+                    </p>
+                    <button 
+                        onClick={() => onNavigate('Settings', { tab: 'maintenance' })}
+                        className="px-6 py-3 bg-dominant text-on-dominant rounded-xl font-black uppercase tracking-widest text-xs hover:bg-dominant-light transition-colors"
+                    >
+                        Add Music Folder
+                    </button>
+                </div>
+            )}
+
+            {/* Quick Actions - Always Visible */}
+            {totalTracks > 0 && (
+                <div className="mb-6 flex flex-wrap gap-2">
+                    <button 
+                        onClick={() => onNavigate('AllTracks')}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-colors"
+                    >
+                        All Tracks
+                    </button>
+                    <button 
+                        onClick={() => onNavigate('Albums')}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-colors"
+                    >
+                        Albums
+                    </button>
+                    <button 
+                        onClick={() => onNavigate('Artists')}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-colors"
+                    >
+                        Artists
+                    </button>
+                    <button 
+                        onClick={() => onNavigate('Playlists')}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-colors"
+                    >
+                        Playlists
+                    </button>
+                    <button 
+                        onClick={() => onNavigate('Favorites')}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-colors"
+                    >
+                        Favorites
+                    </button>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Main Content: Recently & Most Played */}
-                <div className="lg:col-span-2 space-y-12">
-                    <section>
-                        <div className="flex items-end justify-between mb-6">
-                            <h2 className="text-2xl font-black tracking-tighter text-white">Recently Played</h2>
-                            <button onClick={() => onNavigate('DetailedHistory')} className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-dominant transition-colors">View All History</button>
-                        </div>
-                        <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
-                            {recentlyPlayed.map(track => (
-                                <TrackCard key={`recent-${track.logic.hash_sha256}`} track={track} list={recentlyPlayed} />
-                            ))}
-                        </div>
-                    </section>
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-8 md:space-y-12">
+                    {/* Recently Played - Only show if there are tracks */}
+                    {recentlyPlayed.length > 0 && (
+                        <section>
+                            <div className="flex items-end justify-between mb-6">
+                                <h2 className="text-xl md:text-2xl font-black tracking-tighter text-white">Recently Played</h2>
+                                <button onClick={() => onNavigate('DetailedHistory')} className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-dominant transition-colors">View All History</button>
+                            </div>
+                            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
+                                {recentlyPlayed.map(track => (
+                                    <TrackCard key={`recent-${track.logic.hash_sha256}`} track={track} list={recentlyPlayed} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
-                    <section>
-                        <div className="flex items-end justify-between mb-6">
-                            <h2 className="text-2xl font-black tracking-tighter text-white">Most Played</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-2">
-                            {mostPlayed.map((track, i) => (
-                                <TrackRow key={`most-${track.logic.hash_sha256}`} track={track} list={mostPlayed} index={i} />
-                            ))}
-                        </div>
-                    </section>
+                    {/* Most Played - Only show if there are tracks */}
+                    {mostPlayed.length > 0 && (
+                        <section>
+                            <div className="flex items-end justify-between mb-6">
+                                <h2 className="text-xl md:text-2xl font-black tracking-tighter text-white">Most Played</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-10 gap-y-2">
+                                {mostPlayed.map((track, i) => (
+                                    <TrackRow key={`most-${track.logic.hash_sha256}`} track={track} list={mostPlayed} index={i} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
-                    <section>
-                        <div className="flex items-end justify-between mb-6">
-                            <h2 className="text-2xl font-black tracking-tighter text-white">New Arrivals</h2>
-                        </div>
-                        <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
-                            {newArrivals.map(track => (
-                                <TrackCard key={`new-${track.logic.hash_sha256}`} track={track} list={newArrivals} />
-                            ))}
-                        </div>
-                    </section>
+                    {/* Show New Arrivals if available, otherwise show recently added */}
+                    {newArrivals.length > 0 && (
+                        <section>
+                            <div className="flex items-end justify-between mb-6">
+                                <h2 className="text-xl md:text-2xl font-black tracking-tighter text-white">Recently Added</h2>
+                            </div>
+                            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
+                                {newArrivals.map(track => (
+                                    <TrackCard key={`new-${track.logic.hash_sha256}`} track={track} list={newArrivals} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Empty State Content for Returning Users with No History */}
+                    {totalTracks > 0 && recentlyPlayed.length === 0 && mostPlayed.length === 0 && newArrivals.length === 0 && (
+                        <section className="py-8">
+                            <div className="text-center">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+                                    <Play size={24} className="text-gray-500" />
+                                </div>
+                                <h2 className="text-xl font-black text-white mb-2">Start Listening</h2>
+                                <p className="text-gray-500 text-sm mb-6">Play some music from your library to see it here.</p>
+                                <button 
+                                    onClick={() => onNavigate('AllTracks')}
+                                    className="px-6 py-3 bg-dominant text-on-dominant rounded-xl font-black uppercase tracking-widest text-xs"
+                                >
+                                    Browse Library
+                                </button>
+                            </div>
+                        </section>
+                    )}
                 </div>
 
                 {/* Sidebar: Stats & Favorites */}
