@@ -8,7 +8,7 @@ import { TrackItem } from '../../types/music';
 import {
     Sparkles, Volume2, Database, ShieldAlert,
     Download, RefreshCcw, FileWarning, Zap,
-    Sliders, Monitor, Palette, BarChart3, FileText
+    Sliders, Monitor, Palette, BarChart3, FileText, User, ExternalLink
 } from 'lucide-react';
 
 export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) => {
@@ -16,11 +16,12 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
     const { state: playerState, setShuffleMode } = usePlayer();
     const { settings: themeSettings, updateSettings, currentPalette, reportBadPalette } = useTheme();
 
-    const [activeTab, setActiveTab] = useState<'interface' | 'audio' | 'metadata' | 'maintenance' | 'stats'>(() => {
+    const [activeTab, setActiveTab] = useState<'interface' | 'audio' | 'metadata' | 'maintenance' | 'stats' | 'credentials'>(() => {
         if (initialTab === 'maintenance') return 'maintenance';
         if (initialTab === 'audio') return 'audio';
         if (initialTab === 'metadata') return 'metadata';
         if (initialTab === 'stats') return 'stats';
+        if (initialTab === 'credentials') return 'credentials';
         return 'interface';
     });
     const [maintenanceTab, setMaintenanceTab] = useState<'duplicates' | 'health' | 'data'>('duplicates');
@@ -60,6 +61,31 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
         'Bass Reducer': [-6, -5, -4, -2, 0, 0, 0, 0, 0, 0],
         'Treble Boost': [0, 0, 0, 0, 0, 0, 2, 4, 5, 6],
         'Treble Reducer': [0, 0, 0, 0, 0, 0, -2, -4, -5, -6]
+    };
+
+    const packageLicenseLinks = {
+        dependencies: [
+            { name: 'react', url: 'https://www.npmjs.com/package/react' },
+            { name: 'react-dom', url: 'https://www.npmjs.com/package/react-dom' },
+            { name: 'react-router-dom', url: 'https://www.npmjs.com/package/react-router-dom' },
+            { name: '@dnd-kit/core', url: 'https://www.npmjs.com/package/@dnd-kit/core' },
+            { name: '@dnd-kit/sortable', url: 'https://www.npmjs.com/package/@dnd-kit/sortable' },
+            { name: '@dnd-kit/utilities', url: 'https://www.npmjs.com/package/@dnd-kit/utilities' },
+            { name: 'lucide-react', url: 'https://www.npmjs.com/package/lucide-react' },
+            { name: 'framer-motion', url: 'https://www.npmjs.com/package/framer-motion' },
+            { name: 'clsx', url: 'https://www.npmjs.com/package/clsx' },
+            { name: 'tailwind-merge', url: 'https://www.npmjs.com/package/tailwind-merge' }
+        ],
+        devDependencies: [
+            { name: '@types/react', url: 'https://www.npmjs.com/package/@types/react' },
+            { name: '@types/react-dom', url: 'https://www.npmjs.com/package/@types/react-dom' },
+            { name: '@vitejs/plugin-react', url: 'https://www.npmjs.com/package/@vitejs/plugin-react' },
+            { name: 'autoprefixer', url: 'https://www.npmjs.com/package/autoprefixer' },
+            { name: 'postcss', url: 'https://www.npmjs.com/package/postcss' },
+            { name: 'tailwindcss', url: 'https://www.npmjs.com/package/tailwindcss' },
+            { name: 'typescript', url: 'https://www.npmjs.com/package/typescript' },
+            { name: 'vite', url: 'https://www.npmjs.com/package/vite' }
+        ]
     };
 
     useEffect(() => {
@@ -199,7 +225,7 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
 
     return (
         <div className="h-full flex flex-col p-3 md:p-8 pt-16 md:pt-24 bg-surface-primary overflow-hidden">
-            <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
+            <div className="max-w-[110rem] mx-auto w-full flex flex-col h-full">
                 {/* Header */}
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-8">
                     <div>
@@ -208,21 +234,22 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                     </div>
 
                     {/* Main Tabs */}
-                    <div className="flex w-full md:w-auto bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl overflow-x-auto no-scrollbar">
+                    <div className="grid w-full grid-cols-3 md:grid-cols-6 gap-1 bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl">
                         {[
                             { id: 'interface', label: 'Interface', icon: <Palette size={16} /> },
                             { id: 'audio', label: 'Audio Engine', icon: <Volume2 size={16} /> },
                             { id: 'metadata', label: 'Metadata', icon: <FileText size={16} /> },
                             { id: 'stats', label: 'Stats', icon: <BarChart3 size={16} /> },
+                            { id: 'credentials', label: 'Credentials', icon: <User size={16} /> },
                             { id: 'maintenance', label: 'Maintenance', icon: <Database size={16} /> }
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex items-center gap-2 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-widest whitespace-nowrap ${activeTab === tab.id ? 'bg-dominant text-on-dominant shadow-dominant/20 shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`min-w-0 flex items-center justify-center gap-2 px-2 md:px-3 py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black transition-all uppercase tracking-widest ${activeTab === tab.id ? 'bg-dominant text-on-dominant shadow-dominant/20 shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
                             >
                                 {tab.icon}
-                                <span className="hidden md:inline">{tab.label}</span>
+                                <span className="hidden md:inline truncate">{tab.label}</span>
                             </button>
                         ))}
                     </div>
@@ -817,6 +844,113 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                             <div className="text-2xl font-black text-white truncate">{card.value}</div>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'credentials' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
+                                <h2 className="text-2xl font-black text-white mb-3 flex items-center gap-3">
+                                    <User className="text-dominant" size={24} />
+                                    Credits, Attribution & Licenses
+                                </h2>
+                                <p className="text-sm text-gray-500 mb-8">References for project ownership, source code licensing, and third-party package licenses.</p>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                                    <div className="p-5 rounded-2xl bg-black/20 border border-white/10">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Author</div>
+                                        <div className="text-sm font-bold text-white mb-2">Colin Bossu Réaubourg (Wartets)</div>
+                                        <a
+                                            href="https://wartets.github.io"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-dominant hover:text-dominant-light transition-colors"
+                                        >
+                                            Portfolio
+                                            <ExternalLink size={14} />
+                                        </a>
+                                    </div>
+
+                                    <div className="p-5 rounded-2xl bg-black/20 border border-white/10">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Product License</div>
+                                        <div className="text-sm font-bold text-white mb-2">Music Library source code is licensed under GNU GPL v3.0.</div>
+                                        <a
+                                            href="https://github.com/Wartets/Music-Library/blob/main/LICENSE"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-dominant hover:text-dominant-light transition-colors"
+                                        >
+                                            View LICENSE
+                                            <ExternalLink size={14} />
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="p-5 rounded-2xl bg-black/20 border border-white/10 mb-8">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Music Collection Attribution Notice</div>
+                                    <p className="text-xs text-gray-300 leading-relaxed mb-3">
+                                        All music on this site is provided as royalty-free for listening examples, with mandatory attribution and non-commercial use.
+                                    </p>
+                                    <div className="flex flex-wrap gap-3">
+                                        <a
+                                            href="https://github.com/Wartets/Music-Library"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-gray-200 hover:bg-white/10 transition-all"
+                                        >
+                                            Source Repository
+                                            <ExternalLink size={12} />
+                                        </a>
+                                        <a
+                                            href="https://wartets.github.io/Music-Library/"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-gray-200 hover:bg-white/10 transition-all"
+                                        >
+                                            Live Site
+                                            <ExternalLink size={12} />
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div className="p-5 rounded-2xl bg-black/20 border border-white/10">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Runtime Dependencies License References</div>
+                                        <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-2">
+                                            {packageLicenseLinks.dependencies.map(pkg => (
+                                                <a
+                                                    key={pkg.name}
+                                                    href={pkg.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center justify-between gap-3 p-3 rounded-xl border border-white/10 bg-white/5 text-xs text-gray-200 hover:bg-white/10 transition-colors"
+                                                >
+                                                    <span className="font-bold">{pkg.name}</span>
+                                                    <ExternalLink size={14} className="shrink-0 text-gray-500" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-5 rounded-2xl bg-black/20 border border-white/10">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Development Dependencies License References</div>
+                                        <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-2">
+                                            {packageLicenseLinks.devDependencies.map(pkg => (
+                                                <a
+                                                    key={pkg.name}
+                                                    href={pkg.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center justify-between gap-3 p-3 rounded-xl border border-white/10 bg-white/5 text-xs text-gray-200 hover:bg-white/10 transition-colors"
+                                                >
+                                                    <span className="font-bold">{pkg.name}</span>
+                                                    <ExternalLink size={14} className="shrink-0 text-gray-500" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
