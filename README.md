@@ -1,23 +1,51 @@
 # Music Library
 
-A high-performance local music library and player designed for managing and playing a strictly organized music collection.
+A high-performance local music library and player designed for managing and playing a strictly organized music collection. Features an adaptive interface that responds to album artwork colors and works seamlessly across desktop and mobile devices.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React](https://img.shields.io/badge/React-19-blue)
+![Vite](https://img.shields.io/badge/Vite-5-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 
 ## Key Features
 
-- **Local First**: Completely offline, managing your local files with low-level access.
-- **Advanced Indexing**: Uses a hybrid storage model with `musicBib.json` as the Single Source of Truth.
-- **High Performance**: Optimized for large libraries with instantaneous search, sorting, and filtering.
-- **Audiophile Grade**: Support for Hi-Res and Lossless formats (WAV, FLAC, etc.) with gapless playback.
-- **Adaptive UI**: Chameleon UI that adapts its theme based on the dominant colors of the album artwork.
-- **Curation Tools**: Smart playlists, manual curation, and advanced metadata editing.
+### Core Functionality
+- **Local First** — Completely offline, managing your local files with low-level access
+- **Advanced Indexing** — Hybrid storage model with `musicBib.json` as the Single Source of Truth
+- **High Performance** — Optimized for large libraries with instantaneous search, sorting, and filtering
+- **Audiophile Grade** — Support for Hi-Res and Lossless formats (WAV, FLAC, DSD, etc.) with gapless playback
+- **Adaptive UI** — Chameleon UI that adapts its theme based on the dominant colors of the album artwork
+
+### Library Management
+- **Multiple Views** — Browse by Albums, Artists, Genres, Years, Folders, and Formats
+- **Smart Playlists** — Create dynamic playlists based on rules (genre, year, bitrate, etc.)
+- **Manual Curation** — Create and manage custom playlists
+- **Advanced Metadata** — Edit track metadata, lyrics, ratings, and artwork
+- **Favorites System** — Mark and organize favorite tracks
+- **Playback History** — Track and revisit recently played music
+- **Duplicate Detection** — Find exact and fuzzy duplicates in your collection
+
+### Playback
+- **Queue Management** — Reorder, save, and manage playback queue
+- **Audio Processing** — 10-band EQ, crossfade, and normalization
+- **Multiple Versions** — Handle multiple versions of the same track (remasters, etc.)
+
+### Mobile Support
+- **Responsive Design** — Full mobile-optimized interface
+- **Touch Controls** — Touch-friendly drag-and-drop queue reordering
+- **Adaptive Layout** — Seamlessly transitions between mobile and desktop layouts
+- **Context Menus** — Long-press support for track actions
 
 ## Tech Stack
 
-- **Frontend**: React 19, Vite, TypeScript
-- **Styling**: Tailwind CSS
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **Drag & Drop**: @dnd-kit
+| Category | Technology |
+|----------|------------|
+| Frontend | React 19, Vite, TypeScript |
+| Styling | Tailwind CSS 3.4 |
+| Animations | Framer Motion |
+| Icons | Lucide React |
+| Drag & Drop | @dnd-kit |
+| State | React Context |
 
 ## Getting Started
 
@@ -28,25 +56,73 @@ A high-performance local music library and player designed for managing and play
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd music-library
+   ```
 
+2. Install dependencies:
    ```bash
    npm install
    ```
 
 ### Running the App
 
-1. Run the development server:
-
+1. Start the development server:
    ```bash
    npm run dev
    ```
 
-2. Open your browser to the local address provided (usually `http://localhost:5173`).
+2. Open your browser to `http://localhost:5173`
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+Output will be in the `dist/` directory.
 
 ## Library Structure
 
 The library is organized into strict categories (Albums and Singles). Files are indexed via a batch script that generates `musicBib.json`.
 
-**Note**: Music files and large folders (e.g., `Album 2`, `Album 3`, etc.) are excluded from this repository via `.gitignore` to keep the codebase lean.
+**Note**: Music files and large folders are excluded from this repository via `.gitignore` to keep the codebase lean.
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── library/          # Main library views (Dashboard, Albums, Artists, etc.)
+│   ├── layout/           # Layout components (MobileTabBar, Sidebar, etc.)
+│   ├── player/           # Player components (PlayerBar, Visualizer, etc.)
+│   ├── settings/         # Settings views
+│   └── shared/           # Shared components (ContextMenu, MetadataEditor, etc.)
+├── contexts/             # React contexts (Player, Library, UI, Theme)
+├── hooks/                # Custom hooks
+├── services/             # Services (persistence, audio)
+├── types/                # TypeScript types
+└── utils/                # Utility functions
+```
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Space | Play/Pause |
+| Left/Right Arrow | Seek ±10s |
+| Up/Down Arrow | Volume |
+| N | Next track |
+| P | Previous track |
+| M | Mute |
+| F | Toggle fullscreen |
+
+## License
+
+MIT License — feel free to use this project for personal and commercial purposes.
+
+---
+
+Built with passion for music lovers and audiophiles.
