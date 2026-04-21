@@ -5,6 +5,7 @@ const GITHUB_BRANCH = 'main';
 const GITHUB_RAW_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/${GITHUB_BRANCH}`;
 const ABSOLUTE_URL_REGEX = /^[a-z][a-z0-9+.-]*:\/\//i;
 const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
+const MEDIA_BASE_URL = (import.meta.env.VITE_MEDIA_BASE_URL || '').replace(/\/+$/, '');
 
 const toPosixPath = (value: string): string => value.replace(/\\/g, '/').replace(/\/+/g, '/').trim();
 
@@ -59,14 +60,22 @@ export const resolveAssetCandidates = (assetPath: string, includeLocalFallback: 
     if (ABSOLUTE_URL_REGEX.test(normalized)) return [normalized];
 
     const encodedPath = toEncodedUrlPath(normalized);
-    const candidates = [`${GITHUB_RAW_BASE_URL}/${encodedPath}`];
+    const candidates: string[] = [];
+
+    if (MEDIA_BASE_URL) {
+        candidates.push(`${MEDIA_BASE_URL}/${encodedPath}`);
+    }
 
     if (includeLocalFallback) {
         if (BASE_URL !== '/') {
             candidates.push(`${BASE_URL}/${encodedPath}`);
         }
-        candidates.push(`/${encodedPath}`);
+        if (BASE_URL === '/') {
+            candidates.push(`/${encodedPath}`);
+        }
     }
+
+    candidates.push(`${GITHUB_RAW_BASE_URL}/${encodedPath}`);
 
     return Array.from(new Set(candidates));
 };
