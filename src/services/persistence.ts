@@ -56,7 +56,7 @@ const DEFAULT_DATA: UserDataStore = {
     preferences: {
         volume: 1.0,
         shuffle: false,
-        shuffleMode: 'standard',
+        shuffleMode: 'recent',
         repeat: 'none',
         eqEnabled: false,
         eqBands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
