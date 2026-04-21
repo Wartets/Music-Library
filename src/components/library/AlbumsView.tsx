@@ -20,25 +20,53 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
 
     const albums = useMemo(() => {
         const groups: Record<string, any> = {};
+        const unknownAlbums: any[] = [];
+        
         libraryState.filteredTracks.forEach(track => {
-            const key = getTrackCollectionKey(track);
-            const albumName = getTrackCollectionLabel(track);
-            if (!groups[key]) {
-                groups[key] = {
-                    id: key,
-                    name: albumName,
-                    artist: track.metadata?.album_artist || track.metadata?.artists?.[0] || 'Unknown Artist',
-                    tracks: [],
-                    artwork: track.artworks?.album_artwork?.[0] || track.artworks?.track_artwork?.[0]
-                };
+            const album = track.metadata?.album;
+            
+            // Check if album metadata is empty/null/undefined
+            const isEmptyAlbum = !album || (typeof album === 'string' && !album.trim());
+            
+            if (isEmptyAlbum) {
+                unknownAlbums.push(track);
+            } else {
+                const albumTrimmed = album.trim();
+                const key = `album:${albumTrimmed.toLowerCase()}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        id: key,
+                        name: albumTrimmed,
+                        artist: track.metadata?.album_artist || track.metadata?.artists?.[0] || 'Unknown Artist',
+                        tracks: [],
+                        artwork: track.artworks?.album_artwork?.[0] || track.artworks?.track_artwork?.[0]
+                    };
+                }
+                groups[key].tracks.push(track);
             }
-            groups[key].tracks.push(track);
         });
+        
+        if (unknownAlbums.length > 0) {
+            groups['__unknown__'] = {
+                id: '__unknown__',
+                name: 'Unknown Album',
+                artist: 'Unknown Artist',
+                tracks: unknownAlbums,
+                artwork: unknownAlbums[0]?.artworks?.album_artwork?.[0] || unknownAlbums[0]?.artworks?.track_artwork?.[0]
+            };
+        }
+        
         const sorted = Object.values(groups);
         if (sortBy === 'name') {
-            return sorted.sort((a, b) => a.name.localeCompare(b.name));
+            return sorted.sort((a, b) => {
+                if (a.id === '__unknown__') return 1;
+                if (b.id === '__unknown__') return -1;
+                return a.name.localeCompare(b.name);
+            });
         } else {
             return sorted.sort((a, b) => {
+                if (a.id === '__unknown__') return 1;
+                if (b.id === '__unknown__') return -1;
                 const artistCmp = a.artist.localeCompare(b.artist);
                 if (artistCmp !== 0) return artistCmp;
                 return a.name.localeCompare(b.name);

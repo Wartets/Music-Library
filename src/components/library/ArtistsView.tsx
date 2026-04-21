@@ -25,18 +25,45 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({ onNavigate }) => {
 
     const artists = useMemo(() => {
         const groups: Record<string, ArtistGroup> = {};
+        let unknownArtistTracks: TrackItem[] = [];
 
         libraryState.filteredTracks.forEach(track => {
-            const artistNames = track.metadata?.artists || ['Unknown Artist'];
-            artistNames.forEach(artistName => {
-                if (!groups[artistName]) {
-                    groups[artistName] = { name: artistName, tracks: [] };
+            const artistNames = track.metadata?.artists;
+            
+            // Check if artists array is empty or falsy
+            if (!artistNames || !Array.isArray(artistNames) || artistNames.length === 0) {
+                unknownArtistTracks.push(track);
+            } else {
+                // Filter out empty strings from the array
+                const validArtists = artistNames
+                    .map(a => (a || '').trim())
+                    .filter(a => a.length > 0);
+                
+                if (validArtists.length === 0) {
+                    unknownArtistTracks.push(track);
+                } else {
+                    validArtists.forEach(artistName => {
+                        const key = artistName.toLowerCase();
+                        if (!groups[key]) {
+                            groups[key] = { name: artistName, tracks: [] };
+                        }
+                        groups[key].tracks.push(track);
+                    });
                 }
-                groups[artistName].tracks.push(track);
-            });
+            }
         });
+        
+        if (unknownArtistTracks.length > 0) {
+            groups['__unknown__'] = { name: 'Unknown Artist', tracks: unknownArtistTracks };
+        }
 
-        return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+        const sorted = Object.values(groups).sort((a, b) => {
+            if (a.name === 'Unknown Artist') return 1;
+            if (b.name === 'Unknown Artist') return -1;
+            return a.name.localeCompare(b.name);
+        });
+        
+        return sorted;
     }, [libraryState.filteredTracks]);
 
     const onRightClick = (e: React.MouseEvent, artist: ArtistGroup) => {

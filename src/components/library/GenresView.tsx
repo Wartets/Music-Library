@@ -56,30 +56,61 @@ export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
 
     const genres = useMemo(() => {
         const groups: Record<string, { name: string, tracks: any[] }> = {};
+        const unknownGenreTracks: any[] = [];
+        
         libraryState.filteredTracks.forEach(track => {
             let trackGenresRaw = track.metadata?.genre;
             let trackGenres: string[] = [];
+            
             if (!Array.isArray(trackGenresRaw)) {
-                trackGenres = trackGenresRaw ? [trackGenresRaw as string] : ['Unknown Genre'];
-            } else {
-                trackGenres = trackGenresRaw as string[];
-            }
-            trackGenres.forEach((genreName: string) => {
-                if (!groups[genreName]) {
-                    groups[genreName] = {
-                        name: genreName,
-                        tracks: []
-                    };
+                // Single genre or empty
+                const genre = trackGenresRaw ? (trackGenresRaw as string).trim() : '';
+                if (genre.length > 0) {
+                    trackGenres = [genre];
                 }
-                groups[genreName].tracks.push(track);
-            });
+            } else {
+                // Array of genres - filter out empty strings
+                trackGenres = (trackGenresRaw as string[])
+                    .map(g => (g || '').trim())
+                    .filter(g => g.length > 0);
+            }
+            
+            if (trackGenres.length === 0) {
+                unknownGenreTracks.push(track);
+            } else {
+                trackGenres.forEach((genreName: string) => {
+                    const key = genreName.toLowerCase();
+                    if (!groups[key]) {
+                        groups[key] = {
+                            name: genreName,
+                            tracks: []
+                        };
+                    }
+                    groups[key].tracks.push(track);
+                });
+            }
         });
+        
+        if (unknownGenreTracks.length > 0) {
+            groups['__unknown__'] = {
+                name: 'Unknown Genre',
+                tracks: unknownGenreTracks
+            };
+        }
 
         const sorted = Object.values(groups);
         if (sortBy === 'name') {
-            return sorted.sort((a, b) => a.name.localeCompare(b.name));
+            return sorted.sort((a, b) => {
+                if (a.name === 'Unknown Genre') return 1;
+                if (b.name === 'Unknown Genre') return -1;
+                return a.name.localeCompare(b.name);
+            });
         } else {
-            return sorted.sort((a, b) => b.tracks.length - a.tracks.length || a.name.localeCompare(b.name));
+            return sorted.sort((a, b) => {
+                if (a.name === 'Unknown Genre') return 1;
+                if (b.name === 'Unknown Genre') return -1;
+                return b.tracks.length - a.tracks.length || a.name.localeCompare(b.name);
+            });
         }
     }, [libraryState.filteredTracks, sortBy]);
 

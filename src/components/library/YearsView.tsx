@@ -19,29 +19,61 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
 
     const years = useMemo(() => {
         const groups: Record<string, any> = {};
+        const unknownYearTracks: any[] = [];
+        
         libraryState.filteredTracks.forEach(track => {
-            const year = track.metadata?.year || 'Unknown Year';
-            if (!groups[year]) {
-                groups[year] = {
-                    name: String(year),
-                    tracks: []
-                };
+            const yearRaw = track.metadata?.year;
+            
+            // Check if year is empty/null/undefined
+            if (!yearRaw) {
+                unknownYearTracks.push(track);
+            } else {
+                const yearStr = String(yearRaw).trim();
+                if (!yearStr) {
+                    unknownYearTracks.push(track);
+                } else {
+                    const yearNum = parseInt(yearStr);
+                    // Valid year should be a valid number in reasonable range
+                    if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
+                        unknownYearTracks.push(track);
+                    } else {
+                        const key = String(yearNum);
+                        if (!groups[key]) {
+                            groups[key] = {
+                                name: String(yearNum),
+                                tracks: []
+                            };
+                        }
+                        groups[key].tracks.push(track);
+                    }
+                }
             }
-            groups[year].tracks.push(track);
         });
+        
+        if (unknownYearTracks.length > 0) {
+            groups['__unknown__'] = {
+                name: 'Unknown Year',
+                tracks: unknownYearTracks
+            };
+        }
 
         const sorted = Object.values(groups);
         if (sortBy === 'year') {
-            // Sort by year descending (newest first), but push 'Unknown Year' to bottom
             return sorted.sort((a, b) => {
                 if (a.name === 'Unknown Year') return 1;
                 if (b.name === 'Unknown Year') return -1;
-                return b.name.localeCompare(a.name); // Decending
+                const yearA = parseInt(a.name) || 0;
+                const yearB = parseInt(b.name) || 0;
+                return yearB - yearA;
             });
         } else {
-            return sorted.sort((a, b) => b.tracks.length - a.tracks.length || b.name.localeCompare(a.name));
+            return sorted.sort((a, b) => {
+                if (a.name === 'Unknown Year') return 1;
+                if (b.name === 'Unknown Year') return -1;
+                return b.tracks.length - a.tracks.length || parseInt(b.name) - parseInt(a.name);
+            });
         }
-    }, [libraryState.filteredTracks, sortBy]);
+    }, [libraryState.filteredTracks, sortBy]);}
 
     const onRightClick = (e: React.MouseEvent, yearGroup: any) => {
         e.preventDefault();
