@@ -73,7 +73,7 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
                 return b.tracks.length - a.tracks.length || parseInt(b.name) - parseInt(a.name);
             });
         }
-    }, [libraryState.filteredTracks, sortBy]);}
+    }, [libraryState.filteredTracks, sortBy]);
 
     const onRightClick = (e: React.MouseEvent, yearGroup: any) => {
         e.preventDefault();
