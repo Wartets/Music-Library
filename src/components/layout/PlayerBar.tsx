@@ -1,93 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { formatDuration } from '../../utils/formatters';
 import { ViewType } from './AppLayout';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { SeekBar } from '../player/SeekBar';
 import { Info, Music, Volume1, Volume2, VolumeX } from 'lucide-react';
 
 export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (view: ViewType, data?: any) => void }> = ({ onToggleContext, onNavigate }) => {
     const { state, togglePlay, playNext, playPrevious, setVolume, seek, getProgress, seekForward, seekBackward, toggleShuffle, setRepeat } = usePlayer();
     const track = state.currentTrack;
     const previousVolumeRef = useRef<number>(state.volume > 0 ? state.volume : 0.8);
-
-    const [isDragging, setIsDragging] = useState(false);
-    const [localProgress, setLocalProgress] = useState(0);
-    const [showRemaining, setShowRemaining] = useState(false);
-    const rafRef = useRef<number | null>(null);
-    const progressBarRef = useRef<HTMLDivElement>(null);
-    const thumbRef = useRef<HTMLDivElement>(null);
-    const timeDisplayRef = useRef<HTMLButtonElement>(null);
-    const durationRef = useRef<number>(0);
-
-    useEffect(() => {
-        let lastTime = 0;
-        const updateProgress = (timestamp: number) => {
-            if (timestamp - lastTime > 42) {
-                lastTime = timestamp;
-                const current = getProgress();
-                const duration = durationRef.current;
-
-                if (progressBarRef.current) {
-                    const percent = duration > 0 ? (current / duration) : 0;
-                    progressBarRef.current.style.transform = `scaleX(${percent})`;
-                    if (thumbRef.current) thumbRef.current.style.transform = `translateX(${percent * 100}%)`;
-                }
-
-                if (timeDisplayRef.current && !isDragging) {
-                    const displayTime = showRemaining
-                        ? `-${formatDuration(Math.max(0, duration - current))}`
-                        : formatDuration(current);
-                    if (timeDisplayRef.current.textContent !== displayTime) {
-                        timeDisplayRef.current.textContent = displayTime;
-                    }
-                }
-            }
-
-            if (state.isPlaying) {
-                rafRef.current = requestAnimationFrame(updateProgress);
-            }
-        };
-
-        if (state.isPlaying) {
-            rafRef.current = requestAnimationFrame(updateProgress);
-        } else {
-            // Final update for pause
-            updateProgress(0);
-        }
-
-        return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        };
-    }, [getProgress, state.isPlaying, isDragging, showRemaining]);
-
-    const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setLocalProgress(Number(e.target.value));
-    };
-
-    const handleSeekEnd = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
-        setIsDragging(false);
-        const el = e.target as HTMLInputElement;
-        seek(Number(el.value));
-    };
-
-    const handleSeekMouseLeave = () => {
-        if (isDragging) {
-            setIsDragging(false);
-            seek(localProgress);
-        }
-    };
-
-    const handleSeekBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!track || !durationSec) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percent = clickX / rect.width;
-        const newTime = percent * durationSec;
-        setLocalProgress(newTime);
-        seek(newTime);
-    };
 
     // Helper for HH:MM:SS / MM:SS to seconds
     const parseDurationStr = (str: string | null): number => {
@@ -102,10 +25,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     };
 
     const durationSec = parseDurationStr(track?.audio_specs?.duration || null);
-    durationRef.current = durationSec;
-    const progressPercent = durationSec > 0 ? (localProgress / durationSec) * 100 : 0;
 
-    const isGlowEnabled = persistenceService.get('ui_glow') !== false;
     const isCompact = persistenceService.get('ui_compact_player') === true;
 
     const artworkDetails = track?.artworks?.track_artwork?.[0] || track?.artworks?.album_artwork?.[0];
@@ -119,15 +39,6 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
             previousVolumeRef.current = state.volume;
         }
     }, [state.volume]);
-
-    useEffect(() => {
-        if (!isDragging && track) {
-            const currentProgress = getProgress();
-            if (Math.abs(currentProgress - localProgress) > 1) {
-                setLocalProgress(currentProgress);
-            }
-        }
-    }, [track?.logic.track_hash, getProgress, isDragging]);
 
     // --- SVGs ---
     const IconPlay = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M8 5v14l11-7z" /></svg>;
@@ -183,52 +94,16 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 className="absolute bottom-0 left-0 w-full h-[1px] opacity-20 transition-colors duration-1000"
                 style={{ backgroundColor: currentPalette.dominant }}
             ></div>
+
             {/* Seek Bar */}
-            <div className="w-full relative h-[6px] group -mt-[3px] cursor-pointer" style={{ pointerEvents: track ? 'auto' : 'none' }} onClick={handleSeekBarClick}>
-                <input
-                    type="range"
-                    min={0}
-                    max={durationSec}
-                    step={0.1}
-                    value={localProgress}
-                    onChange={handleSeekChange}
-                    onMouseDown={() => setIsDragging(true)}
-                    onMouseUp={handleSeekEnd}
-                    onMouseLeave={handleSeekMouseLeave}
-                    onTouchStart={() => setIsDragging(true)}
-                    onTouchEnd={handleSeekEnd}
-                    onTouchCancel={handleSeekMouseLeave}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    disabled={!track}
-                />
-
-                {/* Background Line */}
-                <div className="absolute inset-x-0 h-[2px] top-1/2 -translate-y-1/2 bg-white/10 group-hover:h-[4px] transition-all pointer-events-none rounded-full mx-1"></div>
-
-                {/* Progress Fill */}
-                <div
-                    ref={progressBarRef}
-                    className={`absolute inset-y-0 left-0 bg-dominant group-hover:bg-dominant-light transition-all rounded-r-full pointer-events-none top-1/2 -translate-y-1/2 h-[2px] group-hover:h-[4px] mx-1 origin-left ${isGlowEnabled ? 'shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)]' : ''}`}
-                    style={{ transform: `scaleX(${durationSec > 0 ? localProgress / durationSec : 0})`, width: 'calc(100% - 8px)' }}
-                ></div>
-
-                {/* Seeker Thumb */}
-                <div
-                    ref={thumbRef}
-                    className="absolute top-1/2 -translate-y-1/2 left-0 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-125 z-20 pointer-events-none"
-                    style={{ transform: `translateX(${progressPercent}%)`, marginLeft: '-6px' }}
-                ></div>
-
-                {/* Visual Feedback on Drag */}
-                {isDragging && (
-                    <div
-                        className="absolute -top-8 bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded border border-white/10 transition-opacity pointer-events-none translate-x-1/2"
-                        style={{ right: `calc(${100 - progressPercent}%)` }}
-                    >
-                        {formatDuration(localProgress)}
-                    </div>
-                )}
-            </div>
+            <SeekBar
+                duration={durationSec}
+                position={getProgress()}
+                isPlaying={state.isPlaying}
+                isBuffering={false}
+                onSeek={seek}
+                disabled={!track}
+            />
 
             <div className="flex-1 flex items-center justify-between px-2 md:px-6 pt-0.5 md:pt-1">
                 {/* Left: Track Info */}
@@ -399,25 +274,8 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                     </div>
                 </div>
 
-                {/* Right: Time & Volume */}
+                {/* Right: Volume (time display now in SeekBar) */}
                 <div className="hidden md:flex flex-col items-end w-1/3 text-xs text-gray-400 font-medium font-mono">
-                    <div className="mb-2 tracking-wide flex items-center justify-end w-full tabular-nums">
-                        <button
-                            ref={timeDisplayRef}
-                            onClick={() => setShowRemaining(!showRemaining)}
-                            className="text-white hover:text-dominant transition-colors cursor-pointer tabular-nums"
-                            title="Toggle elapsed/remaining"
-                        >
-                            {/* Initially populated by React, updated via Ref for performance */}
-                            {showRemaining ? `-${formatDuration(Math.max(0, durationSec - localProgress))}` : formatDuration(localProgress)}
-                        </button>
-                        <span className="mx-1 tabular-nums">/</span> <span className="tabular-nums">{formatDuration(durationSec)}</span>
-                        {onToggleContext && (
-                            <button onClick={onToggleContext} className="ml-4 text-gray-500 hover:text-white transition-colors" title="Track Info">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                            </button>
-                        )}
-                    </div>
                     <div className="flex items-center gap-3 w-32 group/vol relative">
                         <button
                             onClick={toggleMute}
