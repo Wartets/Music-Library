@@ -144,7 +144,7 @@ const AppContent: React.FC<any> = ({
             {currentView !== 'BigScreen' && (
                 <>
                     <PlayerBar onNavigate={navigate} onToggleContext={() => setShowContext(!showContext)} />
-                    <MobileTabBar currentView={currentView} onNavigate={(view) => navigate(view, null)} />
+                    <MobileTabBar currentView={currentView} onNavigate={(view, data) => navigate(view, data ?? null)} />
                 </>
             )}
             <MetadataEditor />

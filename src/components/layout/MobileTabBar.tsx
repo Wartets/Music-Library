@@ -1,10 +1,11 @@
 import React from 'react';
 import { ViewType } from './AppLayout';
 import { Calendar, FileAudio, FolderOpen, Grid3X3, Heart, Home, LayoutGrid, ListMusic, Mic2, MoreHorizontal, PlaySquare, Settings, Tags } from 'lucide-react';
+import { useLibrary } from '../../contexts/LibraryContext';
 
 interface MobileTabBarProps {
     currentView: ViewType;
-    onNavigate: (view: ViewType) => void;
+    onNavigate: (view: ViewType, data?: any) => void;
 }
 
 const tabs: { id: ViewType; label: string; icon: React.ReactNode }[] = [
@@ -37,7 +38,17 @@ const getTabFromView = (view: ViewType): ViewType => {
 export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavigate }) => {
     const activeTab = getTabFromView(currentView);
     const [isMoreOpen, setIsMoreOpen] = React.useState(false);
+    const [mobileSearchQuery, setMobileSearchQuery] = React.useState('');
     const isMoreActive = extraTabs.some(tab => tab.id === currentView);
+    const { setSearchQuery } = useLibrary();
+
+    const submitMobileSearch = () => {
+        const query = mobileSearchQuery.trim();
+        if (!query) return;
+        setSearchQuery(query);
+        onNavigate('SearchResults', { query, sourceView: currentView });
+        setIsMoreOpen(false);
+    };
 
     return (
         <>
@@ -47,8 +58,32 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                         className="absolute left-3 right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] rounded-2xl bg-[#121212]/95 border border-white/10 p-3.5 shadow-2xl"
                         onClick={e => e.stopPropagation()}
                     >
+                        <div className="mb-3">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Search library</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={mobileSearchQuery}
+                                    onChange={(e) => setMobileSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            submitMobileSearch();
+                                        }
+                                    }}
+                                    placeholder="Search tracks, artists, albums..."
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-gray-500 outline-none focus:border-dominant"
+                                />
+                                <button
+                                    onClick={submitMobileSearch}
+                                    className="px-3 py-2.5 rounded-xl bg-dominant text-on-dominant text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Go
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">More views</div>
-                        <div className="grid grid-cols-2 gap-2.5">
+                        <div className="grid grid-cols-2 gap-2.5 max-h-[42vh] overflow-y-auto custom-scrollbar pr-1">
                             {extraTabs.map(tab => {
                                 const isActive = currentView === tab.id;
                                 return (

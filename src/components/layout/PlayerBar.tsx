@@ -5,7 +5,7 @@ import { ViewType } from './AppLayout';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Music, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { Info, Music, Volume1, Volume2, VolumeX } from 'lucide-react';
 
 export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (view: ViewType, data?: any) => void }> = ({ onToggleContext, onNavigate }) => {
     const { state, togglePlay, playNext, playPrevious, setVolume, seek, getProgress, seekForward, seekBackward, toggleShuffle, setRepeat } = usePlayer();
@@ -149,7 +149,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
     return (
         <footer
-            className={`${isCompact ? 'h-16 md:h-20' : 'h-20 md:h-24'} fixed md:static bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[60] transition-all duration-1000 overflow-hidden`}
+            className={`${isCompact ? 'h-[5rem] md:h-20' : 'h-[5.25rem] md:h-24'} fixed md:static bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[60] transition-all duration-1000 overflow-hidden`}
             style={{ backgroundColor: `${currentPalette.dominantDark}bb` }}
         >
             {/* Subtle bottom glow */}
@@ -257,7 +257,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 </div>
 
                 {/* Center: Controls */}
-                <div className="flex items-center justify-center flex-1 md:w-1/3 max-w-[420px]">
+                <div className="flex flex-col items-center justify-center flex-1 md:w-1/3 max-w-[420px]">
                     <div className="flex items-center justify-center gap-1 md:gap-3">
                         <button
                             onClick={toggleShuffle}
@@ -318,16 +318,56 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         >
                             <IconRepeat mode={state.repeat} />
                         </button>
+                    </div>
+
+                    <div className="md:hidden mt-1 flex items-center justify-center gap-2.5 w-full">
+                        {onToggleContext && (
+                            <button
+                                onClick={onToggleContext}
+                                disabled={!track}
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
+                                title="Track Info"
+                            >
+                                <Info size={14} />
+                            </button>
+                        )}
 
                         <button
                             onClick={toggleMute}
                             disabled={!track}
-                            className={`md:hidden inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
                             title={isMuted ? 'Unmute' : 'Mute'}
                             aria-pressed={isMuted}
                         >
                             <IconVolume vol={state.volume} />
                         </button>
+
+                        <div className="relative h-[4px] w-28 bg-white/10 rounded-full cursor-pointer">
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={state.volume}
+                                onChange={(e) => {
+                                    const nextVolume = Number(e.target.value);
+                                    if (nextVolume > 0) {
+                                        previousVolumeRef.current = nextVolume;
+                                    }
+                                    setVolume(nextVolume);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                disabled={!track}
+                            />
+                            <div
+                                className="absolute inset-y-0 left-0 bg-dominant transition-all rounded-full pointer-events-none"
+                                style={{ width: `${state.volume * 100}%` }}
+                            ></div>
+                            <div
+                                className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full shadow-lg pointer-events-none"
+                                style={{ left: `calc(${state.volume * 100}% - 5px)` }}
+                            ></div>
+                        </div>
                     </div>
                 </div>
 
