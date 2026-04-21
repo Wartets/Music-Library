@@ -65,14 +65,14 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                 </div>
                 {sortOptions.length > 0 && (
                     <div className="flex items-center gap-2 self-start md:self-auto">
-                        <div className="flex bg-white/5 rounded-xl border border-white/5 p-1 overflow-x-auto no-scrollbar max-w-full">
+                        <div className="flex bg-white/5 rounded-xl border border-white/5 p-1 overflow-x-auto no-scrollbar max-w-[calc(100vw-2rem)] sm:max-w-full">
                             {sortOptions.map(opt => (
                                 <button
                                     key={opt.id}
                                     onClick={() => onSortChange(opt.id)}
-                                    className={`px-3 md:px-4 py-2 flex-shrink-0 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${currentSort === opt.id ? 'bg-white/10 text-white shadow' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`px-3 py-2.5 sm:px-4 sm:py-2 flex-shrink-0 rounded-lg text-xs font-bold transition-all flex items-center gap-2 min-h-10 ${currentSort === opt.id ? 'bg-white/10 text-white shadow' : 'text-gray-500 hover:text-gray-300'}`}
                                 >
-                                    {opt.icon} {opt.label}
+                                    {opt.icon} <span className="hidden sm:inline">{opt.label}</span>
                                 </button>
                             ))}
                         </div>

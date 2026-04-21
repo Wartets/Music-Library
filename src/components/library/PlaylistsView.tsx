@@ -265,24 +265,27 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
             )}
 
             {isCreating && (
-                <form onSubmit={handleCreate} className="mb-8 bg-white/5 p-6 rounded-3xl border border-white/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-dominant">
-                        <FolderPlus size={24} />
+                <form onSubmit={handleCreate} className="mb-6 sm:mb-8 bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/10 flex flex-col sm:flex-row gap-3 sm:items-center animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/5 flex items-center justify-center text-dominant flex-shrink-0">
+                        <FolderPlus size={20} className="sm:hidden" />
+                        <FolderPlus size={24} className="hidden sm:block" />
                     </div>
                     <input
                         type="text"
                         value={newPlaylistName}
                         onChange={e => setNewPlaylistName(e.target.value)}
                         placeholder="Name your masterpiece..."
-                        className="bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white flex-1 outline-none focus:border-dominant transition-all font-bold"
+                        className="bg-black/50 border border-white/10 rounded-xl px-4 py-3 sm:py-3 text-white flex-1 outline-none focus:border-dominant transition-all font-bold text-base min-h-12"
                         autoFocus
                     />
-                    <button type="submit" className="bg-dominant text-on-dominant font-black px-8 py-3 rounded-xl hover:bg-dominant-light transition-all uppercase tracking-widest text-xs">
-                        Create
-                    </button>
-                    <button type="button" onClick={() => setIsCreating(false)} className="text-gray-400 font-bold hover:text-white px-4 py-3 transition-colors text-xs uppercase tracking-widest">
-                        Discard
-                    </button>
+                    <div className="flex gap-2 sm:gap-3">
+                        <button type="submit" className="bg-dominant text-on-dominant font-black px-4 sm:px-6 py-3 rounded-xl hover:bg-dominant-light transition-all uppercase tracking-widest text-[10px] sm:text-xs flex-1 sm:flex-none min-h-11">
+                            Create
+                        </button>
+                        <button type="button" onClick={() => setIsCreating(false)} className="text-gray-400 font-bold hover:text-white px-3 sm:px-4 py-3 transition-colors text-[10px] sm:text-xs uppercase tracking-widest min-h-11">
+                            Cancel
+                        </button>
+                    </div>
                 </form>
             )}
 
@@ -451,16 +454,25 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                             {activeTrackIds.map((hash, idx) => {
                                                 const track = getTrackByHash(hash);
                                                 if (!track) return null;
+                                                const handleRemove = () => {
+                                                    if (isSmartPlaylist(selectedPlaylist)) return;
+                                                    persistenceService.removeFromPlaylist((selectedPlaylist as Playlist).id, track.logic.hash_sha256);
+                                                    const updated = persistenceService.getPlaylists();
+                                                    setPlaylists(updated);
+                                                    const refreshed = updated.find(p => p.id === (selectedPlaylist as Playlist).id);
+                                                    if (refreshed) setSelectedPlaylist(refreshed);
+                                                    showToast('Track removed from playlist');
+                                                    refresh();
+                                                };
                                                 return (
                                                     <div
                                                         key={`${hash}-${idx}`}
-                                                        className="flex items-center justify-between p-4 bg-white/2 border border-transparent rounded-2xl group hover:bg-white/5 hover:border-white/5 transition-all cursor-pointer relative"
+                                                        className="flex items-center justify-between p-3 sm:p-4 bg-white/2 border border-transparent rounded-xl sm:rounded-2xl group hover:bg-white/5 hover:border-white/5 transition-all cursor-pointer relative"
                                                         onClick={() => playTrack(track, state.tracks)}
                                                         onContextMenu={(e) => {
                                                             if (!isSmartPlaylist(selectedPlaylist)) {
                                                                 onRightClickTrack(e, track, selectedPlaylist as Playlist);
                                                             } else {
-                                                                // For smart playlists, maybe just standard track context menu (play, queue)
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 showContextMenu(e.clientX, e.clientY, [
@@ -472,9 +484,9 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                             }
                                                         }}
                                                     >
-                                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                                        <div className="flex items-center min-w-0 flex-1 gap-5">
-                                                            <div className="w-12 h-12 rounded-xl bg-black/50 overflow-hidden flex items-center justify-center text-xs text-white/30 flex-shrink-0 border border-white/10 group-hover:border-white/20 transition-all">
+                                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 sm:h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                        <div className="flex items-center min-w-0 flex-1 gap-3 sm:gap-5">
+                                                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-black/50 overflow-hidden flex items-center justify-center text-xs text-white/30 flex-shrink-0 border border-white/10 group-hover:border-white/20 transition-all">
                                                                 <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} />
                                                             </div>
                                                             <div className="min-w-0 flex-1">
@@ -482,8 +494,17 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                                 <p className="text-gray-500 font-bold text-[10px] uppercase tracking-tighter truncate mt-1">{track.metadata?.artists?.join(', ')}</p>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-4 text-xs font-bold text-gray-600 font-mono">
-                                                            {track.audio_specs?.duration}
+                                                        <div className="flex items-center gap-2 sm:gap-4">
+                                                            <span className="text-xs font-bold text-gray-600 font-mono hidden sm:block">{track.audio_specs?.duration}</span>
+                                                            {!isSmartPlaylist(selectedPlaylist) && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleRemove(); }}
+                                                                    className="p-2 sm:opacity-0 sm:group-hover:opacity-100 min-w-9 min-h-9 flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                                                    aria-label="Remove from playlist"
+                                                                >
+                                                                    <ListMinus size={14} />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );

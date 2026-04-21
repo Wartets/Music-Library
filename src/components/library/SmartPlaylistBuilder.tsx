@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SmartRule, SmartPlaylistDefinition, Operator, LogicCondition } from '../../utils/smartPlaylistEvaluator';
 import { persistenceService } from '../../services/persistence';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface SmartPlaylistBuilderProps {
     onSave?: (playlist: SmartPlaylistDefinition) => void;
@@ -57,42 +58,47 @@ export const SmartPlaylistBuilder: React.FC<SmartPlaylistBuilderProps> = ({ onSa
             }
         };
 
-        // Save to persistence
         persistenceService.saveSmartPlaylist(def);
         if (onSave) onSave(def);
     };
 
-    const inputStyle = { padding: '6px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px' };
-
     return (
-        <div style={{ padding: '24px', backgroundColor: '#1a1a1a', color: '#fff', borderRadius: '8px', maxWidth: '600px' }}>
-            <h2 style={{ marginTop: 0 }}>Create Smart Playlist</h2>
+        <div className="w-full max-w-full sm:max-w-lg bg-[#1a1a1a] text-white rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto custom-scrollbar">
+            <h2 className="text-xl sm:text-2xl font-black mb-4 sm:mb-6 mt-0">Create Smart Playlist</h2>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div className="mb-4 sm:mb-5">
+                <label className="block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
+                    Playlist Name
+                </label>
                 <input
+                    type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    style={{ ...inputStyle, width: '100%', fontSize: '1.2rem', padding: '10px' }}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base text-white placeholder:text-gray-500 outline-none focus:border-dominant min-h-12"
                     placeholder="Playlist Name"
                 />
             </div>
 
-            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>Match</span>
-                <select value={condition} onChange={(e) => setCondition(e.target.value as LogicCondition)} style={inputStyle}>
+            <div className="mb-4 sm:mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
+                <span className="text-xs sm:text-sm text-gray-400 font-bold">Match</span>
+                <select 
+                    value={condition} 
+                    onChange={(e) => setCondition(e.target.value as LogicCondition)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-dominant min-h-11"
+                >
                     <option value="AND">ALL</option>
                     <option value="OR">ANY</option>
                 </select>
-                <span>of the following rules:</span>
+                <span className="text-xs sm:text-sm text-gray-400 font-bold">of the following rules:</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', backgroundColor: '#2a2a2a', padding: '16px', borderRadius: '6px' }}>
+            <div className="flex flex-col gap-3 mb-5 sm:mb-6 bg-white/5 rounded-xl border border-white/5 p-3 sm:p-4">
                 {rules.map((rule, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div key={idx} className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
                         <select
                             value={rule.field}
                             onChange={(e) => handleChangeRule(idx, { field: e.target.value })}
-                            style={inputStyle}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-dominant min-h-11"
                         >
                             {FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                         </select>
@@ -100,42 +106,48 @@ export const SmartPlaylistBuilder: React.FC<SmartPlaylistBuilderProps> = ({ onSa
                         <select
                             value={rule.operator}
                             onChange={(e) => handleChangeRule(idx, { operator: e.target.value as Operator })}
-                            style={inputStyle}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-dominant min-h-11"
                         >
                             {OPERATOR_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                         </select>
 
                         <input
+                            type="text"
                             value={rule.value as string}
                             onChange={(e) => handleChangeRule(idx, { value: e.target.value })}
-                            style={{ ...inputStyle, flex: 1 }}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white placeholder:text-gray-500 outline-none focus:border-dominant min-h-11"
                             placeholder="Value"
                         />
 
                         <button
                             onClick={() => handleRemoveRule(idx)}
-                            style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '1.2rem', cursor: 'pointer' }}
+                            className="p-2.5 sm:p-2 min-h-11 min-w-11 flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                            aria-label="Remove rule"
                         >
-                            ✕
+                            <Trash2 size={16} />
                         </button>
                     </div>
                 ))}
 
-                <div>
-                    <button
-                        onClick={handleAddRule}
-                        style={{ ...inputStyle, cursor: 'pointer', backgroundColor: 'transparent', border: '1px dashed #555' }}
-                    >
-                        + Add Rule
-                    </button>
-                </div>
+                <button
+                    onClick={handleAddRule}
+                    className="w-full py-2.5 min-h-11 flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-gray-400 hover:text-white border border-dashed border-white/20 hover:border-dominant rounded-xl transition-colors"
+                >
+                    <Plus size={16} /> Add Rule
+                </button>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button onClick={onCancel} style={{ ...inputStyle, cursor: 'pointer', backgroundColor: 'transparent' }}>
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+                <button 
+                    onClick={onCancel} 
+                    className="px-5 py-3 min-h-12 rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
                     Cancel
                 </button>
-                <button onClick={handleSave} style={{ ...inputStyle, cursor: 'pointer', backgroundColor: '#1DB954', border: 'none', color: '#000', fontWeight: 'bold' }}>
+                <button 
+                    onClick={handleSave} 
+                    className="px-5 py-3 min-h-12 rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest bg-green-500 text-black hover:bg-green-400 transition-colors"
+                >
                     Save Playlist
                 </button>
             </div>

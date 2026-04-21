@@ -61,13 +61,13 @@ export const FormatsView: React.FC<FormatsViewProps> = ({ onNavigate }) => {
                     background: palette.background,
                     borderColor: palette.borderColor
                 },
-                symbol: (
-                    <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="text-3xl font-black tracking-tight" style={{ color: palette.accentColor }}>
+symbol: (
+                    <div className="flex flex-col items-center justify-center gap-2 max-w-full">
+                        <span className="text-2xl sm:text-3xl font-black tracking-tight truncate" style={{ color: palette.accentColor }}>
                             {fmt.name}
                         </span>
                         {fmt.isLossless && (
-                            <span className="text-[9px] font-black bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full border border-green-400/30 tracking-wider">
+                            <span className="text-[10px] font-black bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full border border-green-400/30 tracking-wider">
                                 LOSSLESS
                             </span>
                         )}

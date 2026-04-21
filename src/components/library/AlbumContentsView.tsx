@@ -40,7 +40,7 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
             <div>Collection not found</div>
             <button
                 onClick={() => onNavigate('Albums', null)}
-                className="px-4 py-2 rounded-xl border border-white/10 text-white/80 hover:text-white hover:bg-white/5 transition-colors text-[10px] font-black tracking-[0.25em]"
+                className="px-4 py-2.5 min-h-11 rounded-xl border border-white/10 text-white/80 hover:text-white hover:bg-white/5 transition-colors text-[10px] font-black tracking-[0.25em]"
             >
                 Back to Albums
             </button>

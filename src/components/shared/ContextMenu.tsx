@@ -156,6 +156,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         openSubMenuForItem(item, e.currentTarget as HTMLElement);
     };
 
+    const handleTouchEnd = (item: ContextMenuItem, _index: number, e: React.TouchEvent) => {
+        e.preventDefault();
+        if (item.subItems || item.lazySubItems) {
+            openSubMenuForItem(item, e.currentTarget as HTMLElement);
+        }
+    };
+
     const handleMenuMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
         const related = e.relatedTarget as Node | null;
         if (related && subMenuRef.current?.contains(related)) {
@@ -216,10 +223,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                     }
                                 }}
                                 onMouseEnter={(e) => handleMouseEnter(item, idx, e)}
+                                onTouchEnd={(e) => handleTouchEnd(item, idx, e)}
                                 disabled={item.disabled}
                                 className={`
                                     w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold transition-colors relative group min-h-11 md:min-h-0
-                                    ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-300 hover:bg-white/10 hover:text-white'}
+                                    ${item.danger ? 'text-red-400 hover:bg-red-500/10 active:bg-red-500/20' : 'text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white'}
                                     ${item.disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
                                 `}
                             >
