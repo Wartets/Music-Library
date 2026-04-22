@@ -1,13 +1,66 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { formatDuration } from '../../utils/formatters';
-import { ViewType } from './AppLayout';
+import { ViewType } from './viewRouting';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Info, Music, Volume1, Volume2, VolumeX } from 'lucide-react';
 
-export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (view: ViewType, data?: any) => void }> = ({ onToggleContext, onNavigate }) => {
+const IconPlay = React.memo(() => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M8 5v14l11-7z" /></svg>);
+const IconPause = React.memo(() => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>);
+const IconNext = React.memo(() => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>);
+const IconPrev = React.memo(() => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>);
+const IconSeekBackward = React.memo(() => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 17l-5-5 5-5" />
+        <path d="M18 17l-5-5 5-5" />
+    </svg>
+));
+const IconSeekForward = React.memo(() => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 17l5-5-5-5" />
+        <path d="M6 17l5-5-5-5" />
+    </svg>
+));
+const IconExpandTrack = React.memo(() => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 3 21 3 21 9"></polyline>
+        <polyline points="9 21 3 21 3 15"></polyline>
+        <line x1="21" y1="3" x2="14" y2="10"></line>
+        <line x1="3" y1="21" x2="10" y2="14"></line>
+    </svg>
+));
+
+const IconShuffle = React.memo(({ active }: { active: boolean }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${active ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+));
+
+const IconRepeat = React.memo(({ mode }: { mode: 'none' | 'all' | 'one' }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={mode !== 'none' ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${mode !== 'none' ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}>
+        {mode === 'one' ? (
+            <>
+                <path d="M17 2l4 4-4 4" />
+                <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                <path d="M7 22l-4-4 4-4" />
+                <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                <path d="M11 15V9.5L9.5 10.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </>
+        ) : (
+            <><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></>
+        )}
+    </svg>
+));
+
+const TrackInfoIcon = React.memo(() => <Info size={14} />);
+const PlaceholderMusicIcon = React.memo(({ compact }: { compact: boolean }) => <Music className="opacity-20" size={compact ? 20 : 24} />);
+const VolumeIcon = React.memo(({ vol }: { vol: number }) => {
+    if (vol === 0) return <VolumeX size={18} />;
+    if (vol < 0.5) return <Volume1 size={18} />;
+    return <Volume2 size={18} />;
+});
+
+export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (view: ViewType, data?: unknown) => void }> = ({ onToggleContext, onNavigate }) => {
     const { state, togglePlay, playNext, playPrevious, setVolume, seek, getProgress, seekForward, seekBackward, toggleShuffle, setRepeat } = usePlayer();
     const track = state.currentTrack;
     const previousVolumeRef = useRef<number>(state.volume > 0 ? state.volume : 0.8);
@@ -109,37 +162,17 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
         }
     }, [track, getProgress, isDragging]);
 
-    // --- SVGs ---
-    const IconPlay = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M8 5v14l11-7z" /></svg>;
-    const IconPause = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-active:scale-90"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>;
-    const IconNext = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>;
-    const IconPrev = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>;
-    const IconShuffle = ({ active }: { active: boolean }) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${active ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
-    );
-    const IconRepeat = ({ mode }: { mode: 'none' | 'all' | 'one' }) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={mode !== 'none' ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${mode !== 'none' ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}>
-            {mode === 'one' ? (
-                <>
-                    <path d="M17 2l4 4-4 4" />
-                    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-                    <path d="M7 22l-4-4 4-4" />
-                    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
-                    {/* A more robust "1" using paths for better visibility across resolutions */}
-                    <path d="M11 15V9.5L9.5 10.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </>
-            ) : (
-                <><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></>
-            )}
-        </svg>
-    );
-    const IconVolume = ({ vol }: { vol: number }) => (
-        vol === 0
-            ? <VolumeX size={18} />
-            : vol < 0.5
-                ? <Volume1 size={18} />
-                : <Volume2 size={18} />
-    );
+    const handleRepeatToggle = useCallback(() => {
+        setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none');
+    }, [setRepeat, state.repeat]);
+
+    const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const nextVolume = Number(e.target.value);
+        if (nextVolume > 0) {
+            previousVolumeRef.current = nextVolume;
+        }
+        setVolume(nextVolume);
+    }, [setVolume]);
 
     const toggleMute = () => {
         if (state.volume === 0) {
@@ -152,6 +185,77 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     };
 
     const { currentPalette } = useTheme();
+
+    const desktopPrimaryControls = React.useMemo(() => (
+        <>
+            <button
+                onClick={toggleShuffle}
+                disabled={!track}
+                className={`inline-flex items-center justify-center transition-all rounded-full w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
+                aria-label={`Shuffle ${state.shuffle ? 'on' : 'off'}`}
+            >
+                <IconShuffle active={state.shuffle} />
+            </button>
+
+            <button
+                onClick={playPrevious}
+                disabled={!track}
+                className={`transition-transform active:scale-95 w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
+                aria-label="Previous track"
+            >
+                <IconPrev />
+            </button>
+
+            <button
+                onClick={seekBackward}
+                disabled={!track}
+                title="Rewind 10s"
+                className={`transition-transform active:scale-95 py-2 px-0.5 hidden lg:block ${activeClass(track, 'text-gray-400 hover:text-white')}`}
+                aria-label="Rewind 10 seconds"
+            >
+                <IconSeekBackward />
+            </button>
+
+            <button
+                onClick={togglePlay}
+                disabled={!track}
+                className={`w-12 h-12 md:w-12 md:h-12 rounded-full bg-white text-black flex items-center justify-center transition-all shadow-lg shadow-white/10 ${activeClass(track, 'hover:scale-105 active:scale-95')}`}
+                aria-label={state.isPlaying ? 'Pause' : 'Play'}
+            >
+                {state.isPlaying ? <IconPause /> : <IconPlay />}
+            </button>
+
+            <button
+                onClick={seekForward}
+                disabled={!track}
+                title="Forward 10s"
+                className={`transition-transform active:scale-95 py-2 px-0.5 hidden lg:block ${activeClass(track, 'text-gray-400 hover:text-white')}`}
+                aria-label="Forward 10 seconds"
+            >
+                <IconSeekForward />
+            </button>
+
+            <button
+                onClick={playNext}
+                disabled={!track}
+                className={`transition-transform active:scale-95 w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
+                aria-label="Next track"
+            >
+                <IconNext />
+            </button>
+
+            <button
+                onClick={handleRepeatToggle}
+                disabled={!track}
+                className={`inline-flex items-center justify-center transition-all rounded-full w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
+                title={`Repeat: ${state.repeat}`}
+                aria-label={`Repeat mode ${state.repeat}`}
+            >
+                <IconRepeat mode={state.repeat} />
+            </button>
+        </>
+    ), [handleRepeatToggle, playNext, playPrevious, seekBackward, seekForward, state.isPlaying, state.repeat, state.shuffle, togglePlay, toggleShuffle, track]);
 
     return (
         <footer
@@ -178,6 +282,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                     onPointerCancel={() => setIsDragging(false)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 touch-none"
                     disabled={!track}
+                    aria-label="Track position"
                 />
 
                 {/* Background Line */}
@@ -208,10 +313,12 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                             <div
                                 className={`${isCompact ? 'w-10 h-10 md:w-12 md:h-12' : 'w-12 h-12 md:w-14 md:h-14'} rounded-md bg-white/5 flex-shrink-0 mr-3 md:mr-4 overflow-hidden border border-white/5 shadow-2xl relative group cursor-pointer active:scale-95 transition-transform`}
                                 onClick={() => onNavigate('BigScreen', track)}
+                                role="button"
+                                aria-label="Open big screen now playing"
                             >
                                 <ArtworkImage details={artworkDetails} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                                    <IconExpandTrack />
                                 </div>
                             </div>
                             <div className="flex flex-col min-w-0 flex-1">
@@ -244,7 +351,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                     ) : (
                         <div className="flex items-center group">
                             <div className={`${isCompact ? 'w-10 h-10 md:w-12 md:h-12' : 'w-12 h-12 md:w-14 md:h-14'} rounded-md bg-white/5 mr-4 flex items-center justify-center text-gray-800 border border-white/5`}>
-                                <Music className="opacity-20" size={isCompact ? 20 : 24} />
+                                <PlaceholderMusicIcon compact={isCompact} />
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <div className="h-3.5 w-24 bg-white/5 rounded-full opacity-50"></div>
@@ -257,65 +364,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                 {/* Center: Controls */}
                 <div className="flex flex-col items-center justify-center flex-1 md:w-1/3 max-w-[420px]">
                     <div className="flex items-center justify-center gap-1 md:gap-3">
-                        <button
-                            onClick={toggleShuffle}
-                            disabled={!track}
-                            className={`inline-flex items-center justify-center transition-all rounded-full w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.shuffle ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
-                            title={`Shuffle: ${state.shuffle ? 'On' : 'Off'}`}
-                        >
-                            <IconShuffle active={state.shuffle} />
-                        </button>
-
-                        <button
-                            onClick={playPrevious}
-                            disabled={!track}
-                            className={`transition-transform active:scale-95 w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
-                        >
-                            <IconPrev />
-                        </button>
-
-                        <button
-                            onClick={seekBackward}
-                            disabled={!track}
-                            title="Rewind 10s"
-                            className={`transition-transform active:scale-95 py-2 px-0.5 hidden lg:block ${activeClass(track, 'text-gray-400 hover:text-white')}`}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 17l-5-5 5-5" /><path d="M18 17l-5-5 5-5" /></svg>
-                        </button>
-
-                        <button
-                            onClick={togglePlay}
-                            disabled={!track}
-                            className={`w-12 h-12 md:w-12 md:h-12 rounded-full bg-white text-black flex items-center justify-center transition-all shadow-lg shadow-white/10 ${activeClass(track, 'hover:scale-105 active:scale-95')}`}
-                        >
-                            {state.isPlaying ? <IconPause /> : <IconPlay />}
-                        </button>
-
-                        <button
-                            onClick={seekForward}
-                            disabled={!track}
-                            title="Forward 10s"
-                            className={`transition-transform active:scale-95 py-2 px-0.5 hidden lg:block ${activeClass(track, 'text-gray-400 hover:text-white')}`}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 17l5-5-5-5" /><path d="M6 17l5-5-5-5" /></svg>
-                        </button>
-
-                        <button
-                            onClick={playNext}
-                            disabled={!track}
-                            className={`transition-transform active:scale-95 w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-1 inline-flex items-center justify-center rounded-full ${activeClass(track, 'text-gray-200 hover:text-white hover:bg-white/5')}`}
-                        >
-                            <IconNext />
-                        </button>
-
-                        <button
-                            onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
-                            disabled={!track}
-                            className={`inline-flex items-center justify-center transition-all rounded-full w-9 h-9 md:w-auto md:h-auto md:py-2 md:px-2.5 ${activeClass(track, state.repeat !== 'none' ? 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'text-gray-400 hover:text-white hover:bg-white/5')}`}
-                            title={`Repeat: ${state.repeat}`}
-                        >
-                            <IconRepeat mode={state.repeat} />
-                        </button>
+                        {desktopPrimaryControls}
                     </div>
 
                     <div className="md:hidden mt-1 mb-1 text-[10px] font-mono text-gray-400 leading-none">
@@ -331,8 +380,9 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                 disabled={!track}
                                 className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
                                 title="Track Info"
+                                aria-label="Track info"
                             >
-                                <Info size={14} />
+                                <TrackInfoIcon />
                             </button>
                         )}
 
@@ -341,9 +391,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                             disabled={!track}
                             className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${activeClass(track, 'text-gray-300 hover:text-white hover:bg-white/5')}`}
                             title={isMuted ? 'Unmute' : 'Mute'}
+                            aria-label={isMuted ? 'Unmute' : 'Mute'}
                             aria-pressed={isMuted}
                         >
-                            <IconVolume vol={state.volume} />
+                            <VolumeIcon vol={state.volume} />
                         </button>
 
                         <div className="relative h-[4px] w-28 bg-white/10 rounded-full cursor-pointer">
@@ -353,15 +404,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                 max={1}
                                 step={0.01}
                                 value={state.volume}
-                                onChange={(e) => {
-                                    const nextVolume = Number(e.target.value);
-                                    if (nextVolume > 0) {
-                                        previousVolumeRef.current = nextVolume;
-                                    }
-                                    setVolume(nextVolume);
-                                }}
+                                onChange={handleVolumeChange}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                 disabled={!track}
+                                aria-label="Volume"
                             />
                             <div
                                 className="absolute inset-y-0 left-0 bg-dominant transition-all rounded-full pointer-events-none"
@@ -389,9 +435,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                             disabled={!track}
                             className={`flex items-center justify-center transition-colors ${activeClass(track, 'text-gray-300 hover:text-white')}`}
                             title={isMuted ? 'Unmute' : 'Mute'}
+                            aria-label={isMuted ? 'Unmute' : 'Mute'}
                             aria-pressed={isMuted}
                         >
-                            <IconVolume vol={state.volume} />
+                            <VolumeIcon vol={state.volume} />
                         </button>
                         <div className="relative h-[4px] w-full bg-white/10 rounded-full flex-1 cursor-pointer group-hover/vol:h-[6px] transition-all">
                             <input
@@ -400,14 +447,9 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                                 max={1}
                                 step={0.01}
                                 value={state.volume}
-                                onChange={(e) => {
-                                    const nextVolume = Number(e.target.value);
-                                    if (nextVolume > 0) {
-                                        previousVolumeRef.current = nextVolume;
-                                    }
-                                    setVolume(nextVolume);
-                                }}
+                                onChange={handleVolumeChange}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                aria-label="Volume"
                             />
                             <div
                                 className="absolute inset-y-0 left-0 bg-dominant transition-all rounded-full pointer-events-none shadow-[0_0_10px_rgba(var(--color-dominant-rgb),0.5)]"
