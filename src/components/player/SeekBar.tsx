@@ -20,9 +20,6 @@ export const SeekBar: React.FC<SeekBarProps> = ({
     disabled = false,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const progressRef = useRef<HTMLDivElement>(null);
-    const thumbRef = useRef<HTMLDivElement>(null);
-    const tooltipRef = useRef<HTMLDivElement>(null);
 
     const [isDragging, setIsDragging] = useState(false);
     const [localPosition, setLocalPosition] = useState(0);
@@ -32,7 +29,6 @@ export const SeekBar: React.FC<SeekBarProps> = ({
     );
     const [isTouchDevice, setIsTouchDevice] = useState(false);
 
-    const rafRef = useRef<number | null>(null);
     const isGlowEnabled = persistenceService.get('ui_glow') !== false;
 
     useEffect(() => {
@@ -45,155 +41,73 @@ export const SeekBar: React.FC<SeekBarProps> = ({
         }
     }, [position, isDragging]);
 
+    const seekCommitRef = useRef(onSeek);
+
     useEffect(() => {
-        if (isDragging || isHovering || isPlaying) {
-            const updateVisuals = (_timestamp: number) => {
-                const currentPos = isDragging ? localPosition : position;
-                const percent = duration > 0 ? (currentPos / duration) * 100 : 0;
+        seekCommitRef.current = onSeek;
+    }, [onSeek]);
 
-                if (progressRef.current) {
-                    progressRef.current.style.width = `${percent}%`;
-                }
-                if (thumbRef.current) {
-                    thumbRef.current.style.left = `${percent}%`;
-                }
-                if (tooltipRef.current) {
-                    tooltipRef.current.style.left = `${percent}%`;
-                }
-
-                if ((isDragging || isHovering || isPlaying) && !isDragging) {
-                    rafRef.current = requestAnimationFrame(updateVisuals);
-                }
-            };
-
-            rafRef.current = requestAnimationFrame(updateVisuals);
+    const commitSeek = useCallback((nextPosition: number) => {
+        if (disabled || isBuffering) {
+            setIsDragging(false);
+            return;
         }
 
-        return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        const clamped = Math.max(0, Math.min(duration, nextPosition));
+        seekCommitRef.current(clamped);
+        setIsDragging(false);
+
+        if (isTouchDevice && 'vibrate' in navigator) {
+            navigator.vibrate(5);
+        }
+    }, [disabled, duration, isBuffering, isTouchDevice]);
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handlePointerUp = () => {
+            commitSeek(localPosition);
         };
-    }, [localPosition, position, isDragging, isHovering, isPlaying, duration]);
 
-    const handleSeekFromEvent = useCallback((clientX: number) => {
-        if (!containerRef.current || !duration) return undefined;
-        const rect = containerRef.current.getBoundingClientRect();
-        const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const newPosition = percent * duration;
-        setLocalPosition(newPosition);
-        return newPosition;
-    }, [duration]);
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerUp);
 
-    const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        return () => {
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointercancel', handlePointerUp);
+        };
+    }, [commitSeek, isDragging, localPosition]);
+
+    useEffect(() => {
+        return () => {
+            setIsDragging(false);
+        };
+    }, []);
+
+    const handleRangeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalPosition(Number(e.target.value));
+    }, []);
+
+    const handleRangePointerDown = useCallback(() => {
         if (disabled || isBuffering) return;
-        e.preventDefault();
         setIsDragging(true);
-        
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        handleSeekFromEvent(clientX);
-        
         if (isTouchDevice && 'vibrate' in navigator) {
             navigator.vibrate(10);
         }
-    }, [disabled, isBuffering, isTouchDevice, handleSeekFromEvent]);
+    }, [disabled, isBuffering, isTouchDevice]);
 
-    const handlePointerMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const handleRangePointerUp = useCallback(() => {
         if (!isDragging) return;
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        handleSeekFromEvent(clientX);
-    }, [isDragging, handleSeekFromEvent]);
+        commitSeek(localPosition);
+    }, [commitSeek, isDragging, localPosition]);
 
-    const handlePointerUp = useCallback(() => {
-        if (isDragging) {
-            onSeek(localPosition);
-            setIsDragging(false);
-            
-            if (isTouchDevice && 'vibrate' in navigator) {
-                navigator.vibrate(5);
-            }
-        }
-    }, [isDragging, localPosition, onSeek, isTouchDevice]);
-
-    // Global mouse event listeners for drag
-    const onSeekRef = useRef(onSeek);
-    const handleSeekRef = useRef(handleSeekFromEvent);
-    
-    useEffect(() => {
-        onSeekRef.current = onSeek;
-    }, [onSeek]);
-    
-    useEffect(() => {
-        handleSeekRef.current = handleSeekFromEvent;
-    }, [handleSeekFromEvent]);
-    
-    useEffect(() => {
-        if (!isDragging) return;
-        
-        const handleMove = (e: MouseEvent) => {
-            if (containerRef.current) {
-                handleSeekRef.current(e.clientX);
-            }
-        };
-        
-        const handleUp = () => {
-            if (isDragging) {
-                onSeekRef.current(localPosition);
-                setIsDragging(false);
-            }
-        };
-        
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleUp);
-        
-        return () => {
-            window.removeEventListener('mousemove', handleMove);
-            window.removeEventListener('mouseup', handleUp);
-        };
-    }, [isDragging, localPosition]);
-
-    const handlePointerLeave = useCallback(() => {
-        if (isDragging) {
-            onSeek(localPosition);
-            setIsDragging(false);
-        }
-        setIsHovering(false);
-    }, [isDragging, localPosition, onSeek]);
-
-    const handleClick = useCallback((e: React.MouseEvent) => {
-        if (disabled || isBuffering || isDragging) return;
-        
-        const newPosition = handleSeekFromEvent(e.clientX);
-        if (newPosition !== undefined) {
-            onSeek(newPosition);
-        }
-    }, [disabled, isBuffering, isDragging, handleSeekFromEvent]);
-
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const handleRangeKeyUp = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (disabled) return;
-        
-        const step = e.shiftKey ? 1 : 5;
-        
-        switch (e.key) {
-            case 'ArrowLeft':
-                e.preventDefault();
-                onSeek(Math.max(0, localPosition - step));
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                onSeek(Math.min(duration, localPosition + step));
-                break;
-            case 'Home':
-                e.preventDefault();
-                onSeek(0);
-                break;
-            case 'End':
-                e.preventDefault();
-                onSeek(duration);
-                break;
+
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
+            commitSeek(localPosition);
         }
-    }, [disabled, localPosition, duration, onSeek]);
+    }, [commitSeek, disabled, localPosition]);
 
     const toggleTimeDisplay = useCallback(() => {
         setShowRemaining(prev => {
@@ -210,7 +124,7 @@ export const SeekBar: React.FC<SeekBarProps> = ({
     const remaining = safeDuration - displayPosition;
     const percent = safeDuration > 0 ? (displayPosition / safeDuration) * 100 : 0;
 
-    const showThumb = isTouchDevice || isDragging || isHovering;
+    const showThumb = isTouchDevice || isDragging || isHovering || isPlaying;
     const showTooltip = isDragging && !isTouchDevice;
 
     const shouldShowMarkers = isTouchDevice && duration > 120;
@@ -236,52 +150,43 @@ export const SeekBar: React.FC<SeekBarProps> = ({
                 aria-disabled={disabled || isBuffering}
                 tabIndex={disabled ? -1 : 0}
                 onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => {
-                    if (isDragging) handlePointerLeave();
-                    setIsHovering(false);
-                }}
-                onMouseDown={handlePointerDown}
-                onMouseMove={handlePointerMove}
-                onMouseUp={handlePointerUp}
-                onTouchStart={handlePointerDown}
-                onTouchMove={handlePointerMove}
-                onTouchEnd={handlePointerUp}
-                onTouchCancel={handlePointerUp}
-                onKeyDown={handleKeyDown}
-                onClick={handleClick}
+                onMouseLeave={() => setIsHovering(false)}
                 className="relative h-6 md:h-2 py-2 md:py-0 -my-1 md:my-0 cursor-pointer touch-manipulation select-none"
                 style={{ pointerEvents: disabled || isBuffering ? 'none' : 'auto' }}
             >
                 <input
                     type="range"
                     min={0}
-                    max={duration}
+                    max={safeDuration}
                     step={0.1}
-                    value={localPosition}
-                    onChange={(e) => setLocalPosition(Number(e.target.value))}
+                    value={displayPosition}
+                    onChange={handleRangeChange}
+                    onPointerDown={handleRangePointerDown}
+                    onPointerUp={handleRangePointerUp}
+                    onTouchEnd={handleRangePointerUp}
+                    onMouseUp={handleRangePointerUp}
+                    onKeyUp={handleRangeKeyUp}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     disabled={disabled || isBuffering}
-                    aria-hidden="true"
+                    aria-label="Track progress"
                 />
 
                 <div className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[3px] md:h-[2px] bg-white/10 group-hover:h-[6px] md:group-hover:h-[4px] transition-all pointer-events-none rounded-full" />
 
                 <div
-                    ref={progressRef}
                     className={`absolute inset-y-0 left-0 bg-dominant transition-all rounded-r-full pointer-events-none top-1/2 -translate-y-1/2 h-[3px] md:h-[2px] md:group-hover:h-[4px] ${isGlowEnabled ? 'shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)]' : ''}`}
-                    style={{ width: isDragging ? `calc(${progressPercent}% - 8px)` : `calc(${percent}% - 8px)` }}
+                    style={{ width: `${isDragging ? progressPercent : percent}%` }}
                 />
 
                 <div
-                    ref={thumbRef}
                     className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 md:w-3 bg-white rounded-full shadow-lg transition-all duration-150 z-20 pointer-events-none ${showThumb ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
                     style={{ left: isDragging ? `${progressPercent}%` : `${percent}%` }}
                 />
 
                 {showTooltip && (
                     <div
-                        ref={tooltipRef}
                         className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded border border-white/10 whitespace-nowrap"
+                        style={{ left: `${isDragging ? progressPercent : percent}%` }}
                     >
                         {formatDuration(localPosition)}
                     </div>
