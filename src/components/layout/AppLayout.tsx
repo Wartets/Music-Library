@@ -11,26 +11,18 @@ import { useUI } from '../../contexts/UIContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MobileTabBar } from './MobileTabBar';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import {
+    DEFAULT_VIEW,
+    NavigationEntry,
+    ViewType,
+    isViewType,
+    normalizeHistoryEntries,
+    resolveViewType
+} from './viewRouting';
 
-export type ViewType = 'Dashboard' | 'SearchResults' | 'AllTracks' | 'DetailedHistory' | 'Albums' | 'Artists' | 'Genres' | 'Years' | 'Folders' | 'Formats' | 'Favorites' | 'Playlists' | 'Settings' | 'AlbumDetail' | 'ArtistDetail' | 'SongDetail' | 'BigScreen' | 'Queue';
+export type { ViewType } from './viewRouting';
 
-const DEFAULT_VIEW: ViewType = 'Dashboard';
-
-const VALID_VIEWS: ReadonlySet<ViewType> = new Set([
-    'Dashboard', 'SearchResults', 'AllTracks', 'DetailedHistory', 'Albums', 'Artists', 'Genres', 'Years',
-    'Folders', 'Formats', 'Favorites', 'Playlists', 'Settings', 'AlbumDetail', 'ArtistDetail', 'SongDetail',
-    'BigScreen', 'Queue'
-]);
-
-const isViewType = (view: unknown): view is ViewType => {
-    return typeof view === 'string' && VALID_VIEWS.has(view as ViewType);
-};
-
-const resolveViewType = (view: unknown, fallback: ViewType = DEFAULT_VIEW): ViewType => {
-    return isViewType(view) ? view : fallback;
-};
-
-const getInitialHistory = (): { view: ViewType, data: any }[] => {
+const getInitialHistory = (): NavigationEntry[] => {
     try {
         const saved = localStorage.getItem('nav_history');
         if (!saved) {
@@ -38,18 +30,7 @@ const getInitialHistory = (): { view: ViewType, data: any }[] => {
         }
 
         const parsed = JSON.parse(saved);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-            return [{ view: DEFAULT_VIEW, data: null }];
-        }
-
-        const normalizedHistory = parsed
-            .map((entry) => ({
-                view: resolveViewType(entry?.view),
-                data: entry?.data ?? null
-            }))
-            .filter((entry) => isViewType(entry.view));
-
-        return normalizedHistory.length > 0 ? normalizedHistory : [{ view: DEFAULT_VIEW, data: null }];
+        return normalizeHistoryEntries(parsed);
     } catch {
         return [{ view: DEFAULT_VIEW, data: null }];
     }
@@ -72,7 +53,7 @@ const getInitialHistoryIndex = (historyLength: number): number => {
 
 export const AppLayout: React.FC = () => {
     const initialHistory = getInitialHistory();
-    const [history, setHistory] = useState<{ view: ViewType, data: any }[]>(initialHistory);
+    const [history, setHistory] = useState<NavigationEntry[]>(initialHistory);
     const [historyIndex, setHistoryIndex] = useState(() => getInitialHistoryIndex(initialHistory.length));
     const [showContext, setShowContext] = useState(false);
 
@@ -87,13 +68,14 @@ export const AppLayout: React.FC = () => {
         localStorage.setItem('nav_history_index', safeHistoryIndex.toString());
     }, [history, safeHistoryIndex]);
 
-    const navigate = (view: ViewType, data: any = null) => {
+    const navigate = (view: ViewType, data: unknown = null) => {
+        const safeView = resolveViewType(view);
         if (!isViewType(view)) {
-            console.warn(`Invalid view: ${view}`);
-            view = DEFAULT_VIEW;
+            console.warn(`Invalid view requested: ${String(view)}. Falling back to ${DEFAULT_VIEW}.`);
         }
+
         const newHistory = history.slice(0, safeHistoryIndex + 1);
-        newHistory.push({ view, data });
+        newHistory.push({ view: safeView, data });
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     };
@@ -122,7 +104,20 @@ export const AppLayout: React.FC = () => {
     );
 };
 
-const AppContent: React.FC<any> = ({
+interface AppContentProps {
+    history: NavigationEntry[];
+    historyIndex: number;
+    currentView: ViewType;
+    viewData: unknown;
+    navigate: (view: ViewType, data?: unknown) => void;
+    goBack: () => void;
+    goForward: () => void;
+    showContext: boolean;
+    setShowContext: React.Dispatch<React.SetStateAction<boolean>>;
+    showShellChrome: boolean;
+}
+
+const AppContent: React.FC<AppContentProps> = ({
     history, historyIndex, currentView, viewData, navigate, goBack, goForward, showContext, setShowContext, showShellChrome
 }) => {
     const { contextMenu, closeContextMenu, showToast } = useUI();
