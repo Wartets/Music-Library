@@ -10,47 +10,106 @@ import { ContextMenu } from '../shared/ContextMenu';
 import { useUI } from '../../contexts/UIContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MobileTabBar } from './MobileTabBar';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
 export type ViewType = 'Dashboard' | 'SearchResults' | 'AllTracks' | 'DetailedHistory' | 'Albums' | 'Artists' | 'Genres' | 'Years' | 'Folders' | 'Formats' | 'Favorites' | 'Playlists' | 'Settings' | 'AlbumDetail' | 'ArtistDetail' | 'SongDetail' | 'BigScreen' | 'Queue';
 
-export const AppLayout: React.FC = () => {
-    const [history, setHistory] = useState<{ view: ViewType, data: any }[]>(() => {
+const DEFAULT_VIEW: ViewType = 'Dashboard';
+
+const VALID_VIEWS: ReadonlySet<ViewType> = new Set([
+    'Dashboard', 'SearchResults', 'AllTracks', 'DetailedHistory', 'Albums', 'Artists', 'Genres', 'Years',
+    'Folders', 'Formats', 'Favorites', 'Playlists', 'Settings', 'AlbumDetail', 'ArtistDetail', 'SongDetail',
+    'BigScreen', 'Queue'
+]);
+
+const isViewType = (view: unknown): view is ViewType => {
+    return typeof view === 'string' && VALID_VIEWS.has(view as ViewType);
+};
+
+const resolveViewType = (view: unknown, fallback: ViewType = DEFAULT_VIEW): ViewType => {
+    return isViewType(view) ? view : fallback;
+};
+
+const getInitialHistory = (): { view: ViewType, data: any }[] => {
+    try {
         const saved = localStorage.getItem('nav_history');
-        return saved ? JSON.parse(saved) : [{ view: 'Dashboard', data: null }];
-    });
-    const [historyIndex, setHistoryIndex] = useState(() => {
+        if (!saved) {
+            return [{ view: DEFAULT_VIEW, data: null }];
+        }
+
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+            return [{ view: DEFAULT_VIEW, data: null }];
+        }
+
+        const normalizedHistory = parsed
+            .map((entry) => ({
+                view: resolveViewType(entry?.view),
+                data: entry?.data ?? null
+            }))
+            .filter((entry) => isViewType(entry.view));
+
+        return normalizedHistory.length > 0 ? normalizedHistory : [{ view: DEFAULT_VIEW, data: null }];
+    } catch {
+        return [{ view: DEFAULT_VIEW, data: null }];
+    }
+};
+
+const getInitialHistoryIndex = (historyLength: number): number => {
+    try {
         const saved = localStorage.getItem('nav_history_index');
-        return saved ? parseInt(saved) : 0;
-    });
+        const parsed = saved ? parseInt(saved, 10) : 0;
+
+        if (Number.isNaN(parsed)) {
+            return 0;
+        }
+
+        return Math.min(Math.max(parsed, 0), Math.max(historyLength - 1, 0));
+    } catch {
+        return 0;
+    }
+};
+
+export const AppLayout: React.FC = () => {
+    const initialHistory = getInitialHistory();
+    const [history, setHistory] = useState<{ view: ViewType, data: any }[]>(initialHistory);
+    const [historyIndex, setHistoryIndex] = useState(() => getInitialHistoryIndex(initialHistory.length));
     const [showContext, setShowContext] = useState(false);
 
-    const currentView = history[historyIndex].view;
-    const viewData = history[historyIndex].data;
+    const safeHistoryIndex = Math.min(Math.max(historyIndex, 0), Math.max(history.length - 1, 0));
+    const currentEntry = history[safeHistoryIndex] ?? { view: DEFAULT_VIEW, data: null };
+    const currentView = resolveViewType(currentEntry.view);
+    const viewData = currentEntry.data;
+    const showShellChrome = currentView !== 'BigScreen';
 
     useEffect(() => {
         localStorage.setItem('nav_history', JSON.stringify(history));
-        localStorage.setItem('nav_history_index', historyIndex.toString());
-    }, [history, historyIndex]);
+        localStorage.setItem('nav_history_index', safeHistoryIndex.toString());
+    }, [history, safeHistoryIndex]);
 
     const navigate = (view: ViewType, data: any = null) => {
-        const newHistory = history.slice(0, historyIndex + 1);
+        if (!isViewType(view)) {
+            console.warn(`Invalid view: ${view}`);
+            view = DEFAULT_VIEW;
+        }
+        const newHistory = history.slice(0, safeHistoryIndex + 1);
         newHistory.push({ view, data });
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     };
 
     const goBack = () => {
-        if (historyIndex > 0) setHistoryIndex(historyIndex - 1);
+        if (safeHistoryIndex > 0) setHistoryIndex(safeHistoryIndex - 1);
     };
 
     const goForward = () => {
-        if (historyIndex < history.length - 1) setHistoryIndex(historyIndex + 1);
+        if (safeHistoryIndex < history.length - 1) setHistoryIndex(safeHistoryIndex + 1);
     };
 
     return (
         <AppContent
             history={history}
-            historyIndex={historyIndex}
+            historyIndex={safeHistoryIndex}
             currentView={currentView}
             viewData={viewData}
             navigate={navigate}
@@ -58,16 +117,18 @@ export const AppLayout: React.FC = () => {
             goForward={goForward}
             showContext={showContext}
             setShowContext={setShowContext}
+            showShellChrome={showShellChrome}
         />
     );
 };
 
 const AppContent: React.FC<any> = ({
-    history, historyIndex, currentView, viewData, navigate, goBack, goForward, showContext, setShowContext
+    history, historyIndex, currentView, viewData, navigate, goBack, goForward, showContext, setShowContext, showShellChrome
 }) => {
     const { contextMenu, closeContextMenu, showToast } = useUI();
     const { togglePlay, playNext, playPrevious, state: playerState } = usePlayer();
     const { applyArtworkColors } = useTheme();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         // Trigger theme update when track changes or component mounts
@@ -128,10 +189,10 @@ const AppContent: React.FC<any> = ({
         <div className="h-screen w-full flex flex-col overflow-hidden bg-dominant-dark text-white selection:bg-dominant-light selection:text-white">
             <div className="flex flex-1 overflow-hidden relative">
                 <Sidebar currentView={currentView} onNavigate={navigate} />
-                <div className={`flex-1 flex flex-col overflow-hidden relative ${currentView !== 'BigScreen' ? 'pb-[10.25rem] md:pb-0' : 'pb-0'}`}>
+                <div className={`flex-1 flex flex-col overflow-hidden relative ${showShellChrome && isMobile ? 'pb-[10.25rem]' : 'pb-0'}`}>
                     {/* Navigation Bar - Superimposed, no background, fixed position */}
-                    {currentView !== 'BigScreen' && (
-                        <div className="hidden md:flex fixed top-4 left-24 xl:left-72 z-40 items-center gap-2 pointer-events-none">
+                    {showShellChrome && !isMobile && (
+                        <div className="flex fixed top-4 left-24 xl:left-72 z-40 items-center gap-2 pointer-events-none">
                             <button
                                 onClick={goBack}
                                 disabled={historyIndex === 0}
@@ -154,7 +215,7 @@ const AppContent: React.FC<any> = ({
                 </div>
                 {showContext && <ContextPanel isOpen={showContext} onClose={() => setShowContext(false)} />}
             </div>
-            {currentView !== 'BigScreen' && (
+            {showShellChrome && (
                 <>
                     <PlayerBar onNavigate={navigate} onToggleContext={() => setShowContext(!showContext)} />
                     <MobileTabBar currentView={currentView} onNavigate={(view, data) => navigate(view, data ?? null)} />

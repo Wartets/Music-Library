@@ -34,7 +34,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 
 
-interface SortableItemProps {
+interface QueueListItemProps {
     track: QueueDisplayItem;
     index: number;
     curIdx: number;
@@ -53,7 +53,7 @@ const getArtworkForTrack = (track: any) => {
 
 const trackTitle = (track: any) => track.metadata?.title || track.logic.track_name;
 
-const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
+const QueueListItem: React.FC<QueueListItemProps> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
     const {
         attributes,
         listeners,
@@ -120,48 +120,6 @@ const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, inde
                     <GripVertical size={16} />
                 </div>
             </div>
-        </div>
-    );
-});
-
-const QueueListItem: React.FC<{
-    track: QueueDisplayItem;
-    index: number;
-    curIdx: number;
-    playTrack: any;
-    removeFromQueue: any;
-    originalQueue: any[];
-    onContextMenu?: (e: React.MouseEvent) => void;
-}> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
-    const artwork = getArtworkForTrack(track);
-    return (
-        <div className="group flex items-center gap-5 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 relative h-full" onContextMenu={onContextMenu}>
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="text-[10px] font-black text-white/10 w-6 text-center font-mono">{(index + 1).toString().padStart(2, '0')}</div>
-            <button
-                onClick={() => playTrack(track, originalQueue)}
-                className="w-6 h-6 items-center justify-center text-dominant bg-dominant/10 rounded-lg hover:bg-dominant/20 transition-colors inline-flex"
-            >
-                <Play size={14} fill="currentColor" />
-            </button>
-            <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/5 shadow-lg">
-                <ArtworkImage details={artwork} alt={trackTitle(track)} />
-            </div>
-            <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-white truncate">{trackTitle(track)}</div>
-                <div className="text-[10px] font-bold text-gray-500 truncate uppercase tracking-tighter mt-0.5">{track.metadata?.artists?.join(', ')}</div>
-            </div>
-            <div className="flex flex-col items-end gap-1 min-w-[80px]">
-                <div className="text-[10px] font-black text-gray-600 font-mono">+{formatDuration(track.startTimeSeconds)}</div>
-                <div className="text-xs font-bold text-white/40">{track.audio_specs?.duration}</div>
-            </div>
-            <button
-                onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
-                className="p-2 text-gray-500 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg"
-                title="Remove from queue"
-            >
-                <Trash2 size={16} />
-            </button>
         </div>
     );
 });
@@ -458,8 +416,8 @@ export const QueueView: React.FC = () => {
                     <div>
                         <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">Playback Control</h1>
                         <p className="text-gray-500 text-xs md:text-sm mt-1 flex items-center gap-3 md:gap-4 flex-wrap">
-                            <span className="flex items-center gap-1.5"><ListMusic size={14} /> {nextTracksRaw.length} tracks upcoming</span>
-                            <span className="flex items-center gap-1.5"><Clock size={14} /> {formatDuration(totalQueueDuration)} remaining</span>
+                             <span className="flex items-center gap-1.5"><ListMusic size={14} /> {queueDisplay.length} tracks upcoming</span>
+                             <span className="flex items-center gap-1.5"><Clock size={14} /> {formatDuration(totalQueueDuration)} remaining</span>
                             <span className={`text-xs font-black uppercase tracking-wider ${playerState.shuffle ? 'text-dominant-light' : 'text-gray-600'}`}>
                                 Shuffle {playerState.shuffle ? 'On' : 'Off'}
                             </span>
@@ -615,7 +573,7 @@ export const QueueView: React.FC = () => {
                                     >
                                         <div className="space-y-2">
                                             {filteredQueueDisplay.map((track, index) => (
-                                                <SortableTrackItem
+                                                <QueueListItem
                                                     key={track.id}
                                                     track={track}
                                                     index={index}
@@ -632,9 +590,9 @@ export const QueueView: React.FC = () => {
                             ) : (
                                 <div className="h-[min(70vh,720px)] rounded-2xl border border-white/5 overflow-hidden">
                                     <VirtualList
-                                        items={queueWithTime}
+                                        items={queueDisplay}
                                         rowHeight={74}
-                                        renderRow={(track: QueueTrackItem, index: number) => (
+                                        renderRow={(track: QueueDisplayItem, index: number) => (
                                             <div className="px-1 py-1">
                                                 <QueueListItem
                                                     track={track}

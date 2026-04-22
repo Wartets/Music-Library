@@ -473,7 +473,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         let accumulatedTime = currentTrack ? getProgress() : 0;
         items.forEach((item) => {
             item.startTimeSeconds = accumulatedTime;
-            accumulatedTime += duration;
+            accumulatedTime += parseDuration(item.audio_specs?.duration) || 0;
         });
 
         setQueueDisplay(items);
