@@ -43,6 +43,7 @@ export class AudioEngine {
     private normalizationBuffer: Uint8Array | null = null;
     private lastNormalizationAt: number = 0;
     private userVolume: number = 1;
+    private djBurstTimer: number | null = null;
 
     public getAnalyser(): AnalyserNode | null {
         return this.analyserNode;
@@ -176,6 +177,38 @@ export class AudioEngine {
 
     private getActiveGainNode(): GainNode | null {
         return this.activeAudioElement === 1 ? this.gainNode : this.secondaryGainNode;
+    }
+
+    triggerDjBurst(): void {
+        const el = this.getActiveElement();
+        if (!this.currentTrack || el.paused) {
+            return;
+        }
+
+        if (this.djBurstTimer) {
+            window.clearTimeout(this.djBurstTimer);
+            this.djBurstTimer = null;
+        }
+
+        const originalRate = 1;
+        const burstRate = 1.07;
+        const gainNode = this.getActiveGainNode();
+        const now = this.audioContext?.currentTime || 0;
+        const effectiveVolume = this.getEffectiveVolume();
+
+        el.playbackRate = burstRate;
+
+        if (this.audioContext && gainNode) {
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(effectiveVolume, now);
+            gainNode.gain.linearRampToValueAtTime(this.clamp(effectiveVolume * 1.03, 0, 1), now + 0.04);
+            gainNode.gain.linearRampToValueAtTime(effectiveVolume, now + 0.12);
+        }
+
+        this.djBurstTimer = window.setTimeout(() => {
+            el.playbackRate = originalRate;
+            this.djBurstTimer = null;
+        }, 120);
     }
 
     private buildTrackSourceCandidates(track: TrackItem): string[] {

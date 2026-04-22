@@ -81,22 +81,35 @@ const AppContent: React.FC<any> = ({
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+            const target = e.target as HTMLElement;
+            const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+
+            // Spacebar: ONLY play/pause, always
+            if (e.code === 'Space') {
+                if (!isInput) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    togglePlay();
+                }
+                return;
+            }
+
+            // Other shortcuts only if not in input
+            if (isInput) return;
 
             switch (e.code) {
-                case 'Space':
-                    e.preventDefault();
-                    togglePlay();
-                    break;
                 case 'KeyN':
+                    e.preventDefault();
                     playNext();
                     showToast('Next Track');
                     break;
                 case 'KeyP':
+                    e.preventDefault();
                     playPrevious();
                     showToast('Previous Track');
                     break;
                 case 'KeyQ':
+                    e.preventDefault();
                     navigate('Queue');
                     break;
                 case 'KeyF':

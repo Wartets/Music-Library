@@ -5,6 +5,7 @@ import { ArtworkImage } from '../shared/ArtworkImage';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { audioEngine } from '../../services/audioEngine';
 import { persistenceService } from '../../services/persistence';
 
 interface SidebarProps {
@@ -17,8 +18,82 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
     const { playTrack, state: playerState } = usePlayer();
     const { currentPalette } = useTheme();
     const [isFocused, React_setIsFocused] = React.useState(false);
+    const [discScratch, setDiscScratch] = React.useState(false);
     const searchInputRef = React.useRef<HTMLInputElement>(null);
+    const discScratchTimeoutRef = React.useRef<number | null>(null);
+    const discRotationFrameRef = React.useRef<number | null>(null);
+    const lastRotationTickRef = React.useRef<number>(0);
+    const discRotationRef = React.useRef<number>(0);
+    const discSpinnerRef = React.useRef<HTMLDivElement>(null);
     const trackHashes = new Set(libState.tracks.map(track => track.logic.hash_sha256));
+    const isDiscSpinning = Boolean(playerState.currentTrack && playerState.isPlaying);
+
+    React.useEffect(() => {
+        return () => {
+            if (discScratchTimeoutRef.current) {
+                window.clearTimeout(discScratchTimeoutRef.current);
+            }
+            if (discRotationFrameRef.current) {
+                window.cancelAnimationFrame(discRotationFrameRef.current);
+            }
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (discRotationFrameRef.current) {
+            window.cancelAnimationFrame(discRotationFrameRef.current);
+            discRotationFrameRef.current = null;
+        }
+
+        if (!isDiscSpinning) {
+            lastRotationTickRef.current = 0;
+            return;
+        }
+
+        const spinMsPerRevolution = 16000;
+        const tick = (timestamp: number) => {
+            if (!lastRotationTickRef.current) {
+                lastRotationTickRef.current = timestamp;
+            }
+
+            const delta = timestamp - lastRotationTickRef.current;
+            lastRotationTickRef.current = timestamp;
+
+            discRotationRef.current = (discRotationRef.current + (360 * delta / spinMsPerRevolution)) % 360;
+            if (discSpinnerRef.current) {
+                discSpinnerRef.current.style.transform = `rotate(${discRotationRef.current}deg)`;
+            }
+            discRotationFrameRef.current = window.requestAnimationFrame(tick);
+        };
+
+        discRotationFrameRef.current = window.requestAnimationFrame(tick);
+
+        return () => {
+            if (discRotationFrameRef.current) {
+                window.cancelAnimationFrame(discRotationFrameRef.current);
+                discRotationFrameRef.current = null;
+            }
+            lastRotationTickRef.current = 0;
+        };
+    }, [isDiscSpinning]);
+
+    const triggerDiscScratch = React.useCallback(() => {
+        setDiscScratch(true);
+        if (discScratchTimeoutRef.current) {
+            window.clearTimeout(discScratchTimeoutRef.current);
+        }
+        discScratchTimeoutRef.current = window.setTimeout(() => {
+            setDiscScratch(false);
+            discScratchTimeoutRef.current = null;
+        }, 160);
+    }, []);
+
+    const handleDiscClick = React.useCallback(() => {
+        if (!isDiscSpinning) return;
+        triggerDiscScratch();
+        audioEngine.triggerDjBurst();
+    }, [isDiscSpinning, triggerDiscScratch]);
+
     const hasFavorites = persistenceService.getFavorites().some(id => {
         const primaryId = libState.versionToPrimaryMap[id] || id;
         return trackHashes.has(primaryId);
@@ -77,16 +152,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 <div className="flex flex-col items-center gap-4 mb-10">
                     <div
                         className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden flex-shrink-0 transition-all duration-700 group cursor-pointer active:scale-95 relative"
+                        onClick={handleDiscClick}
                         style={{
                             background: `linear-gradient(135deg, ${currentPalette.dominant} 0%, ${currentPalette.dominantDark} 100%)`,
                             boxShadow: `0 10px 30px -10px ${currentPalette.dominant}88`
                         }}
                     >
-                        <Disc3 className="text-white animate-[spin_8s_linear_infinite] group-hover:animate-[spin_2s_linear_infinite]" size={28} />
+                        {discScratch && (
+                            <div
+                                className="absolute inset-0 rounded-2xl animate-pulse"
+                                style={{ backgroundColor: `${currentPalette.dominantLight}2d` }}
+                            />
+                        )}
+                        <div
+                            ref={discSpinnerRef}
+                            className="absolute inset-0 flex items-center justify-center"
+                            style={{
+                                transform: 'rotate(0deg)',
+                                willChange: 'transform'
+                            }}
+                        >
+                            <Disc3
+                                className={`text-white transition-transform duration-100 ${discScratch ? 'scale-110' : ''}`}
+                                size={28}
+                                style={{
+                                    transformOrigin: 'center',
+                                    transform: discScratch ? 'rotate(22deg)' : 'rotate(0deg)'
+                                }}
+                            />
+                        </div>
                     </div>
                     <div className="flex flex-col">
                         <h1 className="text-xl font-black tracking-tighter text-white hidden lg:block leading-none">Music Library</h1>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-dominant hidden lg:block mt-1 opacity-80">Local player</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-dominant hidden lg:block mt-1 opacity-80">Web player</span>
                     </div>
                 </div>
 
