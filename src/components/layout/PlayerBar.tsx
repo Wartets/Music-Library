@@ -15,9 +15,6 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     const [isDragging, setIsDragging] = useState(false);
     const [localProgress, setLocalProgress] = useState(0);
     const rafRef = useRef<number | null>(null);
-    const progressBarRef = useRef<HTMLDivElement>(null);
-    const thumbRef = useRef<HTMLDivElement>(null);
-    const timeDisplayRef = useRef<HTMLButtonElement>(null);
     const durationRef = useRef<number>(0);
 
     // Helper for HH:MM:SS / MM:SS to seconds
@@ -34,28 +31,22 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
     const durationSec = parseDurationStr(track?.audio_specs?.duration || null);
     durationRef.current = durationSec;
-    const progressPercent = durationSec > 0 ? (localProgress / durationSec) * 100 : 0;
+    const safeProgress = Math.max(0, Math.min(localProgress, durationSec || 0));
+    const progressPercent = durationSec > 0 ? (safeProgress / durationSec) * 100 : 0;
 
     useEffect(() => {
         let lastTime = 0;
+
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+
         const updateProgress = (timestamp: number) => {
-            if (timestamp - lastTime > 42) {
+            if (timestamp - lastTime > 42 && !isDragging) {
                 lastTime = timestamp;
                 const current = getProgress();
-                const duration = durationRef.current;
-
-                if (progressBarRef.current) {
-                    const percent = duration > 0 ? (current / duration) : 0;
-                    progressBarRef.current.style.transform = `scaleX(${percent})`;
-                    if (thumbRef.current) thumbRef.current.style.transform = `translateX(${percent * 100}%)`;
-                }
-
-                if (timeDisplayRef.current && !isDragging) {
-                    const displayTime = formatDuration(current);
-                    if (timeDisplayRef.current.textContent !== displayTime) {
-                        timeDisplayRef.current.textContent = displayTime;
-                    }
-                }
+                setLocalProgress(current);
             }
 
             if (state.isPlaying) {
@@ -65,40 +56,33 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
         if (state.isPlaying) {
             rafRef.current = requestAnimationFrame(updateProgress);
-        } else {
-            updateProgress(0);
+        } else if (!isDragging) {
+            setLocalProgress(getProgress());
         }
 
         return () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
-    }, [getProgress, state.isPlaying, isDragging]);
+    }, [getProgress, state.isPlaying, isDragging, track?.logic.hash_sha256]);
 
     const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setLocalProgress(Number(e.target.value));
-    };
-
-    const handleSeekEnd = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
-        setIsDragging(false);
-        const el = e.target as HTMLInputElement;
-        seek(Number(el.value));
-    };
-
-    const handleSeekMouseLeave = () => {
-        if (isDragging) {
-            setIsDragging(false);
-            seek(localProgress);
+        const value = Number(e.target.value);
+        setLocalProgress(value);
+        if (track) {
+            seek(value);
         }
     };
 
-    const handleSeekBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!track || !durationSec) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percent = clickX / rect.width;
-        const newTime = percent * durationSec;
-        setLocalProgress(newTime);
-        seek(newTime);
+    const handleSeekPointerDown = (e: React.PointerEvent<HTMLInputElement>) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setIsDragging(true);
+    };
+
+    const handleSeekPointerUp = (e: React.PointerEvent<HTMLInputElement>) => {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+        setIsDragging(false);
     };
 
     const isCompact = persistenceService.get('ui_compact_player') === true;
@@ -181,7 +165,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
             ></div>
 
             {/* Seek Bar */}
-            <div className="w-full relative h-[6px] group -mt-[3px] cursor-pointer" style={{ pointerEvents: track ? 'auto' : 'none' }} onClick={handleSeekBarClick}>
+            <div className="w-full relative h-[6px] group -mt-[3px] cursor-pointer" style={{ pointerEvents: track ? 'auto' : 'none' }}>
                 <input
                     type="range"
                     min={0}
@@ -189,13 +173,10 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                     step={0.1}
                     value={localProgress}
                     onChange={handleSeekChange}
-                    onMouseDown={() => setIsDragging(true)}
-                    onMouseUp={handleSeekEnd}
-                    onMouseLeave={handleSeekMouseLeave}
-                    onTouchStart={() => setIsDragging(true)}
-                    onTouchEnd={handleSeekEnd}
-                    onTouchCancel={handleSeekMouseLeave}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onPointerDown={handleSeekPointerDown}
+                    onPointerUp={handleSeekPointerUp}
+                    onPointerCancel={() => setIsDragging(false)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 touch-none"
                     disabled={!track}
                 />
 
@@ -204,16 +185,8 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
                 {/* Progress Fill */}
                 <div
-                    ref={progressBarRef}
                     className={`absolute inset-y-0 left-0 bg-dominant group-hover:bg-dominant-light transition-all rounded-r-full pointer-events-none top-1/2 -translate-y-1/2 h-[2px] group-hover:h-[4px] mx-1 origin-left ${isCompact ? '' : isGlowEnabled ? 'shadow-[0_0_15px_rgba(var(--color-dominant-rgb),0.5)]' : ''}`}
-                    style={{ transform: `scaleX(${durationSec > 0 ? localProgress / durationSec : 0})`, width: 'calc(100% - 8px)' }}
-                ></div>
-
-                {/* Seeker Thumb */}
-                <div
-                    ref={thumbRef}
-                    className="absolute top-1/2 -translate-y-1/2 left-0 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-125 z-20 pointer-events-none"
-                    style={{ transform: `translateX(${progressPercent}%)`, marginLeft: '-6px' }}
+                    style={{ transform: `scaleX(${durationSec > 0 ? safeProgress / durationSec : 0})`, width: 'calc(100% - 8px)' }}
                 ></div>
 
                 {/* Visual Feedback on Drag */}
@@ -345,6 +318,12 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                         </button>
                     </div>
 
+                    <div className="md:hidden mt-1 mb-1 text-[10px] font-mono text-gray-400 leading-none">
+                        <span>{formatDuration(safeProgress)}</span>
+                        <span className="mx-1.5 text-gray-600">/</span>
+                        <span>{formatDuration(durationSec || 0)}</span>
+                    </div>
+
                     <div className="md:hidden mt-1 flex items-center justify-center gap-2.5 w-full">
                         {onToggleContext && (
                             <button
@@ -398,6 +377,12 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
 
                 {/* Right: Volume (time display now in SeekBar) */}
                 <div className="hidden md:flex flex-col items-end w-1/3 text-xs text-gray-400 font-medium font-mono">
+                    <div className="mb-1 text-[10px] leading-none text-gray-400">
+                        <span>{formatDuration(safeProgress)}</span>
+                        <span className="mx-2 text-gray-600">/</span>
+                        <span>{formatDuration(durationSec || 0)}</span>
+                    </div>
+
                     <div className="flex items-center gap-3 w-32 group/vol relative">
                         <button
                             onClick={toggleMute}
@@ -436,8 +421,6 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
                     </div>
                 </div>
             </div>
-
-
         </footer >
     );
 };
