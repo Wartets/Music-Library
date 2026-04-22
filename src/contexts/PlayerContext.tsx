@@ -200,11 +200,11 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             history,
         }));
 
-        if (!suppressHistoryLog) {
-            persistenceService.addToHistory(track.logic.hash_sha256);
-        }
-
-        audioEngine.play(track).catch((err) => {
+        audioEngine.play(track).then(() => {
+            if (!suppressHistoryLog) {
+                persistenceService.addToHistory(track.logic.hash_sha256);
+            }
+        }).catch((err) => {
             handlePlaybackFailureRef.current(err as Error, track);
         });
     }, [resetRecoveryState]);
