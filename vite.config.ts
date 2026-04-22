@@ -1,16 +1,19 @@
 import { defineConfig, Plugin, ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { fileURLToPath } from 'node:url';
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
 
 function copyMusicBibJson(): Plugin {
     return {
         name: 'copy-musicbib-json',
         apply: 'build',
         closeBundle() {
-            const source = resolve(__dirname, 'musicBib.json');
-            const destination = resolve(__dirname, 'dist', 'musicBib.json');
+            const source = resolve(currentDir, 'musicBib.json');
+            const destination = resolve(currentDir, 'dist', 'musicBib.json');
 
             if (!existsSync(source)) {
                 console.warn('musicBib.json not found at project root; dist/musicBib.json was not generated.');
@@ -46,8 +49,8 @@ function musicFilesMiddleware(): Plugin {
                     return next();
                 }
 
-                const localPath = resolve(__dirname, '..', 'Music-Library', musicPath);
-                const altLocalPath = resolve(__dirname, musicPath);
+                const localPath = resolve(currentDir, '..', 'Music-Library', musicPath);
+                const altLocalPath = resolve(currentDir, musicPath);
 
                 let filePath = '';
                 if (existsSync(localPath)) {
