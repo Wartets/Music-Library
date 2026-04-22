@@ -3,6 +3,31 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { Visualizer } from '../player/Visualizer';
 import { formatSizeMb } from '../../utils/formatters';
 
+interface ParsedLyricLine {
+    time: number;
+    content: string;
+    id: number;
+}
+
+interface ParsedLyrics {
+    lines: ParsedLyricLine[];
+    hasTimestamps: boolean;
+    timedLineIndexes: Array<{ time: number; index: number }>;
+}
+
+const formatSpecValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.trim();
+        return normalized.length > 0 ? normalized : '-';
+    }
+
+    return String(value);
+};
+
 export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const { state: playerState, getProgress } = usePlayer();
     const track = playerState.currentTrack;
@@ -17,14 +42,18 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
         return () => clearInterval(interval);
     }, [isOpen, getProgress]);
 
-    const parsedLyrics = React.useMemo(() => {
-        const text = track?.metadata?.lyrics || track?.metadata?.description || track?.metadata?.comment || '';
-        if (!text) return null;
+    const lyricsSourceText = React.useMemo(
+        () => track?.metadata?.lyrics || track?.metadata?.description || track?.metadata?.comment || '',
+        [track?.metadata?.comment, track?.metadata?.description, track?.metadata?.lyrics]
+    );
 
-        const lines = text.split('\n');
+    const parsedLyrics = React.useMemo(() => {
+        if (!lyricsSourceText) return null;
+
+        const lines = lyricsSourceText.split('\n');
         let hasTimestamps = false;
 
-        const lyricsData = lines.map((line, idx) => {
+        const lyricsData: ParsedLyricLine[] = lines.map((line, idx) => {
             const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\]/);
             if (match) {
                 hasTimestamps = true;
@@ -38,32 +67,67 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
             return { time: -1, content: line.trim(), id: idx };
         }).filter(l => l.content.length > 0 || l.time >= 0);
 
-        return lyricsData.length > 0 ? { lines: lyricsData, hasTimestamps } : null;
-    }, [track]);
+        if (lyricsData.length === 0) {
+            return null;
+        }
+
+        const timedLineIndexes = lyricsData
+            .map((line, index) => ({ time: line.time, index }))
+            .filter((line) => line.time >= 0);
+
+        return { lines: lyricsData, hasTimestamps, timedLineIndexes } as ParsedLyrics;
+    }, [lyricsSourceText]);
 
     // Simple smooth scroll ref for active lyric
     const lyricsRef = React.useRef<HTMLDivElement>(null);
+    const lyricsScrollTimeoutRef = React.useRef<number | null>(null);
+
     const activeLyricIndex = React.useMemo(() => {
-        if (!parsedLyrics?.hasTimestamps || progressR === 0) return -1;
-        // Find the last lyric line that is <= current time
-        let activeIdx = -1;
-        for (let i = 0; i < parsedLyrics.lines.length; i++) {
-            if (parsedLyrics.lines[i].time !== -1 && parsedLyrics.lines[i].time <= progressR) {
-                activeIdx = i;
-            } else if (parsedLyrics.lines[i].time !== -1 && parsedLyrics.lines[i].time > progressR) {
-                break;
+        if (!parsedLyrics?.hasTimestamps || parsedLyrics.timedLineIndexes.length === 0) return -1;
+
+        let left = 0;
+        let right = parsedLyrics.timedLineIndexes.length - 1;
+        let best = -1;
+
+        while (left <= right) {
+            const mid = Math.floor((left + right) / 2);
+            const current = parsedLyrics.timedLineIndexes[mid];
+
+            if (current.time <= progressR) {
+                best = current.index;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
             }
         }
-        return activeIdx;
+
+        return best;
     }, [parsedLyrics, progressR]);
 
     React.useEffect(() => {
-        if (activeLyricIndex >= 0 && lyricsRef.current) {
-            const activeEl = lyricsRef.current.querySelector(`[data-index="${activeLyricIndex}"]`);
+        if (lyricsScrollTimeoutRef.current) {
+            window.clearTimeout(lyricsScrollTimeoutRef.current);
+            lyricsScrollTimeoutRef.current = null;
+        }
+
+        if (activeLyricIndex < 0 || !lyricsRef.current) {
+            return;
+        }
+
+        lyricsScrollTimeoutRef.current = window.setTimeout(() => {
+            const activeEl = lyricsRef.current?.querySelector(`[data-index="${activeLyricIndex}"]`);
             if (activeEl) {
                 activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        }
+            lyricsScrollTimeoutRef.current = null;
+        }, 90);
+
+        return () => {
+            if (lyricsScrollTimeoutRef.current) {
+                window.clearTimeout(lyricsScrollTimeoutRef.current);
+                lyricsScrollTimeoutRef.current = null;
+            }
+        };
     }, [activeLyricIndex]);
 
     if (!isOpen) return null;
@@ -102,19 +166,19 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                                     <ul className="space-y-2 md:space-y-2.5 text-[11px] md:text-xs">
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Codec</span>
-                                            <span className="text-white uppercase font-mono bg-white/10 px-1.5 py-0.5 rounded">{track.audio_specs?.codec || 'Unknown'}</span>
+                                            <span className="text-white uppercase font-mono bg-white/10 px-1.5 py-0.5 rounded">{formatSpecValue(track.audio_specs?.codec)}</span>
                                         </li>
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Bit Rate</span>
-                                            <span className="text-white font-mono">{track.audio_specs?.bitrate || '-'}</span>
+                                            <span className="text-white font-mono">{formatSpecValue(track.audio_specs?.bitrate)}</span>
                                         </li>
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Sample Rate</span>
-                                            <span className="text-white font-mono">{track.audio_specs?.sample_rate || '-'}</span>
+                                            <span className="text-white font-mono">{formatSpecValue(track.audio_specs?.sample_rate)}</span>
                                         </li>
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Channels</span>
-                                            <span className="text-white font-mono">{track.audio_specs?.channels || '-'}</span>
+                                            <span className="text-white font-mono">{formatSpecValue(track.audio_specs?.channels)}</span>
                                         </li>
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Quality</span>
@@ -131,17 +195,17 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                                     <ul className="space-y-2 md:space-y-2.5 text-[11px] md:text-xs">
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">BPM</span>
-                                            <span className="text-white font-mono">{track.metadata?.bpm || '-'}</span>
+                                            <span className="text-white font-mono">{formatSpecValue(track.metadata?.bpm)}</span>
                                         </li>
                                         <li className="flex justify-between items-start">
                                             <span className="text-gray-400">Genre</span>
                                             <span className="text-white text-right break-words max-w-[150px]">
-                                                {Array.isArray(track.metadata?.genre) ? track.metadata.genre.join(', ') : track.metadata?.genre || '-'}
+                                                {Array.isArray(track.metadata?.genre) ? track.metadata.genre.join(', ') : formatSpecValue(track.metadata?.genre)}
                                             </span>
                                         </li>
                                         <li className="flex justify-between items-center">
                                             <span className="text-gray-400">Year</span>
-                                            <span className="text-white font-mono">{track.metadata?.year || '-'}</span>
+                                            <span className="text-white font-mono">{formatSpecValue(track.metadata?.year)}</span>
                                         </li>
                                     </ul>
                                 </div>
