@@ -75,7 +75,7 @@ export const SeekBar: React.FC<SeekBarProps> = ({
     }, [localPosition, position, isDragging, isHovering, isPlaying, duration]);
 
     const handleSeekFromEvent = useCallback((clientX: number) => {
-        if (!containerRef.current || !duration) return;
+        if (!containerRef.current || !duration) return undefined;
         const rect = containerRef.current.getBoundingClientRect();
         const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         const newPosition = percent * duration;
@@ -98,6 +98,8 @@ export const SeekBar: React.FC<SeekBarProps> = ({
 
     const handlePointerMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
         if (!isDragging) return;
+        e.preventDefault();
+        e.stopPropagation();
         
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         handleSeekFromEvent(clientX);
@@ -113,6 +115,43 @@ export const SeekBar: React.FC<SeekBarProps> = ({
             }
         }
     }, [isDragging, localPosition, onSeek, isTouchDevice]);
+
+    // Global mouse event listeners for drag
+    const onSeekRef = useRef(onSeek);
+    const handleSeekRef = useRef(handleSeekFromEvent);
+    
+    useEffect(() => {
+        onSeekRef.current = onSeek;
+    }, [onSeek]);
+    
+    useEffect(() => {
+        handleSeekRef.current = handleSeekFromEvent;
+    }, [handleSeekFromEvent]);
+    
+    useEffect(() => {
+        if (!isDragging) return;
+        
+        const handleMove = (e: MouseEvent) => {
+            if (containerRef.current) {
+                handleSeekRef.current(e.clientX);
+            }
+        };
+        
+        const handleUp = () => {
+            if (isDragging) {
+                onSeekRef.current(localPosition);
+                setIsDragging(false);
+            }
+        };
+        
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        
+        return () => {
+            window.removeEventListener('mousemove', handleMove);
+            window.removeEventListener('mouseup', handleUp);
+        };
+    }, [isDragging, localPosition]);
 
     const handlePointerLeave = useCallback(() => {
         if (isDragging) {
@@ -164,9 +203,12 @@ export const SeekBar: React.FC<SeekBarProps> = ({
         });
     }, []);
 
-    const displayPosition = isDragging ? localPosition : position;
-    const remaining = duration - displayPosition;
-    const percent = duration > 0 ? (displayPosition / duration) * 100 : 0;
+    const safeDuration = typeof duration === 'number' && !isNaN(duration) ? duration : 0;
+    const safePosition = typeof position === 'number' && !isNaN(position) ? position : 0;
+    
+    const displayPosition = isDragging ? localPosition : safePosition;
+    const remaining = safeDuration - displayPosition;
+    const percent = safeDuration > 0 ? (displayPosition / safeDuration) * 100 : 0;
 
     const showThumb = isTouchDevice || isDragging || isHovering;
     const showTooltip = isDragging && !isTouchDevice;

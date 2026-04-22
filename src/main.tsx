@@ -28,12 +28,35 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 if (typeof window !== 'undefined') {
     if ('serviceWorker' in navigator) {
+        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+        const shouldRegisterServiceWorker = import.meta.env.PROD && !isLocalhost;
+
         window.addEventListener('load', () => {
-            navigator.serviceWorker
-                .register(`${import.meta.env.BASE_URL}sw.js`)
-                .catch(() => {
-                    // Ignore service-worker registration errors in unsupported environments.
+            if (shouldRegisterServiceWorker) {
+                navigator.serviceWorker
+                    .register(`${import.meta.env.BASE_URL}sw.js`)
+                    .catch(() => {
+                        // Ignore service-worker registration errors in unsupported environments.
+                    });
+                return;
+            }
+
+            // In local/dev contexts, clear old registrations and caches to avoid stale blank screens.
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                registrations.forEach((registration) => {
+                    registration.unregister().catch(() => {
+                        // Ignore cleanup failures.
+                    });
                 });
+            }).catch(() => {
+                // Ignore cleanup failures.
+            });
+
+            if ('caches' in window) {
+                caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).catch(() => {
+                    // Ignore cache cleanup failures.
+                });
+            }
         });
     }
 
