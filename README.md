@@ -5,31 +5,31 @@ A high-performance local music library and player designed for managing and play
 ## Key Features
 
 ### Core Functionality
-- **Local First** — Completely offline, managing your local files with low-level access
-- **Advanced Indexing** — Hybrid storage model with `musicBib.json` as the Single Source of Truth
-- **High Performance** — Optimized for large libraries with instantaneous search, sorting, and filtering
-- **Audiophile Grade** — Support for Hi-Res and Lossless formats (WAV, FLAC, DSD, etc.) with gapless playback
-- **Adaptive UI** — Chameleon UI that adapts its theme based on the dominant colors of the album artwork
+- **Local First**: Completely offline, managing your local files with low-level access
+- **Advanced Indexing**: Hybrid storage model with `musicBib.json` as the Single Source of Truth
+- **High Performance**: Optimized for large libraries with instantaneous search, sorting, and filtering
+- **Audiophile Grade**: Support for Hi-Res and Lossless formats (WAV, FLAC, DSD, etc.) with gapless playback
+- **Adaptive UI**: Chameleon UI that adapts its theme based on the dominant colors of the album artwork
 
 ### Library Management
-- **Multiple Views** — Browse by Albums, Artists, Genres, Years, Folders, and Formats
-- **Smart Playlists** — Create dynamic playlists based on rules (genre, year, bitrate, etc.)
-- **Manual Curation** — Create and manage custom playlists
-- **Advanced Metadata** — Edit track metadata, lyrics, ratings, and artwork
-- **Favorites System** — Mark and organize favorite tracks
-- **Playback History** — Track and revisit recently played music
-- **Duplicate Detection** — Find exact and fuzzy duplicates in your collection
+- **Multiple Views**: Browse by Albums, Artists, Genres, Years, Folders, and Formats
+- **Smart Playlists**: Create dynamic playlists based on rules (genre, year, bitrate, etc.)
+- **Manual Curation**: Create and manage custom playlists
+- **Advanced Metadata**: Edit track metadata, lyrics, ratings, and artwork
+- **Favorites System**: Mark and organize favorite tracks
+- **Playback History**: Track and revisit recently played music
+- **Duplicate Detection**: Find exact and fuzzy duplicates in your collection
 
 ### Playback
-- **Queue Management** — Reorder, save, and manage playback queue
-- **Audio Processing** — 10-band EQ, crossfade, and normalization
-- **Multiple Versions** — Handle multiple versions of the same track (remasters, etc.)
+- **Queue Management**: Reorder, save, and manage playback queue
+- **Audio Processing**: 10-band EQ, crossfade, and normalization
+- **Multiple Versions**: Handle multiple versions of the same track (remasters, etc.)
 
 ### Mobile Support
-- **Responsive Design** — Full mobile-optimized interface
-- **Touch Controls** — Touch-friendly drag-and-drop queue reordering
-- **Adaptive Layout** — Seamlessly transitions between mobile and desktop layouts
-- **Context Menus** — Long-press support for track actions
+- **Responsive Design**: Full mobile-optimized interface
+- **Touch Controls**: Touch-friendly drag-and-drop queue reordering
+- **Adaptive Layout**: Seamlessly transitions between mobile and desktop layouts
+- **Context Menus**: Long-press support for track actions
 
 ## Tech Stack
 
@@ -79,45 +79,4 @@ npm run build
 
 Output will be in the `dist/` directory.
 
-## Library Structure
-
-The library is organized into strict categories (Albums and Singles). Files are indexed via a batch script that generates `musicBib.json`.
-
-**Note**: Music files and large folders are excluded from this repository via `.gitignore` to keep the codebase lean.
-
-## Project Structure
-
-```
-src/
-├── components/
-│   ├── library/          # Main library views (Dashboard, Albums, Artists, etc.)
-│   ├── layout/           # Layout components (MobileTabBar, Sidebar, etc.)
-│   ├── player/           # Player components (PlayerBar, Visualizer, etc.)
-│   ├── settings/         # Settings views
-│   └── shared/           # Shared components (ContextMenu, MetadataEditor, etc.)
-├── contexts/             # React contexts (Player, Library, UI, Theme)
-├── hooks/                # Custom hooks
-├── services/             # Services (persistence, audio)
-├── types/                # TypeScript types
-└── utils/                # Utility functions
-```
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| Space | Play/Pause |
-| Left/Right Arrow | Seek ±10s |
-| Up/Down Arrow | Volume |
-| N | Next track |
-| P | Previous track |
-| M | Mute |
-| F | Toggle fullscreen |
-
-## License
-
-MIT License — feel free to use this project for personal and commercial purposes.
-
 ---
-
-Built with passion for music lovers and audiophiles.
