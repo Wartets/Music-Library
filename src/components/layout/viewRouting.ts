@@ -56,3 +56,19 @@ export const normalizeHistoryEntries = (entries: unknown): NavigationEntry[] => 
     const normalized = entries.map(normalizeHistoryEntry).filter((entry) => isViewType(entry.view));
     return normalized.length > 0 ? normalized : [{ view: DEFAULT_VIEW, data: null }];
 };
+
+const VIEW_TO_PRIMARY_TAB: Readonly<Partial<Record<ViewType, ViewType>>> = {
+    SearchResults: 'AllTracks',
+    AlbumDetail: 'Albums',
+    ArtistDetail: 'Artists',
+    SongDetail: 'AllTracks'
+};
+
+export const resolvePrimaryTabView = (
+    view: ViewType,
+    primaryTabs: readonly ViewType[],
+    fallback: ViewType = DEFAULT_VIEW
+): ViewType => {
+    const mapped = VIEW_TO_PRIMARY_TAB[view] ?? view;
+    return primaryTabs.includes(mapped) ? mapped : fallback;
+};
