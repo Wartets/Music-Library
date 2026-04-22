@@ -1,9 +1,10 @@
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin, ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
-function copyMusicBibJson() {
+function copyMusicBibJson(): Plugin {
     return {
         name: 'copy-musicbib-json',
         apply: 'build',
@@ -12,7 +13,7 @@ function copyMusicBibJson() {
             const destination = resolve(__dirname, 'dist', 'musicBib.json');
 
             if (!existsSync(source)) {
-                this.warn('musicBib.json not found at project root; dist/musicBib.json was not generated.');
+                console.warn('musicBib.json not found at project root; dist/musicBib.json was not generated.');
                 return;
             }
 
@@ -21,11 +22,11 @@ function copyMusicBibJson() {
     };
 }
 
-function musicFilesMiddleware() {
+function musicFilesMiddleware(): Plugin {
     return {
         name: 'music-files-middleware',
-        configureServer(server) {
-            server.middlewares.use(async (req, res, next) => {
+        configureServer(server: ViteDevServer) {
+            server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
                 const url = req.url || '';
                 if (!url) {
                     return next();
