@@ -44,6 +44,7 @@ export class AudioEngine {
     private lastNormalizationAt: number = 0;
     private userVolume: number = 1;
     private djBurstTimer: number | null = null;
+    private playInvocationDepth: number = 0;
 
     public getAnalyser(): AnalyserNode | null {
         return this.analyserNode;
@@ -94,6 +95,7 @@ export class AudioEngine {
 
             el.addEventListener('error', () => {
                 if (this.getActiveElement() === el && this.onError) {
+                    if (this.playInvocationDepth > 0) return;
                     this.onError(this.createMediaError(el.error));
                 }
             });
@@ -235,31 +237,35 @@ export class AudioEngine {
         const playCandidates = sourceCandidates.length > 0 ? sourceCandidates : [el.src].filter(Boolean);
 
         let lastError: AudioPlaybackError | null = null;
+        this.playInvocationDepth += 1;
 
-        for (const candidate of playCandidates) {
-            if (!candidate) continue;
+        try {
+            for (const candidate of playCandidates) {
+                if (!candidate) continue;
 
-            if (el.src !== candidate) {
-                el.src = candidate;
-                el.load();
-            }
+                if (el.src !== candidate) {
+                    el.src = candidate;
+                    el.load();
+                }
 
-            try {
-                await el.play();
-                return;
-            } catch (error) {
-                const playbackError = this.normalizePlaybackException(error);
-                lastError = playbackError;
+                try {
+                    await el.play();
+                    return;
+                } catch (error) {
+                    const playbackError = this.normalizePlaybackException(error);
+                    lastError = playbackError;
 
-                if (!this.shouldRetryWithAlternateSource(playbackError)) {
-                    break;
+                    if (!this.shouldRetryWithAlternateSource(playbackError)) {
+                        break;
+                    }
                 }
             }
-        }
 
-        const finalError = lastError || new AudioPlaybackError('unknown', 'Unknown playback failure.');
-        if (this.onError) this.onError(finalError);
-        throw finalError;
+            const finalError = lastError || new AudioPlaybackError('unknown', 'Unknown playback failure.');
+            throw finalError;
+        } finally {
+            this.playInvocationDepth = Math.max(0, this.playInvocationDepth - 1);
+        }
     }
 
 

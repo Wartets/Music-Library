@@ -71,8 +71,16 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, []);
     const playTrackLogicRef = useRef<(track: TrackItem, queue?: TrackItem[], options?: PlayTrackOptions) => void>(() => { });
     const handlePlaybackFailureRef = useRef<(error: Error, failedTrack?: TrackItem | null) => void>(() => { });
-    const recoveryRef = useRef<{ attempted: Set<string>; lastErrorAt: number; lastErrorKey: string }>({
+    const recoveryRef = useRef<{
+        attempted: Set<string>;
+        attemptedPrimary: Set<string>;
+        notified: Set<string>;
+        lastErrorAt: number;
+        lastErrorKey: string;
+    }>({
         attempted: new Set(),
+        attemptedPrimary: new Set(),
+        notified: new Set(),
         lastErrorAt: 0,
         lastErrorKey: ''
     });
@@ -84,9 +92,19 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const resetRecoveryState = useCallback(() => {
         recoveryRef.current.attempted.clear();
+        recoveryRef.current.attemptedPrimary.clear();
+        recoveryRef.current.notified.clear();
         recoveryRef.current.lastErrorAt = 0;
         recoveryRef.current.lastErrorKey = '';
     }, []);
+
+    const toPrimaryHash = useCallback((trackOrHash: TrackItem | string | null | undefined): string => {
+        const hash = typeof trackOrHash === 'string'
+            ? trackOrHash
+            : (trackOrHash?.logic?.hash_sha256 || '');
+        if (!hash) return '';
+        return libState.versionToPrimaryMap[hash] || hash;
+    }, [libState.versionToPrimaryMap]);
 
     useEffect(() => {
         const prefs = persistenceService.getPreferences();
@@ -206,22 +224,22 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 case 'format_unsupported':
                     return {
                         title: 'Unsupported format',
-                        message: 'This codec is unsupported in browser playback. Trying an alternative version when available.'
+                        message: 'This version uses a codec your browser cannot play. Trying other available versions.'
                     };
                 case 'media_network':
                     return {
                         title: 'Source unavailable',
-                        message: 'The audio file could not be reached. Trying another version.'
+                        message: 'This file cannot be accessed right now. Trying another available version.'
                     };
                 case 'media_decode':
                     return {
                         title: 'Decode failed',
-                        message: 'The file appears corrupted or unreadable. Trying another version.'
+                        message: 'This file is unreadable or corrupted. Trying another available version.'
                     };
                 case 'playback_interrupted':
                     return {
                         title: 'Playback interrupted',
-                        message: 'Playback was interrupted unexpectedly. Retrying on another source.'
+                        message: 'Playback was interrupted unexpectedly. Retrying with another source.'
                     };
                 default:
                     return {
@@ -233,13 +251,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         const lower = (error.message || '').toLowerCase();
         if (lower.includes('network')) {
-            return { title: 'Network issue', message: 'Could not access the audio source. Trying fallback track.' };
+            return { title: 'Network issue', message: 'Could not access this audio source. Trying a fallback version.' };
         }
         if (lower.includes('decode')) {
-            return { title: 'Decode issue', message: 'Audio decode failed. Trying fallback track.' };
+            return { title: 'Decode issue', message: 'Audio decode failed for this file. Trying a fallback version.' };
         }
         if (lower.includes('not supported')) {
-            return { title: 'Unsupported format', message: 'Codec unsupported here. Trying another version if possible.' };
+            return { title: 'Unsupported format', message: 'Codec unsupported in this browser. Trying another version if possible.' };
         }
 
         return { title: 'Playback error', message: error.message || 'Unexpected playback failure.' };
@@ -248,25 +266,39 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const handlePlaybackFailure = useCallback((error: Error, failedTrack?: TrackItem | null) => {
         const cur = stateRef.current;
         const failed = failedTrack || cur.currentTrack;
+        const showOnce = (
+            key: string,
+            message: string,
+            type: 'success' | 'error' | 'warning' | 'info',
+            options?: Parameters<typeof showToast>[2]
+        ) => {
+            if (recoveryRef.current.notified.has(key)) return;
+            recoveryRef.current.notified.add(key);
+            showToast(message, type, options);
+        };
 
         if (!failed) {
             const fallback = describePlaybackError(error);
-            showToast(fallback.message, 'error', { title: fallback.title });
+            showOnce(`playback-orphan-${error.name}-${error.message}`, fallback.message, 'error', { title: fallback.title });
             return;
         }
 
         const failedHash = failed.logic.hash_sha256;
+        const failedPrimaryHash = toPrimaryHash(failed);
         const now = Date.now();
-        const errKey = `${failedHash}|${error.name}|${error.message}`;
+        const errKey = `${failedPrimaryHash}|${error.name}|${error.message}`;
         if (
             recoveryRef.current.lastErrorKey === errKey &&
-            now - recoveryRef.current.lastErrorAt < 1200
+            now - recoveryRef.current.lastErrorAt < 1800
         ) {
             return;
         }
         recoveryRef.current.lastErrorKey = errKey;
         recoveryRef.current.lastErrorAt = now;
         recoveryRef.current.attempted.add(failedHash);
+        if (failedPrimaryHash) {
+            recoveryRef.current.attemptedPrimary.add(failedPrimaryHash);
+        }
 
         const versions = resolveVersionGroup(failed);
         const nextVersion = versions.find(version => {
@@ -276,10 +308,11 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         if (nextVersion) {
             recoveryRef.current.attempted.add(nextVersion.logic.hash_sha256);
-            showToast(
-                `${failed.metadata?.title || failed.logic.track_name} failed, trying another version.`,
+            showOnce(
+                `version-fallback-${failedPrimaryHash || failedHash}`,
+                `Playback issue on "${failed.metadata?.title || failed.logic.track_name}". Trying another version...`,
                 'warning',
-                { title: 'Playback issue', subtle: true, dedupeKey: `version-fallback-${failedHash}`, durationMs: 2000 }
+                { title: 'Recovering playback', subtle: true, dedupeKey: `version-fallback-${failedPrimaryHash || failedHash}`, durationMs: 2200 }
             );
             playTrackLogicRef.current(nextVersion, cur.queue, {
                 skipHistoryPush: true,
@@ -289,19 +322,47 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             return;
         }
 
-        const currentIndex = cur.currentTrack
-            ? cur.queue.findIndex(t => t.logic.hash_sha256 === cur.currentTrack?.logic.hash_sha256)
+        const queue = cur.queue || [];
+        const currentTrackHash = cur.currentTrack?.logic.hash_sha256 || '';
+        let anchorIndex = currentTrackHash
+            ? queue.findIndex(t => t.logic.hash_sha256 === currentTrackHash)
             : -1;
-        const nextQueueTrack = cur.queue
-            .slice(currentIndex + 1)
-            .find(track => !recoveryRef.current.attempted.has(track.logic.hash_sha256));
+
+        if (anchorIndex < 0 && failedPrimaryHash) {
+            anchorIndex = queue.findIndex(t => toPrimaryHash(t) === failedPrimaryHash);
+        }
+
+        const scanOrder: number[] = [];
+        for (let i = anchorIndex + 1; i < queue.length; i++) {
+            scanOrder.push(i);
+        }
+        if (cur.repeat === 'all' && queue.length > 0) {
+            for (let i = 0; i <= Math.max(anchorIndex, 0) && i < queue.length; i++) {
+                scanOrder.push(i);
+            }
+        }
+
+        const nextQueueTrack = scanOrder
+            .map(index => queue[index])
+            .find(track => {
+                const hash = track.logic.hash_sha256;
+                const primaryHash = toPrimaryHash(track);
+                if (!hash) return false;
+                if (primaryHash && recoveryRef.current.attemptedPrimary.has(primaryHash)) return false;
+                return !recoveryRef.current.attempted.has(hash);
+            });
 
         if (nextQueueTrack) {
             recoveryRef.current.attempted.add(nextQueueTrack.logic.hash_sha256);
-            showToast(
-                `${failed.metadata?.title || failed.logic.track_name} is unavailable, skipping to next track.`,
+            const nextPrimaryHash = toPrimaryHash(nextQueueTrack);
+            if (nextPrimaryHash) {
+                recoveryRef.current.attemptedPrimary.add(nextPrimaryHash);
+            }
+            showOnce(
+                `queue-skip-${failedPrimaryHash || failedHash}`,
+                `All versions of "${failed.metadata?.title || failed.logic.track_name}" failed. Skipping to the next track.`,
                 'warning',
-                { title: 'Track skipped', subtle: true, dedupeKey: `queue-skip-${failedHash}`, durationMs: 2200 }
+                { title: 'Track skipped', subtle: true, dedupeKey: `queue-skip-${failedPrimaryHash || failedHash}`, durationMs: 2600 }
             );
             playTrackLogicRef.current(nextQueueTrack, cur.queue, {
                 skipHistoryPush: true,
@@ -312,13 +373,15 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
 
         const fallback = describePlaybackError(error);
-        showToast(
-            `${fallback.message} No playable fallback was found.`,
+        showOnce(
+            `playback-stop-${failedPrimaryHash || failedHash}`,
+            `Playback stopped: all versions for "${failed.metadata?.title || failed.logic.track_name}" failed. ${fallback.message}`,
             'error',
-            { title: fallback.title, dedupeKey: `playback-stop-${failedHash}`, durationMs: 4500 }
+            { title: fallback.title, dedupeKey: `playback-stop-${failedPrimaryHash || failedHash}`, durationMs: 5200 }
         );
         if (fallback.title === 'Unsupported format') {
-            showToast(
+            showOnce(
+                `compatibility-tip-${failedPrimaryHash || failedHash}`,
                 'Tip: run scripts/fix_codecs.ps1 to create compatible AAC copies while preserving originals.',
                 'info',
                 { title: 'Compatibility helper', durationMs: 5200 }
@@ -326,7 +389,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
         audioEngine.pause();
         setState(prev => ({ ...prev, isPlaying: false }));
-    }, [describePlaybackError, resolveVersionGroup, showToast]);
+    }, [describePlaybackError, resolveVersionGroup, showToast, toPrimaryHash]);
 
     useEffect(() => {
         handlePlaybackFailureRef.current = handlePlaybackFailure;
