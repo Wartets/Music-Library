@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewType } from './AppLayout';
+import { ViewType } from './viewRouting';
 import { LayoutGrid, Library, Mic2, ListMusic, Settings, Search, History, Tags, Calendar, Heart, FolderOpen, FileAudio, Disc3 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useLibrary } from '../../contexts/LibraryContext';
@@ -8,42 +8,69 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { audioEngine } from '../../services/audioEngine';
 import { persistenceService } from '../../services/persistence';
 
+interface NavItem {
+    id: ViewType;
+    label: string;
+    icon: React.ReactNode;
+}
+
 interface SidebarProps {
     currentView: ViewType;
-    onNavigate: (view: ViewType, data?: any) => void;
+    onNavigate: (view: ViewType, data?: unknown) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
     const { state: libState, setSearchQuery } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
     const { currentPalette } = useTheme();
-    const [isFocused, React_setIsFocused] = React.useState(false);
+    const [isFocused, setIsFocused] = React.useState(false);
+    const [activeSearchIndex, setActiveSearchIndex] = React.useState(-1);
     const [discScratch, setDiscScratch] = React.useState(false);
     const searchInputRef = React.useRef<HTMLInputElement>(null);
+    const blurTimeoutRef = React.useRef<number | null>(null);
     const discScratchTimeoutRef = React.useRef<number | null>(null);
     const discRotationFrameRef = React.useRef<number | null>(null);
     const lastRotationTickRef = React.useRef<number>(0);
     const discRotationRef = React.useRef<number>(0);
     const discSpinnerRef = React.useRef<HTMLDivElement>(null);
-    const trackHashes = new Set(libState.tracks.map(track => track.logic.hash_sha256));
     const isDiscSpinning = Boolean(playerState.currentTrack && playerState.isPlaying);
+    const visibleResults = React.useMemo(() => libState.filteredTracks.slice(0, 5), [libState.filteredTracks]);
+    const hasMoreSearchResults = libState.filteredTracks.length > visibleResults.length;
+    const maxKeyboardIndex = visibleResults.length > 0
+        ? visibleResults.length - 1 + (hasMoreSearchResults ? 1 : 0)
+        : -1;
 
-    React.useEffect(() => {
-        return () => {
-            if (discScratchTimeoutRef.current) {
-                window.clearTimeout(discScratchTimeoutRef.current);
-            }
-            if (discRotationFrameRef.current) {
-                window.cancelAnimationFrame(discRotationFrameRef.current);
-            }
-        };
+    const clearBlurTimeout = React.useCallback(() => {
+        if (blurTimeoutRef.current) {
+            window.clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
+        }
     }, []);
 
-    React.useEffect(() => {
+    const cancelDiscFrame = React.useCallback(() => {
         if (discRotationFrameRef.current) {
             window.cancelAnimationFrame(discRotationFrameRef.current);
             discRotationFrameRef.current = null;
         }
+    }, []);
+
+    const trackHashes = React.useMemo(
+        () => new Set(libState.tracks.map(track => track.logic.hash_sha256)),
+        [libState.tracks]
+    );
+
+    React.useEffect(() => {
+        return () => {
+            clearBlurTimeout();
+            if (discScratchTimeoutRef.current) {
+                window.clearTimeout(discScratchTimeoutRef.current);
+            }
+            cancelDiscFrame();
+        };
+    }, [cancelDiscFrame, clearBlurTimeout]);
+
+    React.useEffect(() => {
+        cancelDiscFrame();
 
         if (!isDiscSpinning) {
             lastRotationTickRef.current = 0;
@@ -51,7 +78,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         }
 
         const spinMsPerRevolution = 16000;
+        let disposed = false;
+
         const tick = (timestamp: number) => {
+            if (disposed) {
+                return;
+            }
+
             if (!lastRotationTickRef.current) {
                 lastRotationTickRef.current = timestamp;
             }
@@ -69,13 +102,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         discRotationFrameRef.current = window.requestAnimationFrame(tick);
 
         return () => {
-            if (discRotationFrameRef.current) {
-                window.cancelAnimationFrame(discRotationFrameRef.current);
-                discRotationFrameRef.current = null;
-            }
+            disposed = true;
+            cancelDiscFrame();
             lastRotationTickRef.current = 0;
         };
-    }, [isDiscSpinning]);
+    }, [cancelDiscFrame, isDiscSpinning]);
 
     const triggerDiscScratch = React.useCallback(() => {
         setDiscScratch(true);
@@ -94,13 +125,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         audioEngine.triggerDjBurst();
     }, [isDiscSpinning, triggerDiscScratch]);
 
-    const hasFavorites = persistenceService.getFavorites().some(id => {
-        const primaryId = libState.versionToPrimaryMap[id] || id;
-        return trackHashes.has(primaryId);
-    });
-    const hasHistory = playerState.history.length > 0 || persistenceService.getHistoryIds().length > 0;
+    const hasFavorites = React.useMemo(() => {
+        return persistenceService.getFavorites().some(id => {
+            const primaryId = libState.versionToPrimaryMap[id] || id;
+            return trackHashes.has(primaryId);
+        });
+    }, [libState.versionToPrimaryMap, trackHashes]);
 
-    const navItems = [
+    const hasHistory = React.useMemo(
+        () => playerState.history.length > 0 || persistenceService.getHistoryIds().length > 0,
+        [playerState.history.length]
+    );
+
+    const navItems = React.useMemo<NavItem[]>(() => [
         { id: 'Dashboard', label: 'Home', icon: <Library size={20} /> },
         { id: 'AllTracks', label: 'All Tracks', icon: <ListMusic size={20} /> },
         { id: 'Albums', label: 'Albums', icon: <LayoutGrid size={20} /> },
@@ -109,15 +146,54 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         { id: 'Years', label: 'Years', icon: <Calendar size={20} /> },
         { id: 'Folders', label: 'Folders', icon: <FolderOpen size={20} /> },
         { id: 'Formats', label: 'Formats', icon: <FileAudio size={20} /> },
-        ...(hasFavorites ? [{ id: 'Favorites', label: 'Favorites', icon: <Heart size={20} /> }] : []),
-        ...(hasHistory ? [{ id: 'DetailedHistory', label: 'History', icon: <History size={20} /> }] : []),
+        ...(hasFavorites ? [{ id: 'Favorites', label: 'Favorites', icon: <Heart size={20} /> } as NavItem] : []),
+        ...(hasHistory ? [{ id: 'DetailedHistory', label: 'History', icon: <History size={20} /> } as NavItem] : []),
         { id: 'Playlists', label: 'Playlists', icon: <ListMusic size={20} /> },
         { id: 'Queue', label: 'Queue', icon: <ListMusic size={20} /> },
-    ];
+    ], [hasFavorites, hasHistory]);
 
-    const bottomItems = [
+    const bottomItems = React.useMemo<NavItem[]>(() => [
         { id: 'Settings', label: 'Settings', icon: <Settings size={20} /> },
-    ];
+    ], []);
+
+    const openSearchResults = React.useCallback((query: string) => {
+        const normalizedQuery = query.trim();
+        if (!normalizedQuery) {
+            return;
+        }
+
+        onNavigate('SearchResults', { query: normalizedQuery, sourceView: currentView });
+        setSearchQuery('');
+        setActiveSearchIndex(-1);
+        setIsFocused(false);
+    }, [currentView, onNavigate, setSearchQuery]);
+
+    const playSearchResult = React.useCallback((track: typeof visibleResults[number]) => {
+        playTrack(track, libState.filteredTracks);
+        setSearchQuery('');
+        setActiveSearchIndex(-1);
+        setIsFocused(false);
+    }, [libState.filteredTracks, playTrack, setSearchQuery]);
+
+    const handleInputFocus = React.useCallback(() => {
+        clearBlurTimeout();
+        setIsFocused(true);
+    }, [clearBlurTimeout]);
+
+    const handleInputBlur = React.useCallback(() => {
+        clearBlurTimeout();
+        blurTimeoutRef.current = window.setTimeout(() => {
+            setIsFocused(false);
+            setActiveSearchIndex(-1);
+            blurTimeoutRef.current = null;
+        }, 150);
+    }, [clearBlurTimeout]);
+
+    React.useEffect(() => {
+        if (!isFocused || !libState.searchQuery.trim()) {
+            setActiveSearchIndex(-1);
+        }
+    }, [isFocused, libState.searchQuery]);
 
     const NavButton = ({ item }: { item: any }) => {
         const isActive = currentView === item.id;
@@ -190,8 +266,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
 
                 <div
                     className="mb-8 relative group hidden lg:block"
-                    onFocus={() => React_setIsFocused(true)}
-                    onBlur={() => setTimeout(() => React_setIsFocused(false), 200)}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
                 >
                     <div className="absolute -inset-1 bg-gradient-to-r from-dominant/20 to-dominant-light/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700"></div>
                     <Search
@@ -202,29 +278,81 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                         ref={searchInputRef}
                         type="text"
                         value={libState.searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setActiveSearchIndex(-1);
+                        }}
                         onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setIsFocused(false);
+                                setActiveSearchIndex(-1);
+                                return;
+                            }
+
+                            if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && isFocused && libState.searchQuery.trim()) {
+                                e.preventDefault();
+                                if (maxKeyboardIndex < 0) {
+                                    return;
+                                }
+
+                                setActiveSearchIndex((prevIndex) => {
+                                    if (prevIndex < 0) {
+                                        return e.key === 'ArrowDown' ? 0 : maxKeyboardIndex;
+                                    }
+
+                                    if (e.key === 'ArrowDown') {
+                                        return prevIndex >= maxKeyboardIndex ? 0 : prevIndex + 1;
+                                    }
+
+                                    return prevIndex <= 0 ? maxKeyboardIndex : prevIndex - 1;
+                                });
+                                return;
+                            }
+
                             if (e.key === 'Enter') {
-                                onNavigate('SearchResults', { query: libState.searchQuery, sourceView: currentView });
+                                e.preventDefault();
+
+                                if (activeSearchIndex >= 0 && activeSearchIndex < visibleResults.length) {
+                                    playSearchResult(visibleResults[activeSearchIndex]);
+                                    return;
+                                }
+
+                                if (hasMoreSearchResults && activeSearchIndex === visibleResults.length) {
+                                    openSearchResults(libState.searchQuery);
+                                    return;
+                                }
+
+                                openSearchResults(libState.searchQuery);
                             }
                         }}
                         placeholder="Search library..."
+                        aria-expanded={isFocused && Boolean(libState.searchQuery)}
+                        aria-controls="sidebar-search-results"
+                        aria-autocomplete="list"
                         className="relative z-10 w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-dominant/50 focus:bg-white/10 transition-all font-medium shadow-2xl backdrop-blur-xl"
                     />
                     <div className="absolute bottom-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-dominant/50 to-transparent scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500 z-20"></div>
                     {isFocused && libState.searchQuery && (
-                        <div className="absolute top-full left-0 right-0 mt-3 bg-[#111]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div
+                            id="sidebar-search-results"
+                            className="absolute top-full left-0 right-0 mt-3 bg-[#111]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300"
+                            role="listbox"
+                            aria-label="Search suggestions"
+                        >
                             {libState.filteredTracks.length > 0 ? (
                                 <>
                                     <div className="px-4 py-1.5 text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 border-b border-white/5">Results</div>
                                     <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                                        {libState.filteredTracks.slice(0, 5).map(track => (
-                                            <div
+                                        {visibleResults.map((track, index) => (
+                                            <button
                                                 key={track.logic.hash_sha256}
-                                                className="p-3 hover:bg-dominant/10 cursor-pointer flex items-center gap-3 transition-colors border-b border-white/5 last:border-0"
+                                                type="button"
+                                                role="option"
+                                                aria-selected={index === activeSearchIndex}
+                                                className={`w-full text-left p-3 cursor-pointer flex items-center gap-3 transition-colors border-b border-white/5 last:border-0 ${index === activeSearchIndex ? 'bg-dominant/20' : 'hover:bg-dominant/10'} active:scale-[0.995]`}
                                                 onClick={() => {
-                                                    playTrack(track, libState.filteredTracks);
-                                                    setSearchQuery('');
+                                                    playSearchResult(track);
                                                 }}
                                             >
                                                 <div className="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
@@ -234,16 +362,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                                                     <div className="text-white text-xs font-bold truncate">{track.metadata?.title || track.logic.track_name}</div>
                                                     <div className="text-gray-500 text-[10px] truncate">{track.metadata?.artists?.[0] || 'Unknown Artist'}</div>
                                                 </div>
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
-                                    {libState.filteredTracks.length > 5 && (
-                                        <div
-                                            className="p-3 text-center text-[10px] font-black text-dominant uppercase tracking-[0.2em] cursor-pointer hover:bg-white/5 transition-all active:scale-95"
-                                            onClick={() => onNavigate('SearchResults', { query: libState.searchQuery, sourceView: currentView })}
+                                    {hasMoreSearchResults && (
+                                        <button
+                                            type="button"
+                                            className={`w-full p-3 text-center text-[10px] font-black text-dominant uppercase tracking-[0.2em] transition-all active:scale-95 ${activeSearchIndex === visibleResults.length ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                                            onClick={() => openSearchResults(libState.searchQuery)}
                                         >
                                             View all {libState.filteredTracks.length} results
-                                        </div>
+                                        </button>
                                     )}
                                 </>
                             ) : (
