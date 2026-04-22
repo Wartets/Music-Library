@@ -76,7 +76,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                                 />
                                 <button
                                     onClick={submitMobileSearch}
-                                    className="px-3 py-2.5 rounded-xl bg-dominant text-on-dominant text-[10px] font-black uppercase tracking-widest"
+                                    className="px-3 py-2.5 rounded-xl bg-dominant text-on-dominant text-[10px] font-black uppercase tracking-widest active:scale-95"
                                 >
                                     Go
                                 </button>
@@ -94,7 +94,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                                             onNavigate(tab.id);
                                             setIsMoreOpen(false);
                                         }}
-                                        className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left transition-colors min-h-11 ${isActive ? 'bg-dominant/25 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                                        className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left transition-all min-h-12 active:scale-95 ${isActive ? 'bg-dominant/25 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
                                     >
                                         {tab.icon}
                                         <span className="text-xs font-bold leading-none">{tab.label}</span>
@@ -117,7 +117,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                             <button
                                 key={tab.id}
                                 onClick={() => onNavigate(tab.id)}
-                                className={`flex flex-col items-center justify-center gap-1.5 transition-colors min-h-11 ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                                className={`flex flex-col items-center justify-center gap-1.5 transition-all min-h-12 active:scale-95 ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                             >
                                 <span className={isActive ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]' : ''}>
                                     {tab.icon}
@@ -130,7 +130,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                     })}
                     <button
                         onClick={() => setIsMoreOpen(prev => !prev)}
-                        className={`flex flex-col items-center justify-center gap-1.5 transition-colors min-h-11 ${(isMoreOpen || isMoreActive) ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex flex-col items-center justify-center gap-1.5 transition-all min-h-12 active:scale-95 ${(isMoreOpen || isMoreActive) ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <MoreHorizontal size={18} />
                         <span className="text-[11px] sm:text-[12px] font-bold tracking-wide uppercase leading-none">More</span>

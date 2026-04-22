@@ -602,13 +602,13 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => setSelectedHashes(new Set(metadataCandidates.map(t => t.logic.hash_sha256)))}
-                                                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                                                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all active:scale-95"
                                             >
                                                 Select visible
                                             </button>
                                             <button
                                                 onClick={() => setSelectedHashes(new Set())}
-                                                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-all"
+                                                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-all active:scale-95"
                                             >
                                                 Clear
                                             </button>

@@ -3,6 +3,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { TrackItem } from '../../types/music';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import {
     Play, Trash2, GripVertical, ListMusic, History,
     Search, Download, Save,
@@ -86,14 +87,14 @@ const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, inde
             className={`group flex items-center gap-5 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 relative ${isDragging ? 'opacity-50 shadow-2xl bg-white/10' : ''}`}
             onContextMenu={onContextMenu}
         >
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity"></div>
 
-            <div className="text-[10px] font-black text-white/10 w-6 text-center group-hover:hidden font-mono">
+            <div className="text-[10px] font-black text-white/10 w-6 text-center md:group-hover:hidden font-mono">
                 {(index + 1).toString().padStart(2, '0')}
             </div>
             <button
                 onClick={() => playTrack(track, originalQueue)}
-                className="hidden group-hover:flex w-6 h-6 items-center justify-center text-dominant bg-dominant/10 rounded-lg hover:bg-dominant/20 transition-colors"
+                className="hidden md:hidden group-hover:flex w-6 h-6 items-center justify-center text-dominant bg-dominant/10 rounded-lg hover:bg-dominant/20 transition-colors"
             >
                 <Play size={14} fill="currentColor" />
             </button>
@@ -112,7 +113,7 @@ const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, inde
                 <div className="text-xs font-bold text-white/40">{track.audio_specs?.duration}</div>
             </div>
 
-            <div className="hidden group-hover:flex items-center gap-1 border-l border-white/5 pl-3 ml-2">
+            <div className="hidden md:hidden group-hover:flex items-center gap-1 border-l border-white/5 pl-3 ml-2">
                 <button
                     onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
                     className="p-2 text-gray-500 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg"
@@ -195,15 +196,7 @@ export const QueueView: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'index' | 'duration' | 'name'>('index');
     const [clockTick, setClockTick] = useState(0);
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-
-    useEffect(() => {
-        const media = window.matchMedia('(max-width: 767px)');
-        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-        setIsMobile(media.matches);
-        media.addEventListener('change', onChange);
-        return () => media.removeEventListener('change', onChange);
-    }, []);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (activeTab !== 'queue') return;
@@ -501,13 +494,13 @@ export const QueueView: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={handleExport} title="Export Queue" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center">
+                        <button onClick={handleExport} title="Export Queue" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center active:scale-95">
                             <Download size={18} />
                         </button>
-                        <button onClick={handleSaveAsPlaylist} title="Save as Playlist" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center">
+                        <button onClick={handleSaveAsPlaylist} title="Save as Playlist" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center active:scale-95">
                             <Save size={18} />
                         </button>
-                        <button onClick={clearQueue} className="flex items-center justify-center gap-2 px-3 md:px-5 py-2 hover:bg-red-500/20 rounded-xl text-xs md:text-sm font-bold transition-colors border border-transparent hover:border-red-500/20 text-red-500 ml-1 md:ml-2 h-10">
+                        <button onClick={clearQueue} className="flex items-center justify-center gap-2 px-3 md:px-5 py-2 hover:bg-red-500/20 rounded-xl text-xs md:text-sm font-bold transition-all border border-transparent hover:border-red-500/20 text-red-500 ml-1 md:ml-2 h-10 active:scale-95">
                             <Trash2 size={16} />
                             <span className="hidden sm:inline">Clear Queue</span>
                         </button>

@@ -226,7 +226,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                 onTouchEnd={(e) => handleTouchEnd(item, idx, e)}
                                 disabled={item.disabled}
                                 className={`
-                                    w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold transition-colors relative group min-h-11 md:min-h-0
+                                    w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold transition-all relative group min-h-11 md:min-h-0 active:scale-95
                                     ${item.danger ? 'text-red-400 hover:bg-red-500/10 active:bg-red-500/20' : 'text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white'}
                                     ${item.disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
                                 `}
@@ -262,7 +262,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
                                 sub.onClick();
                                 onClose();
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer min-h-11 md:min-h-0"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-sm md:text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer min-h-11 md:min-h-0 active:scale-95"
                         >
                             <span className="flex-1 text-left truncate">{sub.label}</span>
                         </button>

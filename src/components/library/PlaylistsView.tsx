@@ -499,7 +499,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                             {!isSmartPlaylist(selectedPlaylist) && (
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); handleRemove(); }}
-                                                                    className="p-2 sm:opacity-0 sm:group-hover:opacity-100 min-w-9 min-h-9 flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                                                    className="p-2 min-w-10 min-h-10 flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
                                                                     aria-label="Remove from playlist"
                                                                 >
                                                                     <ListMinus size={14} />

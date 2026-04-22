@@ -277,7 +277,7 @@ export const MetadataEditor: React.FC = () => {
                             </p>
                         )}
                     </div>
-                    <button onClick={() => setEditingTracks(null)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all">
+                    <button onClick={() => setEditingTracks(null)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all active:scale-95">
                         <X size={24} />
                     </button>
                 </div>

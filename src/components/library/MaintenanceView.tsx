@@ -134,7 +134,7 @@ export const MaintenanceView: React.FC = () => {
                                     <div key={idx} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.07] transition-all group">
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="font-bold text-white text-sm truncate max-w-[70%]">{group[0].metadata?.title || group[0].logic.track_name}</h3>
-                                            <button className="text-xs text-red-400 font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:text-red-300">Clean Group</button>
+                                            <button className="text-xs text-red-400 font-black uppercase tracking-widest md:opacity-0 md:group-hover:opacity-100 transition-all hover:text-red-300 min-h-9 px-2">Clean Group</button>
                                         </div>
                                         <div className="space-y-3">
                                             {group.map(track => (

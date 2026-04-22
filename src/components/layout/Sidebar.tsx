@@ -239,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                                     </div>
                                     {libState.filteredTracks.length > 5 && (
                                         <div
-                                            className="p-3 text-center text-[10px] font-black text-dominant uppercase tracking-[0.2em] cursor-pointer hover:bg-white/5 transition-colors"
+                                            className="p-3 text-center text-[10px] font-black text-dominant uppercase tracking-[0.2em] cursor-pointer hover:bg-white/5 transition-all active:scale-95"
                                             onClick={() => onNavigate('SearchResults', { query: libState.searchQuery, sourceView: currentView })}
                                         >
                                             View all {libState.filteredTracks.length} results

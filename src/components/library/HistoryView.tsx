@@ -8,6 +8,7 @@ import { VirtualList } from '../shared/VirtualList';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
 
 interface HistoryViewProps {
@@ -18,15 +19,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
     const { state: libState } = useLibrary();
     const { state: playerState, playTrack } = usePlayer();
     const { openTrackContextMenu } = useTrackContextMenu();
-    const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
-
-    React.useEffect(() => {
-        const media = window.matchMedia('(max-width: 767px)');
-        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-        setIsMobile(media.matches);
-        media.addEventListener('change', onChange);
-        return () => media.removeEventListener('change', onChange);
-    }, []);
+    const isMobile = useIsMobile();
 
     // Map history IDs to actual tracks
     const historyTracks = React.useMemo(() => {

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
 
 const HighlightText: React.FC<{ text: string, query: string }> = ({ text, query }) => {
@@ -52,16 +53,8 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     const { playTrack, state: playerState } = usePlayer();
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [showColumnConfig, setShowColumnConfig] = useState(false);
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+    const isMobile = useIsMobile();
     const columnConfigRef = React.useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const media = window.matchMedia('(max-width: 767px)');
-        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-        setIsMobile(media.matches);
-        media.addEventListener('change', onChange);
-        return () => media.removeEventListener('change', onChange);
-    }, []);
 
     const moveColumn = useCallback((index: number, direction: number) => {
         const newIndex = index + direction;
@@ -500,7 +493,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                                     <div className={`absolute top-[1px] w-3 h-3 rounded-full bg-white shadow-sm transition-all ${col.visible ? 'left-[17px]' : 'left-[1px]'}`} />
                                                 </div>
                                             </button>
-                                            <div className="flex flex-col ml-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                            <div className="flex flex-col ml-1 opacity-100 md:opacity-0 md:lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); moveColumn(idx, -1); }}
                                                     disabled={idx === 0}
