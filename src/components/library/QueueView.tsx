@@ -18,6 +18,7 @@ import {
     closestCenter,
     KeyboardSensor,
     PointerSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragEndEvent
@@ -213,6 +214,9 @@ export const QueueView: React.FC = () => {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: { distance: 8 },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 200, tolerance: 5 },
         }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
@@ -422,10 +426,10 @@ export const QueueView: React.FC = () => {
                                     className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
                                     onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
                                 >
-                                    <button onClick={() => playTrack(track as unknown as TrackItem, playerState.queue)} className="w-9 h-9 rounded-lg bg-dominant/20 text-dominant flex items-center justify-center hover:bg-dominant/30 transition-colors" aria-label="Play track">
+                                    <button onClick={() => playTrack(track as unknown as TrackItem, playerState.queue)} className="w-10 h-10 rounded-lg bg-dominant/20 text-dominant flex items-center justify-center hover:bg-dominant/30 transition-colors active:scale-95" aria-label="Play track">
                                         <Play size={14} fill="currentColor" />
                                     </button>
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10">
                                         <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -435,7 +439,7 @@ export const QueueView: React.FC = () => {
                                     <div className="text-[10px] text-gray-400 font-mono">{track.audio_specs?.duration}</div>
                                     <button
                                         onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
-                                        className="p-2 min-w-9 min-h-9 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        className="p-2 min-w-10 min-h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors active:scale-95"
                                         aria-label="Remove from queue"
                                     >
                                         <Trash2 size={14} />
@@ -462,7 +466,7 @@ export const QueueView: React.FC = () => {
                                     onClick={() => playTrack(track)}
                                     onContextMenu={(e) => openTrackContextMenu(e, track as unknown as TrackItem, history, undefined)}
                                 >
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10">
                                         <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
                                     </div>
                                     <div className="min-w-0 flex-1">

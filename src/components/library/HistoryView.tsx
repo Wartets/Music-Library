@@ -94,7 +94,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                                         || fallbackVersionWithArtwork?.artworks?.track_artwork?.[0]
                                         || fallbackVersionWithArtwork?.artworks?.album_artwork?.[0];
                                     return (
-                                        <div className="w-8 h-8 rounded-md bg-white/5 overflow-hidden">
+                                        <div className="w-11 h-11 rounded-md bg-white/5 overflow-hidden">
                                             {art ? (
                                                 <ArtworkImage details={art} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover" />
                                             ) : (
@@ -169,7 +169,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                                 onDoubleClick={() => handlePlay(track)}
                                 onContextMenu={(e) => openTrackContextMenu(e, track, historyTracks, undefined)}
                             >
-                                <div className="w-10 h-10 rounded-lg bg-white/5 overflow-hidden border border-white/10 flex-shrink-0">
+                                <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden border border-white/10 flex-shrink-0">
                                     {art ? (
                                         <ArtworkImage details={art} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover" />
                                     ) : (

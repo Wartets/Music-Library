@@ -39,23 +39,24 @@ const SortableTrackRow: React.FC<SortableTrackProps> = ({ track, index, onRemove
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        padding: '8px',
-        margin: '4px 0',
+        padding: '10px',
+        margin: '6px 0',
         backgroundColor: isCurrent ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
         border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '4px',
+        borderRadius: '8px',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         color: '#fff',
-        cursor: 'default'
+        cursor: 'default',
+        minHeight: '56px'
     };
 
     return (
         <div ref={setNodeRef} style={style} {...attributes}>
             <div
                 {...listeners}
-                style={{ cursor: 'grab', opacity: 0.5, userSelect: 'none', padding: '0 8px' }}
+                style={{ cursor: 'grab', opacity: 0.5, userSelect: 'none', padding: '8px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 title="Drag to reorder"
             >
                 ☰
@@ -75,7 +76,7 @@ const SortableTrackRow: React.FC<SortableTrackProps> = ({ track, index, onRemove
                 onClick={(e) => { e.stopPropagation(); onRemove(index); }}
                 style={{
                     background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer',
-                    padding: '4px 8px', borderRadius: '4px'
+                    padding: '8px', borderRadius: '4px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}
                 title="Remove from queue"
             >

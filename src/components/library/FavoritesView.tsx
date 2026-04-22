@@ -70,7 +70,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
                             onContextMenu={(e) => onRightClick(e, track)}
                         >
                             <span className="text-xs text-gray-600 w-6 text-right font-mono">{idx + 1}</span>
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
                                 <ArtworkImage
                                     details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]}
                                     alt={track.metadata?.title || track.logic.track_name}

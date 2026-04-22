@@ -248,7 +248,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 onContextMenu={(e) => handleContextMenu(e, track, list)}
             >
                 <span className="text-[10px] font-mono text-gray-600 w-4 text-right">{index + 1}</span>
-                <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/5">
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/5">
                     <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} />
                 </div>
                 <div className="flex-1 min-w-0">

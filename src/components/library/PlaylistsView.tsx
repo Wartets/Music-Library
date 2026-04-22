@@ -266,7 +266,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
 
             {isCreating && (
                 <form onSubmit={handleCreate} className="mb-6 sm:mb-8 bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/10 flex flex-col sm:flex-row gap-3 sm:items-center animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/5 flex items-center justify-center text-dominant flex-shrink-0">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white/5 flex items-center justify-center text-dominant flex-shrink-0">
                         <FolderPlus size={20} className="sm:hidden" />
                         <FolderPlus size={24} className="hidden sm:block" />
                     </div>

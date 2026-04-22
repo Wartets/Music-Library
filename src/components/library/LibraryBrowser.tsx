@@ -152,7 +152,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                             );
                         case 'artwork':
                             return (
-                                <div key={col.id} className={`${responsiveClass} w-10 h-10 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/5 group-hover:border-white/20 transition-all`}>
+                                <div key={col.id} className={`${responsiveClass} w-12 h-12 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/5 group-hover:border-white/20 transition-all`}>
                                     <ArtworkImage
                                         details={item.artworks?.track_artwork?.[0] || item.artworks?.album_artwork?.[0]}
                                         alt={item.metadata?.title || item.logic?.track_name}
@@ -166,7 +166,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                     {item._hasVersions && (
                                         <button
                                             onClick={(e) => toggleFolder(item._folderKey, e)}
-                                            className="p-1.5 sm:p-1 min-w-8 min-h-8 sm:min-w-auto sm:min-h-auto flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                                            className="p-2 sm:p-1.5 min-w-10 min-h-10 sm:min-w-9 sm:min-h-9 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
                                         >
                                             {item._isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                         </button>
@@ -271,7 +271,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
             <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-3 sm:px-4 pb-28 bg-surface-primary">
                 <div className="mb-3 flex items-center gap-3">
                     {artworkPath ? (
-                        <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg flex-shrink-0 border border-white/10 relative">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden shadow-lg flex-shrink-0 border border-white/10 relative">
                             <ArtworkImage
                                 src={artworkPath}
                                 alt={title}
@@ -313,14 +313,14 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                     playTrack(shuffled[0], shuffled);
                                 }
                             }}
-                            className="flex items-center gap-2 px-3 py-2 bg-white/10 text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95 hover:bg-white/15"
+                            className="flex items-center gap-2 px-3 py-3 bg-white/10 text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95 hover:bg-white/15 min-h-11"
                             aria-label="Shuffle play"
                         >
                             <Shuffle size={14} /> Shuffle
                         </button>
                         <button
                             onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
-                            className="flex items-center gap-2 px-3.5 py-2 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95"
+                            className="flex items-center gap-2 px-3.5 py-3 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95 min-h-11"
                             aria-label="Play all in order"
                         >
                             <Play size={14} fill="currentColor" /> Play All
@@ -348,14 +348,14 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                     <button
                                         onClick={(e) => toggleFolder(item._folderKey, e)}
                                         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                        className="p-1.5 min-w-8 min-h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white touch-manufacturer-90"
+                                        className="p-2 min-w-10 min-h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white touch-manufacturer-90"
                                         aria-label={item._isExpanded ? 'Collapse versions' : 'Expand versions'}
                                     >
                                         {item._isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                     </button>
                                 )}
 
-                                <div className="w-10 h-10 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/10">
+                                <div className="w-12 h-12 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/10">
                                     <ArtworkImage
                                         details={artwork}
                                         alt={item.metadata?.title || item.logic?.track_name}
@@ -420,7 +420,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                     <div className="flex items-center gap-2 md:gap-4">
                         <button
                             onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
-                            className="flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2.5 md:py-3 bg-dominant text-on-dominant rounded-xl text-[10px] md:text-xs font-black uppercase tracking-[0.16em] md:tracking-[0.2em] hover:bg-dominant-light transition-all shadow-xl shadow-dominant/10 active:scale-95"
+                            className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-3 bg-dominant text-on-dominant rounded-xl text-sm md:text-xs font-black uppercase tracking-[0.16em] md:tracking-[0.2em] hover:bg-dominant-light transition-all shadow-xl shadow-dominant/10 active:scale-95 min-h-12 md:min-h-11"
                         >
                             <Play size={16} fill="currentColor" /> Play All
                         </button>
