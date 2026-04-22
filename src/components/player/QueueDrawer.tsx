@@ -92,7 +92,7 @@ interface QueueDrawerProps {
 }
 
 export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => {
-    const { state, playTrack, reorderQueue, removeFromQueue, clearQueue } = usePlayer();
+    const { state, queueDisplay, playTrack, reorderQueue, removeFromQueue, clearQueue } = usePlayer();
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -145,7 +145,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-                {state.queue.length === 0 ? (
+                {queueDisplay.length === 0 ? (
                     <div style={{ color: '#888', textAlign: 'center', marginTop: '20px' }}>
                         Queue is empty
                     </div>

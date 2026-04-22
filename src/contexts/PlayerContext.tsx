@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
-import { PlayerState, TrackItem } from '../types/music';
+import { PlayerState, TrackItem, QueueDisplayItem } from '../types/music';
 import { audioEngine, AudioPlaybackError } from '../services/audioEngine';
 import { persistenceService } from '../services/persistence';
 import { useLibrary } from './LibraryContext';
 import { useUI } from './UIContext';
 import { rankTrackVersions } from '../utils/versionUtils';
+import { parseDuration } from '../utils/formatters';
 
 interface PlayTrackOptions {
     skipHistoryPush?: boolean;
@@ -14,6 +15,7 @@ interface PlayTrackOptions {
 
 interface PlayerContextProps {
     state: PlayerState;
+    queueDisplay: QueueDisplayItem[];
     playTrack: (track: TrackItem, queue?: TrackItem[]) => void;
     togglePlay: () => void;
     playNext: () => void;
@@ -71,6 +73,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, []);
     const playTrackLogicRef = useRef<(track: TrackItem, queue?: TrackItem[], options?: PlayTrackOptions) => void>(() => { });
     const handlePlaybackFailureRef = useRef<(error: Error, failedTrack?: TrackItem | null) => void>(() => { });
+
+    // Unified queue display state - single source of truth for both QueueView and QueueDrawer
+    const [queueDisplay, setQueueDisplay] = useState<QueueDisplayItem[]>([]);
     const recoveryRef = useRef<{
         attempted: Set<string>;
         attemptedPrimary: Set<string>;
@@ -450,6 +455,30 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return () => window.removeEventListener('music-history-cleared', handleHistoryCleared);
     }, []);
 
+    // Compute unified queue display state
+    useEffect(() => {
+        const currentTrack = stateRef.current.currentTrack;
+        const queue = stateRef.current.queue;
+        const curIdx = currentTrack ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256) : -1;
+        const nextTracksRaw = curIdx !== -1 ? queue.slice(curIdx + 1) : queue;
+
+        let items: QueueDisplayItem[] = nextTracksRaw.map((track, i) => ({
+            ...track,
+            originalIndex: i,
+            id: track.logic.hash_sha256 + '-' + i,
+            startTimeSeconds: 0 // Will be computed below
+        }));
+
+        // Calculate start times for each track
+        let accumulatedTime = currentTrack ? getProgress() : 0;
+        items.forEach((item) => {
+            item.startTimeSeconds = accumulatedTime;
+            accumulatedTime += duration;
+        });
+
+        setQueueDisplay(items);
+    }, [state.queue, state.currentTrack, getProgress]);
+
     const playTrack = useCallback((track: TrackItem, queue?: TrackItem[]) => {
         playTrackLogic(track, queue);
     }, [playTrackLogic]);
@@ -685,7 +714,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     return (
         <PlayerContext.Provider value={{
-            state, playTrack, togglePlay, playNext, playPrevious,
+            state, queueDisplay, playTrack, togglePlay, playNext, playPrevious,
             setVolume, seek, getProgress, stop, seekForward, seekBackward,
             toggleShuffle, setRepeat, setShuffleMode,
             reorderQueue, removeFromQueue, clearQueue,

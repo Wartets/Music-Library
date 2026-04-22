@@ -140,6 +140,17 @@ export interface PlayerState {
     queueLimit: number;
 }
 
+export interface QueueDisplayItem {
+    originalIndex: number;
+    id: string;
+    startTimeSeconds: number;
+    logic: TrackLogic;
+    metadata: TrackMetadata;
+    audio_specs: AudioSpecs;
+    artworks: TrackArtworks;
+    versions?: TrackItem[];
+}
+
 export interface ColumnConfig {
     id: string;
     label: string;

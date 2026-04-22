@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { ArtworkImage } from '../shared/ArtworkImage';
-import { TrackItem } from '../../types/music';
+import { TrackItem, QueueDisplayItem } from '../../types/music';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import {
     Play, Trash2, GripVertical, ListMusic, History,
@@ -32,19 +32,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-interface QueueTrackItem {
-    originalIndex: number;
-    id: string;
-    startTimeSeconds: number;
-    logic: any;
-    metadata: any;
-    audio_specs: any;
-    artworks: any;
-    versions?: any[];
-}
+
 
 interface SortableItemProps {
-    track: QueueTrackItem;
+    track: QueueDisplayItem;
     index: number;
     curIdx: number;
     playTrack: any;
@@ -134,7 +125,7 @@ const SortableTrackItem: React.FC<SortableItemProps> = React.memo(({ track, inde
 });
 
 const QueueListItem: React.FC<{
-    track: QueueTrackItem;
+    track: QueueDisplayItem;
     index: number;
     curIdx: number;
     playTrack: any;
@@ -178,6 +169,7 @@ const QueueListItem: React.FC<{
 export const QueueView: React.FC = () => {
     const {
         state: playerState,
+        queueDisplay,
         getProgress,
         removeFromQueue,
         playTrack,
@@ -237,10 +229,8 @@ export const QueueView: React.FC = () => {
         ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256)
         : -1;
 
-    const nextTracksRaw = curIdx !== -1 ? queue.slice(curIdx + 1) : queue;
-
-    const filteredQueue = useMemo(() => {
-        let items = nextTracksRaw.map((track, i) => ({ ...track, originalIndex: i, id: track.logic.hash_sha256 + '-' + i }));
+    const filteredQueueDisplay = useMemo(() => {
+        let items = [...queueDisplay];
 
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
@@ -261,43 +251,28 @@ export const QueueView: React.FC = () => {
         }
 
         return items;
-    }, [nextTracksRaw, searchQuery, sortBy]);
-
-    const queueWithTime: QueueTrackItem[] = useMemo(() => {
-        let cumulativeTime = 0;
-        const currentProgressRaw = getProgress();
-        const currentProgress = Number.isFinite(currentProgressRaw) ? currentProgressRaw : 0;
-        const currentDuration = currentTrack ? parseDuration(currentTrack.audio_specs?.duration) : 0;
-        const remainingCurrent = Math.max(0, currentDuration - currentProgress);
-        cumulativeTime = remainingCurrent;
-
-        return filteredQueue.map((item) => {
-            const startTime = cumulativeTime;
-            cumulativeTime += parseDuration(item.audio_specs?.duration);
-            return { ...item, startTimeSeconds: startTime };
-        });
-    }, [filteredQueue, currentTrack, getProgress, clockTick]);
+    }, [queueDisplay, searchQuery, sortBy]);
 
     const totalQueueDuration = useMemo(() => {
         const currentDuration = currentTrack ? parseDuration(currentTrack.audio_specs?.duration) : 0;
         const progressRaw = getProgress();
         const progress = Number.isFinite(progressRaw) ? progressRaw : 0;
         const remainingCurrent = currentTrack ? Math.max(0, currentDuration - progress) : 0;
-        const upcomingDuration = nextTracksRaw.reduce((sum, t) => sum + parseDuration(t.audio_specs?.duration), 0);
+        const upcomingDuration = queueDisplay.reduce((sum, t) => sum + parseDuration(t.audio_specs?.duration), 0);
         return remainingCurrent + upcomingDuration;
-    }, [nextTracksRaw, currentTrack, getProgress, clockTick]);
+    }, [queueDisplay, currentTrack, getProgress, clockTick]);
 
-    const isDragEnabled = !searchQuery && sortBy === 'index' && queueWithTime.length <= 120;
+    const isDragEnabled = !searchQuery && sortBy === 'index' && filteredQueueDisplay.length <= 120;
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         if (over && active.id !== over.id) {
-            const oldIndex = filteredQueue.findIndex((item) => item.id === active.id);
-            const newIndex = filteredQueue.findIndex((item) => item.id === over.id);
+            const oldIndex = filteredQueueDisplay.findIndex((item) => item.id === active.id);
+            const newIndex = filteredQueueDisplay.findIndex((item) => item.id === over.id);
             if (oldIndex < 0 || newIndex < 0) return;
 
-            const absoluteOldIndex = curIdx + 1 + filteredQueue[oldIndex].originalIndex;
-            const absoluteNewIndex = curIdx + 1 + filteredQueue[newIndex].originalIndex;
+            const absoluteOldIndex = curIdx + 1 + filteredQueueDisplay[oldIndex].originalIndex;
+            const absoluteNewIndex = curIdx + 1 + filteredQueueDisplay[newIndex].originalIndex;
 
             reorderQueue(absoluteOldIndex, absoluteNewIndex);
             showToast('Queue reordered', 'info', { subtle: true });
@@ -338,7 +313,7 @@ export const QueueView: React.FC = () => {
                 <div className="mb-3">
                     <h1 className="text-lg font-black tracking-tight text-white">Playback Control</h1>
                     <p className="text-gray-500 text-[11px] mt-1 flex items-center gap-2 flex-wrap">
-                        <span className="flex items-center gap-1"><ListMusic size={12} /> {nextTracksRaw.length} upcoming</span>
+                        <span className="flex items-center gap-1"><ListMusic size={12} /> {queueDisplay.length} upcoming</span>
                         <span className="flex items-center gap-1"><Clock size={12} /> {formatDuration(totalQueueDuration)} left</span>
                     </p>
                 </div>
@@ -407,13 +382,13 @@ export const QueueView: React.FC = () => {
 
                 {activeTab === 'queue' ? (
                     <div className="space-y-2 pb-4">
-                        {queueWithTime.length === 0 ? (
+                        {filteredQueueDisplay.length === 0 ? (
                             <div className="h-44 flex flex-col items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
                                 <ListMusic size={36} className="opacity-20 mb-2" />
                                 <p className="text-sm font-bold text-white/30">Queue empty</p>
                             </div>
                         ) : (
-                            queueWithTime.map((track) => (
+                            filteredQueueDisplay.map((track) => (
                                 <div
                                     key={track.id}
                                     className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
@@ -623,7 +598,7 @@ export const QueueView: React.FC = () => {
 
                         <section>
                             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Next up in list</h2>
-                            {queueWithTime.length === 0 ? (
+                            {filteredQueueDisplay.length === 0 ? (
                                 <div className="h-64 flex flex-col items-center justify-center text-gray-500 border-2 border-dashed border-white/5 rounded-3xl">
                                     <ListMusic size={64} className="opacity-10 mb-4" />
                                     <p className="text-xl font-bold text-white/20">Queue empty</p>
@@ -635,11 +610,11 @@ export const QueueView: React.FC = () => {
                                     onDragEnd={handleDragEnd}
                                 >
                                     <SortableContext
-                                        items={queueWithTime.map(t => t.id)}
+                                        items={filteredQueueDisplay.map(t => t.id)}
                                         strategy={verticalListSortingStrategy}
                                     >
                                         <div className="space-y-2">
-                                            {queueWithTime.map((track, index) => (
+                                            {filteredQueueDisplay.map((track, index) => (
                                                 <SortableTrackItem
                                                     key={track.id}
                                                     track={track}
