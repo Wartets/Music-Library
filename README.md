@@ -2,11 +2,6 @@
 
 A high-performance local music library and player designed for managing and playing a strictly organized music collection. Features an adaptive interface that responds to album artwork colors and works seamlessly across desktop and mobile devices.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-19-blue)
-![Vite](https://img.shields.io/badge/Vite-5-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-
 ## Key Features
 
 ### Core Functionality
