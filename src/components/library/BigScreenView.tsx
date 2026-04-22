@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { Visualizer } from '../player/Visualizer';
 import { Maximize2, Minimize2, Repeat, Repeat1, Shuffle, X } from 'lucide-react';
 import { formatDuration } from '../../utils/formatters';
 import { ViewType } from '../layout/AppLayout';
@@ -9,7 +8,22 @@ import { TrackItem } from '../../types/music';
 
 const getTrackArtwork = (track?: TrackItem | null) => track?.artworks?.track_artwork?.[0] || track?.artworks?.album_artwork?.[0];
 
-const getTrackDominantColor = (track?: TrackItem | null) => getTrackArtwork(track)?.dominant_color || '#121212';
+const hashText = (value: string): number => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+        hash = ((hash << 5) - hash) + value.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+};
+
+const getFallbackArtworkColor = (track?: TrackItem | null) => {
+    const seed = track?.metadata?.title || track?.logic?.track_name || 'track';
+    const hue = hashText(seed) % 360;
+    return `hsl(${hue} 36% 28%)`;
+};
+
+const getTrackDominantColor = (track?: TrackItem | null) => getTrackArtwork(track)?.dominant_color || getFallbackArtworkColor(track);
 
 const getTrackTitle = (track?: TrackItem | null) => track?.metadata?.title || track?.logic.track_name || 'Unknown Track';
 
@@ -146,33 +160,13 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
     const artworkDetails = getTrackArtwork(track);
     const transitionArtworkDetails = getTrackArtwork(transitionTrack);
     const dominantColor = getTrackDominantColor(track);
-    const transitionDominantColor = getTrackDominantColor(transitionTrack);
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden select-none" onDoubleClick={handleBackgroundDoubleClick}>
-            {/* Background Glow */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div
-                    className="absolute inset-0 transition-all duration-1000 ease-out"
-                    style={{
-                        background: `radial-gradient(circle at center, ${dominantColor} 0%, transparent 68%)`,
-                        backgroundColor: dominantColor,
-                        opacity: isArtworkTransitioning ? 0.92 : 1,
-                        transform: 'scale(1.45)'
-                    }}
-                />
-                {transitionTrack && (
-                    <div
-                        className={`absolute inset-0 transition-opacity duration-1000 ease-out ${isArtworkTransitioning ? 'opacity-[0.85]' : 'opacity-0'}`}
-                        style={{
-                            background: `radial-gradient(circle at center, ${transitionDominantColor} 0%, transparent 70%)`,
-                            backgroundColor: transitionDominantColor,
-                            transform: 'scale(1.6)'
-                        }}
-                    />
-                )}
-                <div className="absolute inset-0 bg-black/42" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_32%)] opacity-80" />
+        <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden select-none" onDoubleClick={handleBackgroundDoubleClick}>
+            {/* Static artwork-derived background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: dominantColor }} />
+                <div className="absolute inset-0 bg-black/35" />
             </div>
 
             {/* Header */}
@@ -181,13 +175,10 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                     onClick={onBack}
                     onMouseEnter={() => { isButtonHoveredRef.current = true; setIsButtonHovered(true); }}
                     onMouseLeave={() => { isButtonHoveredRef.current = false; setIsButtonHovered(false); }}
-                    className={`group flex items-center bg-white/10 hover:bg-white/20 rounded-full transition-all duration-700 ease-in-out border border-white/10 hover:border-white/20 shadow-2xl backdrop-blur-md active:scale-95 overflow-hidden h-[44px] ${!isControlsVisible && !isButtonHovered ? 'w-[44px]' : 'w-[200px]'}`}
+                    className={`group flex items-center bg-white/10 hover:bg-white/20 rounded-full transition-all duration-700 ease-in-out border border-white/10 hover:border-white/20 shadow-2xl backdrop-blur-md active:scale-95 overflow-hidden h-[44px] w-[44px]`}
                 >
                     <div className="flex items-center justify-center w-[44px] h-[44px] flex-shrink-0">
                         <X size={18} />
-                    </div>
-                    <div className={`overflow-hidden transition-all duration-700 flex items-center ${!isControlsVisible && !isButtonHovered ? 'w-0 opacity-0' : 'w-full opacity-100'}`}>
-                        <span className="font-black text-xs uppercase tracking-widest text-white/90 whitespace-nowrap">Exit Immersion</span>
                     </div>
                 </button>
                 <div className="flex items-center gap-4">
@@ -304,10 +295,6 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                     </div>
                 </div>
 
-                {/* Bottom Visualizer */}
-                <div className="w-full max-w-4xl h-32 opacity-80 pointer-events-none">
-                    <Visualizer />
-                </div>
             </div>
 
             {/* Controls (Floating/Overlay) */}
