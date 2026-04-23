@@ -12,6 +12,7 @@ import { getInitials, getMutedVisualStyle, seedFromArtistName } from '../../util
 interface ArtistGroup {
     name: string;
     tracks: TrackItem[];
+    albums: Set<string>;
 }
 
 interface ArtistsViewProps {
@@ -24,40 +25,36 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({ onNavigate }) => {
     const { showContextMenu, showToast } = useUI();
 
     const artists = useMemo(() => {
-        const groups: Record<string, ArtistGroup> = {};
-        let unknownArtistTracks: TrackItem[] = [];
+        const groups = new Map<string, ArtistGroup>();
+        const unknownGroup = { name: 'Unknown Artist', tracks: [] as TrackItem[], albums: new Set<string>() };
 
-        libraryState.filteredTracks.forEach(track => {
-            const artistNames = track.metadata?.artists;
-            
-            // Check if artists array is empty or falsy
-            if (!artistNames || !Array.isArray(artistNames) || artistNames.length === 0) {
-                unknownArtistTracks.push(track);
-            } else {
-                // Filter out empty strings from the array
-                const validArtists = artistNames
-                    .map(a => (a || '').trim())
-                    .filter(a => a.length > 0);
-                
-                if (validArtists.length === 0) {
-                    unknownArtistTracks.push(track);
-                } else {
-                    validArtists.forEach(artistName => {
-                        const key = artistName.toLowerCase();
-                        if (!groups[key]) {
-                            groups[key] = { name: artistName, tracks: [] };
-                        }
-                        groups[key].tracks.push(track);
-                    });
-                }
+        for (const track of libraryState.filteredTracks) {
+            const rawArtists = track.metadata?.artists;
+            const validArtists = Array.isArray(rawArtists)
+                ? rawArtists.map(artist => artist?.trim() || '').filter(Boolean)
+                : [];
+            const albumName = track.metadata?.album?.trim();
+
+            if (validArtists.length === 0) {
+                unknownGroup.tracks.push(track);
+                if (albumName) unknownGroup.albums.add(albumName.toLowerCase());
+                continue;
             }
-        });
-        
-        if (unknownArtistTracks.length > 0) {
-            groups['__unknown__'] = { name: 'Unknown Artist', tracks: unknownArtistTracks };
+
+            for (const artistName of validArtists) {
+                const key = artistName.toLowerCase();
+                const group = groups.get(key) || { name: artistName, tracks: [], albums: new Set<string>() };
+                group.tracks.push(track);
+                if (albumName) group.albums.add(albumName.toLowerCase());
+                groups.set(key, group);
+            }
         }
 
-        const sorted = Object.values(groups).sort((a, b) => {
+        if (unknownGroup.tracks.length > 0) {
+            groups.set('__unknown__', unknownGroup);
+        }
+
+        const sorted = Array.from(groups.values()).sort((a, b) => {
             if (a.name === 'Unknown Artist') return 1;
             if (b.name === 'Unknown Artist') return -1;
             return a.name.localeCompare(b.name);
@@ -131,7 +128,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({ onNavigate }) => {
         return {
             id: artist.name,
             title: artist.name,
-            subtitle: `${artist.tracks.length} tracks reported`,
+            subtitle: `${artist.tracks.length} tracks • ${artist.albums.size} albums`,
             visualToken: {
                 style: {
                     background: palette.background,
