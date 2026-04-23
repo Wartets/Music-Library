@@ -5,6 +5,116 @@ import { useUI } from '../../contexts/UIContext';
 import { Filter, User, Play, ListPlus, Plus, FolderPlus, Pencil, Zap } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
+import { formatDuration, parseDuration } from '../../utils/formatters';
+import { TrackItem } from '../../types/music';
+
+interface AlbumGroup {
+    id: string;
+    name: string;
+    artist: string;
+    tracks: TrackItem[];
+    sortedTracks: TrackItem[];
+    artwork?: TrackItem['artworks']['album_artwork'][0] | TrackItem['artworks']['track_artwork'][0];
+    durationSeconds: number;
+    durationLabel: string;
+}
+
+const getBestAlbumArtwork = (tracks: TrackItem[]) => {
+    for (const track of tracks) {
+        const albumArtwork = track.artworks?.album_artwork?.[0];
+        if (albumArtwork) return albumArtwork;
+    }
+
+    for (const track of tracks) {
+        const trackArtwork = track.artworks?.track_artwork?.[0];
+        if (trackArtwork) return trackArtwork;
+
+        const versionArtwork = track.versions?.find(version => version.artworks?.album_artwork?.[0] || version.artworks?.track_artwork?.[0]);
+        if (versionArtwork) {
+            return versionArtwork.artworks?.album_artwork?.[0] || versionArtwork.artworks?.track_artwork?.[0];
+        }
+    }
+
+    return undefined;
+};
+
+const getAlbumDurationSeconds = (tracks: TrackItem[]) => {
+    return tracks.reduce((total, track) => total + parseDuration(track.audio_specs?.duration || '0:00'), 0);
+};
+
+const groupAlbums = (tracks: TrackItem[], sortBy: 'name' | 'artist'): AlbumGroup[] => {
+    const groups = new Map<string, AlbumGroup>();
+    const unknownTracks: TrackItem[] = [];
+
+    tracks.forEach(track => {
+        const album = track.metadata?.album;
+        const isEmptyAlbum = !album || (typeof album === 'string' && !album.trim());
+
+        if (isEmptyAlbum) {
+            unknownTracks.push(track);
+            return;
+        }
+
+        const albumName = album.trim();
+        const key = `album:${albumName.toLowerCase()}`;
+        const existing = groups.get(key);
+
+        if (existing) {
+            existing.tracks.push(track);
+            return;
+        }
+
+        groups.set(key, {
+            id: key,
+            name: albumName,
+            artist: track.metadata?.album_artist || track.metadata?.artists?.[0] || 'Unknown Artist',
+            tracks: [track],
+            sortedTracks: [track],
+            artwork: undefined,
+            durationSeconds: 0,
+            durationLabel: '0:00'
+        });
+    });
+
+    if (unknownTracks.length > 0) {
+        groups.set('__unknown__', {
+            id: '__unknown__',
+            name: 'Unknown Album',
+            artist: 'Unknown Artist',
+            tracks: unknownTracks,
+            sortedTracks: [...unknownTracks],
+            artwork: undefined,
+            durationSeconds: 0,
+            durationLabel: '0:00'
+        });
+    }
+
+    const albums = Array.from(groups.values()).map(album => {
+        const sortedTracks = [...album.tracks].sort((a, b) => (a.metadata?.track_number || '0').localeCompare(b.metadata?.track_number || '0'));
+        const durationSeconds = getAlbumDurationSeconds(sortedTracks);
+
+        return {
+            ...album,
+            sortedTracks,
+            artwork: getBestAlbumArtwork(sortedTracks),
+            durationSeconds,
+            durationLabel: formatDuration(durationSeconds),
+        };
+    });
+
+    return albums.sort((a, b) => {
+        if (a.id === '__unknown__') return 1;
+        if (b.id === '__unknown__') return -1;
+
+        if (sortBy === 'name') {
+            return a.name.localeCompare(b.name);
+        }
+
+        const artistCmp = a.artist.localeCompare(b.artist);
+        if (artistCmp !== 0) return artistCmp;
+        return a.name.localeCompare(b.name);
+    });
+};
 
 
 interface AlbumsViewProps {
@@ -18,59 +128,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
     const [sortBy, setSortBy] = React.useState<'name' | 'artist'>('artist');
 
     const albums = useMemo(() => {
-        const groups: Record<string, any> = {};
-        const unknownAlbums: any[] = [];
-        
-        libraryState.filteredTracks.forEach(track => {
-            const album = track.metadata?.album;
-            
-            // Check if album metadata is empty/null/undefined
-            const isEmptyAlbum = !album || (typeof album === 'string' && !album.trim());
-            
-            if (isEmptyAlbum) {
-                unknownAlbums.push(track);
-            } else {
-                const albumTrimmed = album.trim();
-                const key = `album:${albumTrimmed.toLowerCase()}`;
-                if (!groups[key]) {
-                    groups[key] = {
-                        id: key,
-                        name: albumTrimmed,
-                        artist: track.metadata?.album_artist || track.metadata?.artists?.[0] || 'Unknown Artist',
-                        tracks: [],
-                        artwork: track.artworks?.album_artwork?.[0] || track.artworks?.track_artwork?.[0]
-                    };
-                }
-                groups[key].tracks.push(track);
-            }
-        });
-        
-        if (unknownAlbums.length > 0) {
-            groups['__unknown__'] = {
-                id: '__unknown__',
-                name: 'Unknown Album',
-                artist: 'Unknown Artist',
-                tracks: unknownAlbums,
-                artwork: unknownAlbums[0]?.artworks?.album_artwork?.[0] || unknownAlbums[0]?.artworks?.track_artwork?.[0]
-            };
-        }
-        
-        const sorted = Object.values(groups);
-        if (sortBy === 'name') {
-            return sorted.sort((a, b) => {
-                if (a.id === '__unknown__') return 1;
-                if (b.id === '__unknown__') return -1;
-                return a.name.localeCompare(b.name);
-            });
-        } else {
-            return sorted.sort((a, b) => {
-                if (a.id === '__unknown__') return 1;
-                if (b.id === '__unknown__') return -1;
-                const artistCmp = a.artist.localeCompare(b.artist);
-                if (artistCmp !== 0) return artistCmp;
-                return a.name.localeCompare(b.name);
-            });
-        }
+        return groupAlbums(libraryState.filteredTracks, sortBy);
     }, [libraryState.filteredTracks, sortBy]);
 
     const onRightClick = React.useCallback((e: React.MouseEvent, album: any) => {
@@ -83,8 +141,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
                 label: `Play Album: ${album.name}`,
                 icon: <Play size={14} fill="currentColor" />,
                 onClick: () => {
-                    const sortedTracks = [...album.tracks].sort((a: any, b: any) => (a.metadata?.track_number || '0').localeCompare(b.metadata?.track_number || '0'));
-                    playTrack(sortedTracks[0], sortedTracks);
+                    playTrack(album.sortedTracks[0], album.sortedTracks);
                     showToast(`Playing album: ${album.name}`);
                 }
             },
@@ -92,8 +149,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
                 label: 'Play Next',
                 icon: <Zap size={14} className="text-dominant-light" />,
                 onClick: () => {
-                    const sortedTracks = [...album.tracks].sort((a: any, b: any) => (a.metadata?.track_number || '0').localeCompare(b.metadata?.track_number || '0'));
-                    sortedTracks.reverse().forEach((t: any) => addToNext(t));
+                    album.sortedTracks.slice().reverse().forEach((t: TrackItem) => addToNext(t));
                     showToast(`Album ${album.name} will play next`, 'success');
                 }
             },
@@ -149,7 +205,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
     const gridItems: GridItem[] = albums.map(album => ({
         id: album.id,
         title: album.name,
-        subtitle: album.artist,
+        subtitle: `${album.artist} • ${album.tracks.length} tracks • ${album.durationLabel}`,
         imageDetails: album.artwork,
         onClick: () => onNavigate('AlbumDetail', album),
         onContextMenu: (e) => onRightClick(e, album)
