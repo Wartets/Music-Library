@@ -2,10 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
-import { Play, ListPlus, FolderPlus, Calendar, Hash } from 'lucide-react';
+import { Play, ListPlus, FolderPlus, Calendar, Hash, CalendarRange } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromYear } from '../../utils/collectionVisuals';
+import { groupTracks } from '../../utils/grouping';
 
 interface YearsViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -15,65 +16,52 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, addToQueue, addToNext } = usePlayer();
     const { showContextMenu, showToast } = useUI();
+    const [groupBy, setGroupBy] = useState<'year' | 'decade'>('year');
     const [sortBy, setSortBy] = useState<'year' | 'count'>('year');
 
-    const years = useMemo(() => {
-        const groups: Record<string, any> = {};
-        const unknownYearTracks: any[] = [];
-        
-        libraryState.filteredTracks.forEach(track => {
-            const yearRaw = track.metadata?.year;
-            
-            // Check if year is empty/null/undefined
-            if (!yearRaw) {
-                unknownYearTracks.push(track);
-            } else {
-                const yearStr = String(yearRaw).trim();
-                if (!yearStr) {
-                    unknownYearTracks.push(track);
-                } else {
-                    const yearNum = parseInt(yearStr);
-                    // Valid year should be a valid number in reasonable range
-                    if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
-                        unknownYearTracks.push(track);
-                    } else {
-                        const key = String(yearNum);
-                        if (!groups[key]) {
-                            groups[key] = {
-                                name: String(yearNum),
-                                tracks: []
-                            };
-                        }
-                        groups[key].tracks.push(track);
-                    }
-                }
-            }
-        });
-        
-        if (unknownYearTracks.length > 0) {
-            groups['__unknown__'] = {
-                name: 'Unknown Year',
-                tracks: unknownYearTracks
-            };
+    const parseYear = (value: string | null | undefined): number | null => {
+        const year = parseInt(String(value || '').trim(), 10);
+        if (Number.isNaN(year) || year < 1900 || year > 2100) {
+            return null;
         }
+        return year;
+    };
 
-        const sorted = Object.values(groups);
+    const years = useMemo(() => {
+        const grouped = groupTracks(libraryState.filteredTracks, {
+            getValues: (track) => {
+                const parsedYear = parseYear(track.metadata?.year);
+                if (parsedYear === null) {
+                    return null;
+                }
+
+                if (groupBy === 'decade') {
+                    const decade = Math.floor(parsedYear / 10) * 10;
+                    return `${decade}s`;
+                }
+
+                return String(parsedYear);
+            },
+            unknownLabel: 'Unknown Year'
+        });
+
+        const sorted = [...grouped];
         if (sortBy === 'year') {
             return sorted.sort((a, b) => {
-                if (a.name === 'Unknown Year') return 1;
-                if (b.name === 'Unknown Year') return -1;
-                const yearA = parseInt(a.name) || 0;
-                const yearB = parseInt(b.name) || 0;
-                return yearB - yearA;
+                if (a.isUnknown) return 1;
+                if (b.isUnknown) return -1;
+                const yearA = parseInt(a.name, 10) || 0;
+                const yearB = parseInt(b.name, 10) || 0;
+                return yearB - yearA || a.name.localeCompare(b.name);
             });
         } else {
             return sorted.sort((a, b) => {
-                if (a.name === 'Unknown Year') return 1;
-                if (b.name === 'Unknown Year') return -1;
-                return b.tracks.length - a.tracks.length || parseInt(b.name) - parseInt(a.name);
+                if (a.isUnknown) return 1;
+                if (b.isUnknown) return -1;
+                return b.tracks.length - a.tracks.length || (parseInt(b.name, 10) - parseInt(a.name, 10));
             });
         }
-    }, [libraryState.filteredTracks, sortBy]);
+    }, [groupBy, libraryState.filteredTracks, sortBy]);
 
     const onRightClick = (e: React.MouseEvent, yearGroup: any) => {
         e.preventDefault();
@@ -133,6 +121,7 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
 
     const gridItems: GridItem[] = years.map(yearGroup => {
         const palette = getMutedVisualStyle(seedFromYear(yearGroup.name));
+        const filterValue = yearGroup.name;
         return {
             id: yearGroup.name,
             title: yearGroup.name,
@@ -150,7 +139,7 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
                 label: yearGroup.name === 'Unknown Year' ? 'Unknown' : 'Year',
                 symbolClassName: 'text-5xl leading-none'
             },
-            onClick: () => onNavigate('AllTracks', { filter: { type: 'year', value: yearGroup.name } }),
+            onClick: () => onNavigate('AllTracks', { filter: { type: 'year', value: filterValue } }),
             onContextMenu: (e) => onRightClick(e, yearGroup)
         };
     });
@@ -161,11 +150,23 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
             subtitle={`${years.length} release years`}
             items={gridItems}
             sortOptions={[
+                { id: 'group-year', label: 'By Year', icon: <Calendar size={14} /> },
+                { id: 'group-decade', label: 'By Decade', icon: <CalendarRange size={14} /> },
                 { id: 'year', label: 'Year', icon: <Calendar size={14} /> },
                 { id: 'count', label: 'Track Count', icon: <Hash size={14} /> }
             ]}
-            currentSort={sortBy}
-            onSortChange={(id) => setSortBy(id as 'year' | 'count')}
+            currentSort={groupBy === 'year' ? sortBy : `group-${groupBy}`}
+            onSortChange={(id) => {
+                if (id === 'group-year') {
+                    setGroupBy('year');
+                    return;
+                }
+                if (id === 'group-decade') {
+                    setGroupBy('decade');
+                    return;
+                }
+                setSortBy(id as 'year' | 'count');
+            }}
         />
     );
 };

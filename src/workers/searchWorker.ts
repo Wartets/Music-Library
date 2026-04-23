@@ -23,7 +23,15 @@ self.onmessage = (e: MessageEvent) => {
             return terms.every((term: string) => {
                 if (term.includes(':')) {
                     const [key, val] = term.split(':');
-                    if (key === 'year') return String(track.metadata?.year || '').toLowerCase() === val;
+                    if (key === 'year') {
+                        const yearText = String(track.metadata?.year || '').trim().toLowerCase();
+                        if (/^\d{3}0s$|^\d{4}0s$/.test(val)) {
+                            const decadeStart = parseInt(val.slice(0, -1), 10);
+                            const year = parseInt(yearText, 10);
+                            return !Number.isNaN(year) && year >= decadeStart && year < (decadeStart + 10);
+                        }
+                        return yearText === val;
+                    }
                     if (key === 'folder') return String(track.file?.dir || '').toLowerCase().includes(val);
                     if (key === 'format') return String(track.file?.ext || '').toLowerCase() === val;
                     if (key === 'artist') return (track.metadata?.artists || []).some(a => a.toLowerCase().includes(val));

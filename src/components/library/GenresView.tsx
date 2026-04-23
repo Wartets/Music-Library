@@ -3,20 +3,31 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
 import {
-    Play, ListPlus, FolderPlus, Filter, Hash, AudioWaveform, Circle,
-    Diamond, Disc3, Film, Mic2, Music, Radio, Square, Triangle, Waves, Zap
+    Play, ListPlus, FolderPlus, Filter, Hash, AudioWaveform,
+    Disc3, Film, Mic2, Music, Radio, Waves, Zap
 } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
+import { groupTracks } from '../../utils/grouping';
 
 interface GenresViewProps {
     onNavigate: (view: any, data: any) => void;
 }
 
 const getGenreSymbol = (genreName: string, accentColor: string): React.ReactNode => {
-    const normalized = (genreName || '').toLowerCase();
+    const normalized = (genreName || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\s_-]+/g, ' ')
+        .trim();
+
     const sharedStyle = { color: accentColor };
+
+    if (normalized === 'unknown genre') {
+        return <Music size={44} style={sharedStyle} />;
+    }
 
     if (normalized.includes('rock') || normalized.includes('metal') || normalized.includes('punk')) {
         return <Zap size={44} style={sharedStyle} />;
@@ -43,9 +54,7 @@ const getGenreSymbol = (genreName: string, accentColor: string): React.ReactNode
         return <AudioWaveform size={44} style={sharedStyle} />;
     }
 
-    const shapes = [Circle, Square, Triangle, Diamond];
-    const ShapeIcon = shapes[seedFromText(genreName) % shapes.length];
-    return <ShapeIcon size={44} style={sharedStyle} />;
+    return <Music size={44} style={sharedStyle} />;
 };
 
 export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
@@ -55,60 +64,28 @@ export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
     const [sortBy, setSortBy] = useState<'name' | 'count'>('name');
 
     const genres = useMemo(() => {
-        const groups: Record<string, { name: string, tracks: any[] }> = {};
-        const unknownGenreTracks: any[] = [];
-        
-        libraryState.filteredTracks.forEach(track => {
-            let trackGenresRaw = track.metadata?.genre;
-            let trackGenres: string[] = [];
-            
-            if (!Array.isArray(trackGenresRaw)) {
-                // Single genre or empty
-                const genre = trackGenresRaw ? (trackGenresRaw as string).trim() : '';
-                if (genre.length > 0) {
-                    trackGenres = [genre];
+        const grouped = groupTracks(libraryState.filteredTracks, {
+            getValues: (track) => {
+                const genre = track.metadata?.genre;
+                if (Array.isArray(genre)) {
+                    return genre;
                 }
-            } else {
-                // Array of genres - filter out empty strings
-                trackGenres = (trackGenresRaw as string[])
-                    .map(g => (g || '').trim())
-                    .filter(g => g.length > 0);
-            }
-            
-            if (trackGenres.length === 0) {
-                unknownGenreTracks.push(track);
-            } else {
-                trackGenres.forEach((genreName: string) => {
-                    const key = genreName.toLowerCase();
-                    if (!groups[key]) {
-                        groups[key] = {
-                            name: genreName,
-                            tracks: []
-                        };
-                    }
-                    groups[key].tracks.push(track);
-                });
-            }
+                return genre;
+            },
+            unknownLabel: 'Unknown Genre'
         });
-        
-        if (unknownGenreTracks.length > 0) {
-            groups['__unknown__'] = {
-                name: 'Unknown Genre',
-                tracks: unknownGenreTracks
-            };
-        }
 
-        const sorted = Object.values(groups);
+        const sorted = [...grouped];
         if (sortBy === 'name') {
             return sorted.sort((a, b) => {
-                if (a.name === 'Unknown Genre') return 1;
-                if (b.name === 'Unknown Genre') return -1;
+                if (a.isUnknown) return 1;
+                if (b.isUnknown) return -1;
                 return a.name.localeCompare(b.name);
             });
         } else {
             return sorted.sort((a, b) => {
-                if (a.name === 'Unknown Genre') return 1;
-                if (b.name === 'Unknown Genre') return -1;
+                if (a.isUnknown) return 1;
+                if (b.isUnknown) return -1;
                 return b.tracks.length - a.tracks.length || a.name.localeCompare(b.name);
             });
         }
