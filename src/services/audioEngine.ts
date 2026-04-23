@@ -44,6 +44,7 @@ export class AudioEngine {
     private lastNormalizationAt: number = 0;
     private userVolume: number = 1;
     private djBurstTimer: number | null = null;
+    private crossfadePauseTimer: number | null = null;
     private playInvocationDepth: number = 0;
 
     public getAnalyser(): AnalyserNode | null {
@@ -179,6 +180,45 @@ export class AudioEngine {
 
     private getActiveGainNode(): GainNode | null {
         return this.activeAudioElement === 1 ? this.gainNode : this.secondaryGainNode;
+    }
+
+    private clearCrossfadePauseTimer(): void {
+        if (this.crossfadePauseTimer !== null) {
+            window.clearTimeout(this.crossfadePauseTimer);
+            this.crossfadePauseTimer = null;
+        }
+    }
+
+    private performCrossfade(
+        fadeOutEl: HTMLAudioElement,
+        fadeOutGain: GainNode | null,
+        fadeInGain: GainNode | null,
+        durationSeconds: number
+    ): void {
+        this.clearCrossfadePauseTimer();
+
+        const duration = Math.max(0.05, durationSeconds);
+
+        if (!this.audioContext || !fadeOutGain || !fadeInGain) {
+            fadeOutEl.pause();
+            return;
+        }
+
+        const now = this.audioContext.currentTime;
+        const maxVol = this.getEffectiveVolume();
+
+        fadeOutGain.gain.cancelScheduledValues(now);
+        fadeOutGain.gain.setValueAtTime(maxVol, now);
+        fadeOutGain.gain.linearRampToValueAtTime(0.01, now + duration);
+
+        fadeInGain.gain.cancelScheduledValues(now);
+        fadeInGain.gain.setValueAtTime(0.01, now);
+        fadeInGain.gain.linearRampToValueAtTime(maxVol, now + duration);
+
+        this.crossfadePauseTimer = window.setTimeout(() => {
+            fadeOutEl.pause();
+            this.crossfadePauseTimer = null;
+        }, duration * 1000);
     }
 
     triggerDjBurst(): void {
@@ -393,23 +433,13 @@ export class AudioEngine {
                     this.currentTrack = track;
                     this.nextTrackPreloaded = null;
 
-                    if (useCrossfade && this.audioContext && fadeOutGain && fadeInGain) {
-                        const now = this.audioContext.currentTime;
-                        const maxVol = fadeInEl.volume;
-
-                        fadeOutGain.gain.cancelScheduledValues(now);
-                        fadeOutGain.gain.setValueAtTime(maxVol, now);
-                        fadeOutGain.gain.linearRampToValueAtTime(0.01, now + crossfadeDuration);
-
-                        fadeInGain.gain.cancelScheduledValues(now);
-                        fadeInGain.gain.setValueAtTime(0.01, now);
-                        fadeInGain.gain.linearRampToValueAtTime(maxVol, now + crossfadeDuration);
-
-                        setTimeout(() => { fadeOutEl.pause(); }, crossfadeDuration * 1000);
+                    if (useCrossfade) {
+                        this.performCrossfade(fadeOutEl, fadeOutGain, fadeInGain, crossfadeDuration);
                     } else {
+                        this.clearCrossfadePauseTimer();
                         fadeOutEl.pause();
                         if (this.audioContext && fadeInGain) {
-                            fadeInGain.gain.setValueAtTime(fadeInEl.volume, this.audioContext.currentTime);
+                            fadeInGain.gain.setValueAtTime(this.getEffectiveVolume(), this.audioContext.currentTime);
                         }
                     }
 
@@ -429,20 +459,7 @@ export class AudioEngine {
                         fadeInEl.src = relativePath;
                         this.currentTrack = track;
 
-                        if (this.audioContext && fadeOutGain && fadeInGain) {
-                            const now = this.audioContext.currentTime;
-                            const maxVol = fadeInEl.volume;
-
-                            fadeOutGain.gain.cancelScheduledValues(now);
-                            fadeOutGain.gain.setValueAtTime(maxVol, now);
-                            fadeOutGain.gain.linearRampToValueAtTime(0.01, now + crossfadeDuration);
-
-                            fadeInGain.gain.cancelScheduledValues(now);
-                            fadeInGain.gain.setValueAtTime(0.01, now);
-                            fadeInGain.gain.linearRampToValueAtTime(maxVol, now + crossfadeDuration);
-
-                            setTimeout(() => { fadeOutEl.pause(); }, crossfadeDuration * 1000);
-                        }
+                        this.performCrossfade(fadeOutEl, fadeOutGain, fadeInGain, crossfadeDuration);
 
                         await this.playElement(fadeInEl, track);
                     } else {
@@ -488,6 +505,7 @@ export class AudioEngine {
      * Pauses the current playback.
      */
     pause(): void {
+        this.clearCrossfadePauseTimer();
         this.getActiveElement().pause();
     }
 
@@ -521,9 +539,18 @@ export class AudioEngine {
      * Stops playback entirely — pauses and resets to beginning.
      */
     stop(): void {
+        this.clearCrossfadePauseTimer();
         const el = this.getActiveElement();
         el.pause();
         el.currentTime = 0;
+    }
+
+    cleanup(): void {
+        this.clearCrossfadePauseTimer();
+        if (this.djBurstTimer) {
+            window.clearTimeout(this.djBurstTimer);
+            this.djBurstTimer = null;
+        }
     }
 
     /**

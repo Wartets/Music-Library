@@ -494,7 +494,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     }, []);
 
-    const playNext = useCallback(() => {
+    const advanceToNextTrack = useCallback((respectAutoplay: boolean) => {
         const cur = stateRef.current;
 
         if (cur.repeat === 'one' && cur.currentTrack) {
@@ -502,7 +502,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             audioEngine.play().catch(err => {
                 handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
             });
-            return;
+            return true;
+        }
+
+        if (respectAutoplay && !cur.autoplay) {
+            audioEngine.pause();
+            setState(prev => ({ ...prev, isPlaying: false }));
+            return false;
         }
 
         if (cur.queue.length > 0 && cur.currentTrack) {
@@ -510,13 +516,55 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
             if (nextTrackIndex < cur.queue.length) {
                 playTrackLogic(cur.queue[nextTrackIndex], cur.queue);
-            } else if (cur.repeat === 'all') {
-                playTrackLogic(cur.queue[0], cur.queue);
-            } else {
-                audioEngine.pause();
+                return true;
             }
+
+            if (cur.repeat === 'all') {
+                playTrackLogic(cur.queue[0], cur.queue);
+                return true;
+            }
+
+            audioEngine.pause();
+            setState(prev => ({ ...prev, isPlaying: false }));
+            return false;
         }
+
+        audioEngine.pause();
+        setState(prev => ({ ...prev, isPlaying: false }));
+        return false;
     }, [playTrackLogic]);
+
+    const playNext = useCallback(() => {
+        advanceToNextTrack(false);
+    }, [advanceToNextTrack]);
+
+    useEffect(() => {
+        return () => {
+            audioEngine.cleanup();
+        };
+    }, []);
+
+    useEffect(() => {
+        // Tie to audioEngine events
+        audioEngine.onTimeUpdate = (currentTime) => {
+            const safeTime = Number(currentTime);
+            progressRef.current = Number.isFinite(safeTime) ? Math.max(0, safeTime) : 0;
+        };
+
+        audioEngine.onEnded = () => {
+            advanceToNextTrack(true);
+        };
+
+        audioEngine.onPlay = () => {
+            resetRecoveryState();
+            setState(prev => ({ ...prev, isPlaying: true }));
+        };
+        audioEngine.onPause = () => setState(prev => ({ ...prev, isPlaying: false }));
+
+        audioEngine.onError = (error) => {
+            handlePlaybackFailureRef.current(error, stateRef.current.currentTrack);
+        };
+    }, [advanceToNextTrack, resetRecoveryState]);
 
     const playPrevious = useCallback(() => {
         const cur = stateRef.current;
