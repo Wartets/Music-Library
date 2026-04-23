@@ -6,9 +6,18 @@ import { Play, ListPlus, FolderPlus, FileAudio, Hash } from 'lucide-react';
 import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
+import { TrackItem } from '../../types/music';
 
 interface FormatsViewProps {
     onNavigate: (view: any, data: any) => void;
+}
+
+interface FormatGroup {
+    key: string;
+    name: string;
+    tracks: TrackItem[];
+    losslessCount: number;
+    lossyCount: number;
 }
 
 export const FormatsView: React.FC<FormatsViewProps> = ({ onNavigate }) => {
@@ -18,33 +27,108 @@ export const FormatsView: React.FC<FormatsViewProps> = ({ onNavigate }) => {
     const [sortBy, setSortBy] = useState<'name' | 'count'>('count');
 
     const formats = useMemo(() => {
-        const groups: Record<string, { name: string, tracks: any[], isLossless: boolean }> = {};
-        libraryState.filteredTracks.forEach(track => {
-            const ext = (track.file?.ext || 'unknown').toUpperCase();
-            if (!groups[ext]) {
-                groups[ext] = { name: ext, tracks: [], isLossless: !!track.audio_specs?.is_lossless };
+        const groupedByFormat = new Map<string, FormatGroup>();
+
+        for (const track of libraryState.filteredTracks) {
+            const rawExt = (track.file?.ext || '').trim();
+            const ext = rawExt ? rawExt.toUpperCase() : 'UNKNOWN';
+
+            if (!groupedByFormat.has(ext)) {
+                groupedByFormat.set(ext, {
+                    key: ext,
+                    name: ext,
+                    tracks: [],
+                    losslessCount: 0,
+                    lossyCount: 0
+                });
             }
-            groups[ext].tracks.push(track);
+
+            const group = groupedByFormat.get(ext)!;
+            group.tracks.push(track);
+
+            if (track.audio_specs?.is_lossless) {
+                group.losslessCount += 1;
+            } else {
+                group.lossyCount += 1;
+            }
+        }
+
+        const sorted = Array.from(groupedByFormat.values());
+
+        if (sortBy === 'name') {
+            sorted.sort((a, b) => a.name.localeCompare(b.name));
+            return sorted;
+        }
+
+        sorted.sort((a, b) => {
+            const countDiff = b.tracks.length - a.tracks.length;
+            if (countDiff !== 0) return countDiff;
+            return a.name.localeCompare(b.name);
         });
 
-        const sorted = Object.values(groups);
-        if (sortBy === 'name') return sorted.sort((a, b) => a.name.localeCompare(b.name));
-        return sorted.sort((a, b) => b.tracks.length - a.tracks.length);
+        return sorted;
     }, [libraryState.filteredTracks, sortBy]);
 
-    const onRightClick = (e: React.MouseEvent, fmt: any) => {
+    const runAsyncOperation = (operation: () => void, successMessage: string, errorMessage: string) => {
+        window.setTimeout(() => {
+            try {
+                operation();
+                showToast(successMessage, 'success');
+            } catch (error) {
+                console.error(error);
+                showToast(errorMessage, 'error');
+            }
+        }, 0);
+    };
+
+    const onRightClick = (e: React.MouseEvent, fmt: FormatGroup) => {
         e.preventDefault();
         e.stopPropagation();
         const playlists = persistenceService.getPlaylists();
 
         showContextMenu(e.clientX, e.clientY, [
-            { label: `Play All ${fmt.name}`, icon: <Play size={14} fill="currentColor" />, onClick: () => { playTrack(fmt.tracks[0], fmt.tracks); } },
-            { label: 'Add to Queue', icon: <ListPlus size={14} />, onClick: () => { fmt.tracks.forEach((t: any) => addToQueue(t)); showToast(`Added ${fmt.tracks.length} tracks`); } },
+            {
+                label: `Play All ${fmt.name}`,
+                icon: <Play size={14} fill="currentColor" />,
+                onClick: () => {
+                    if (fmt.tracks.length === 0) {
+                        showToast(`No tracks available for ${fmt.name}`, 'error');
+                        return;
+                    }
+                    playTrack(fmt.tracks[0], fmt.tracks);
+                }
+            },
+            {
+                label: 'Add to Queue',
+                icon: <ListPlus size={14} />,
+                onClick: () => {
+                    showToast(`Adding ${fmt.tracks.length} tracks to queue...`);
+                    runAsyncOperation(
+                        () => {
+                            fmt.tracks.forEach(track => addToQueue(track));
+                        },
+                        `Added ${fmt.tracks.length} tracks to queue`,
+                        `Failed to add ${fmt.name} tracks to queue`
+                    );
+                }
+            },
             { divider: true, label: '', onClick: () => { } },
             {
                 label: 'Add to Playlist', icon: <FolderPlus size={14} />, onClick: () => { },
                 subItems: playlists.map(pl => ({
-                    label: pl.name, onClick: () => { fmt.tracks.forEach((t: any) => persistenceService.addTrackToPlaylist(pl.id, t.logic.hash_sha256)); showToast(`Added to ${pl.name}`, 'success'); }
+                    label: pl.name,
+                    onClick: () => {
+                        showToast(`Adding ${fmt.tracks.length} tracks to ${pl.name}...`);
+                        runAsyncOperation(
+                            () => {
+                                for (const track of fmt.tracks) {
+                                    persistenceService.addTrackToPlaylist(pl.id, track.logic.hash_sha256);
+                                }
+                            },
+                            `Added ${fmt.tracks.length} ${fmt.name} tracks to ${pl.name}`,
+                            `Failed to add ${fmt.name} tracks to ${pl.name}`
+                        );
+                    }
                 }))
             },
         ]);
@@ -66,9 +150,9 @@ symbol: (
                         <span className="text-2xl sm:text-3xl font-black tracking-tight truncate" style={{ color: palette.accentColor }}>
                             {fmt.name}
                         </span>
-                        {fmt.isLossless && (
+                        {fmt.losslessCount > 0 && (
                             <span className="text-[10px] font-black bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full border border-green-400/30 tracking-wider">
-                                LOSSLESS
+                                {fmt.lossyCount > 0 ? 'MIXED LOSSLESS' : 'LOSSLESS'}
                             </span>
                         )}
                     </div>
