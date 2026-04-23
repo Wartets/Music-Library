@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { persistenceService } from '../../services/persistence';
@@ -8,24 +8,8 @@ import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { parseDuration } from '../../utils/formatters';
 
 import { ViewType } from '../layout/AppLayout';
-import { ArtworkImage } from '../shared/ArtworkImage';
 import { TrackRow } from '../shared/TrackRow';
-
-const HighlightText: React.FC<{ text: string, query: string }> = ({ text, query }) => {
-    if (!query.trim()) return <>{text}</>;
-    const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-    return (
-        <>
-            {parts.map((part, i) =>
-                part.toLowerCase() === query.toLowerCase() ? (
-                    <mark key={i} className="bg-dominant/30 text-white rounded-sm px-0.5">{part}</mark>
-                ) : (
-                    part
-                )
-            )}
-        </>
-    );
-};
+import { TrackCard } from '../shared/TrackCard';
 
 interface DashboardViewProps {
     onNavigate: (view: ViewType, data?: any) => void;
@@ -35,10 +19,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
     const { openTrackContextMenu } = useTrackContextMenu();
+    const [visibleCounts, setVisibleCounts] = useState({ recentlyPlayed: 8, newArrivals: 8 });
 
-    const handleContextMenu = (e: React.MouseEvent, track: TrackItem, list: TrackItem[]) => {
+    const handleContextMenu = useCallback((e: React.MouseEvent, track: TrackItem, list: TrackItem[]) => {
         openTrackContextMenu(e, track, list, onNavigate);
-    };
+    }, [onNavigate, openTrackContextMenu]);
 
     const {
         recentlyPlayed,
@@ -66,31 +51,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         oldestYear,
         newestYear,
         historyCount,
-        favoritesCount
+        favoritesCount,
+        ratings
     } = useMemo(() => {
         const tracks = libraryState.tracks;
         const historyIds = persistenceService.getHistoryIds();
         const favs = persistenceService.getFavorites();
         const playCounts = persistenceService.getAllPlayCounts();
         const ratings = persistenceService.getAllRatings();
+        const trackIndex = new Map(tracks.map(track => [track.logic.hash_sha256, track] as const));
 
         // Statistical calculations
         const { versionToPrimaryMap } = libraryState;
 
+        const resolvePrimaryTrack = (id: string) => {
+            const primaryId = versionToPrimaryMap[id] || id;
+            return trackIndex.get(primaryId);
+        };
+
         const recentlyPlayedTracks = historyIds.slice(0, 10)
-            .map(id => {
-                const primaryId = versionToPrimaryMap[id] || id;
-                return tracks.find(t => t.logic.hash_sha256 === primaryId);
-            })
+            .map(resolvePrimaryTrack)
             .filter((t): t is TrackItem => !!t);
 
         const mostPlayedTracks = Object.entries(playCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
-            .map(entry => {
-                const primaryId = versionToPrimaryMap[entry[0]] || entry[0];
-                return tracks.find(t => t.logic.hash_sha256 === primaryId);
-            })
+            .map(entry => resolvePrimaryTrack(entry[0]))
             .filter((t): t is TrackItem => !!t);
 
         const sixMonthsAgo = (Date.now() / 1000) - (6 * 30 * 24 * 3600);
@@ -100,10 +86,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             .slice(0, 20);
 
         const favoriteTracks = favs
-            .map(id => {
-                const primaryId = versionToPrimaryMap[id] || id;
-                return tracks.find(t => t.logic.hash_sha256 === primaryId);
-            })
+            .map(resolvePrimaryTrack)
             .filter((t): t is TrackItem => !!t)
             .slice(0, 10);
 
@@ -204,39 +187,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             oldestYear: years.length ? Math.min(...years) : null,
             newestYear: years.length ? Math.max(...years) : null,
             historyCount: historyIds.length,
-            favoritesCount: favs.length
+            favoritesCount: favs.length,
+            ratings
         };
-    }, [libraryState.tracks, playerState.history]);
+    }, [libraryState.tracks, libraryState.versionToPrimaryMap]);
 
-    const TrackCard = ({ track, list }: { track: TrackItem, list: TrackItem[] }) => {
-        const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
+    const visibleRecentlyPlayed = useMemo(
+        () => recentlyPlayed.slice(0, visibleCounts.recentlyPlayed),
+        [recentlyPlayed, visibleCounts.recentlyPlayed]
+    );
 
-        return (
-            <div
-                className="flex-shrink-0 w-40 group cursor-pointer"
-                onClick={() => playTrack(track, list)}
-                onContextMenu={(e) => handleContextMenu(e, track, list)}
-            >
-                <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 shadow-xl group-hover:shadow-dominant/20 transition-all duration-500 bg-white/5 border border-white/5 group-hover:border-dominant/20">
-                    <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                        <div className="w-12 h-12 rounded-full bg-dominant text-black flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 shadow-xl">
-                            <Play size={20} fill="currentColor" />
-                        </div>
-                    </div>
-                    {isPlaying && (
-                        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-dominant shadow-[0_0_10px_rgba(var(--dominant-rgb),0.8)] animate-pulse"></div>
-                    )}
-                </div>
-                <h3 className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
-                    <HighlightText text={track.metadata?.title || track.logic.track_name} query={libraryState.searchQuery} />
-                </h3>
-                <p className="text-[11px] text-gray-500 truncate mt-0.5 font-medium">
-                    <HighlightText text={track.metadata?.artists?.[0] || 'Unknown Artist'} query={libraryState.searchQuery} />
-                </p>
-            </div>
-        );
-    };
+    const visibleNewArrivals = useMemo(
+        () => newArrivals.slice(0, visibleCounts.newArrivals),
+        [newArrivals, visibleCounts.newArrivals]
+    );
 
     return (
         <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-16 md:pt-24 px-3 md:px-8 pb-24 md:pb-32">
@@ -305,10 +269,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                 <button onClick={() => onNavigate('DetailedHistory')} className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-dominant transition-colors">View All History</button>
                             </div>
                             <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
-                                {recentlyPlayed.map(track => (
-                                    <TrackCard key={`recent-${track.logic.hash_sha256}`} track={track} list={recentlyPlayed} />
+                                {visibleRecentlyPlayed.map(track => (
+                                    <TrackCard
+                                        key={`recent-${track.logic.hash_sha256}`}
+                                        track={track}
+                                        list={recentlyPlayed}
+                                        query={libraryState.searchQuery}
+                                        isPlaying={playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
+                                        onPlay={(t, list) => playTrack(t, list || recentlyPlayed)}
+                                        onContextMenu={(e, t, list) => handleContextMenu(e, t, list || recentlyPlayed)}
+                                    />
                                 ))}
                             </div>
+                            {visibleRecentlyPlayed.length < recentlyPlayed.length && (
+                                <button
+                                    onClick={() => setVisibleCounts(prev => ({ ...prev, recentlyPlayed: prev.recentlyPlayed + 8 }))}
+                                    className="mt-1 px-4 py-2 min-h-11 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/10 active:scale-95 transition-transform"
+                                >
+                                    Load more
+                                </button>
+                            )}
                         </section>
                     )}
 
@@ -343,10 +323,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                 <h2 className="text-xl md:text-2xl font-black tracking-tighter text-white">Recently Added</h2>
                             </div>
                             <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
-                                {newArrivals.map(track => (
-                                    <TrackCard key={`new-${track.logic.hash_sha256}`} track={track} list={newArrivals} />
+                                {visibleNewArrivals.map(track => (
+                                    <TrackCard
+                                        key={`new-${track.logic.hash_sha256}`}
+                                        track={track}
+                                        list={newArrivals}
+                                        query={libraryState.searchQuery}
+                                        isPlaying={playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
+                                        onPlay={(t, list) => playTrack(t, list || newArrivals)}
+                                        onContextMenu={(e, t, list) => handleContextMenu(e, t, list || newArrivals)}
+                                    />
                                 ))}
                             </div>
+                            {visibleNewArrivals.length < newArrivals.length && (
+                                <button
+                                    onClick={() => setVisibleCounts(prev => ({ ...prev, newArrivals: prev.newArrivals + 8 }))}
+                                    className="mt-1 px-4 py-2 min-h-11 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/10 active:scale-95 transition-transform"
+                                >
+                                    Load more
+                                </button>
+                            )}
                         </section>
                     )}
 
@@ -486,7 +482,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                         index={i}
                                         isPlaying={playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
                                         query={libraryState.searchQuery}
-                                        rating={persistenceService.getRating(track.logic.hash_sha256)}
+                                        rating={ratings[track.logic.hash_sha256] || 0}
                                         showRating
                                         showCollection={false}
                                         onPlay={(t) => playTrack(t, favorites)}
