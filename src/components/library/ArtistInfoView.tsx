@@ -6,6 +6,14 @@ import { Play } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { ViewType } from '../layout/AppLayout';
 
+const normalizeArtistKey = (value: string | null | undefined): string => {
+    return String(value || '')
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase();
+};
+
 interface ArtistInfoViewProps {
     artistName: string;
     onNavigate: (view: ViewType, data?: any) => void;
@@ -15,12 +23,40 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
     const { state: libraryState } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
 
+    const normalizedArtistName = useMemo(() => normalizeArtistKey(artistName), [artistName]);
+
+    const tracksByArtist = useMemo(() => {
+        const map = new Map<string, TrackItem[]>();
+
+        libraryState.tracks.forEach(track => {
+            const candidates = new Set<string>();
+
+            const albumArtistKey = normalizeArtistKey(track.metadata?.album_artist);
+            if (albumArtistKey) {
+                candidates.add(albumArtistKey);
+            }
+
+            (track.metadata?.artists || []).forEach(artist => {
+                const artistKey = normalizeArtistKey(artist);
+                if (artistKey) {
+                    candidates.add(artistKey);
+                }
+            });
+
+            candidates.forEach(artistKey => {
+                if (!map.has(artistKey)) {
+                    map.set(artistKey, []);
+                }
+                map.get(artistKey)!.push(track);
+            });
+        });
+
+        return map;
+    }, [libraryState.tracks]);
+
     const artistTracks = useMemo(() => {
-        return libraryState.tracks.filter(t =>
-            t.metadata?.artists?.some(a => a.toLowerCase() === artistName.toLowerCase()) ||
-            t.metadata?.album_artist?.toLowerCase() === artistName.toLowerCase()
-        );
-    }, [libraryState.tracks, artistName]);
+        return tracksByArtist.get(normalizedArtistName) || [];
+    }, [tracksByArtist, normalizedArtistName]);
 
     const artistAlbums = useMemo(() => {
         const albums: Record<string, { name: string, artwork?: any, tracks: TrackItem[] }> = {};
