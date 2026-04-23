@@ -3,12 +3,13 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
-import { Play, Star } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { parseDuration } from '../../utils/formatters';
 
 import { ViewType } from '../layout/AppLayout';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { TrackRow } from '../shared/TrackRow';
 
 const HighlightText: React.FC<{ text: string, query: string }> = ({ text, query }) => {
     if (!query.trim()) return <>{text}</>;
@@ -237,38 +238,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         );
     };
 
-    const TrackRow = ({ track, list, index }: { track: TrackItem, list: TrackItem[], index: number }) => {
-        const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
-        const rating = persistenceService.getRating(track.logic.hash_sha256);
-
-        return (
-            <div
-                className={`flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all group cursor-pointer ${isPlaying ? 'bg-dominant/5' : ''}`}
-                onClick={() => playTrack(track, list)}
-                onContextMenu={(e) => handleContextMenu(e, track, list)}
-            >
-                <span className="text-[10px] font-mono text-gray-600 w-4 text-right">{index + 1}</span>
-                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/5">
-                    <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <h4 className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
-                        <HighlightText text={track.metadata?.title || track.logic.track_name} query={libraryState.searchQuery} />
-                    </h4>
-                    <p className="text-[10px] text-gray-500 truncate mt-0.5">
-                        <HighlightText text={track.metadata?.artists?.[0] || 'Unknown Artist'} query={libraryState.searchQuery} />
-                    </p>
-                </div>
-                {rating > 0 && (
-                    <div className="flex gap-0.5 text-yellow-500/80">
-                        {Array.from({ length: rating }).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}
-                    </div>
-                )}
-                <span className="text-[11px] font-mono text-gray-500">{track.audio_specs?.duration}</span>
-            </div>
-        );
-    };
-
     return (
         <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-16 md:pt-24 px-3 md:px-8 pb-24 md:pb-32">
             {/* Welcome Header for New Users */}
@@ -351,7 +320,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-10 gap-y-2">
                                 {mostPlayed.map((track, i) => (
-                                    <TrackRow key={`most-${track.logic.hash_sha256}`} track={track} list={mostPlayed} index={i} />
+                                    <TrackRow
+                                        key={`most-${track.logic.hash_sha256}`}
+                                        track={track}
+                                        list={mostPlayed}
+                                        index={i}
+                                        isPlaying={playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
+                                        query={libraryState.searchQuery}
+                                        onPlay={(t) => playTrack(t, mostPlayed)}
+                                        onContextMenu={(e, t) => handleContextMenu(e, t, mostPlayed)}
+                                        showRating={false}
+                                    />
                                 ))}
                             </div>
                         </section>
@@ -500,7 +479,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             </div>
                             <div className="space-y-2">
                                 {favorites.map((track, i) => (
-                                    <TrackRow key={`fav-${track.logic.hash_sha256}`} track={track} list={favorites} index={i} />
+                                    <TrackRow
+                                        key={`fav-${track.logic.hash_sha256}`}
+                                        track={track}
+                                        list={favorites}
+                                        index={i}
+                                        isPlaying={playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
+                                        query={libraryState.searchQuery}
+                                        rating={persistenceService.getRating(track.logic.hash_sha256)}
+                                        showRating
+                                        showCollection={false}
+                                        onPlay={(t) => playTrack(t, favorites)}
+                                        onContextMenu={(e, t) => handleContextMenu(e, t, favorites)}
+                                    />
                                 ))}
                             </div>
                         </section>

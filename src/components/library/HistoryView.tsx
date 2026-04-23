@@ -1,14 +1,14 @@
 import React from 'react';
 import { ViewType } from '../layout/AppLayout';
-import { Clock, Play, MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { Clock, Play, ArrowUpDown } from 'lucide-react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { TrackItem } from '../../types/music';
 import { VirtualList } from '../shared/VirtualList';
 import { persistenceService } from '../../services/persistence';
-import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { TrackRow } from '../shared/TrackRow';
 
 
 interface HistoryViewProps {
@@ -59,65 +59,27 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
     };
 
     const renderRow = (track: TrackItem, index: number) => {
-        const columns = libState.columnConfig.filter(c => c.visible);
         const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
 
         return (
-            <div
+            <TrackRow
                 key={`${track.logic.hash_sha256}-${index}`}
-                className={`flex items-center px-4 py-2 hover:bg-white/5 group transition-all cursor-pointer border-b border-white/[0.02] last:border-0 ${isPlaying ? 'bg-dominant/10' : ''}`}
-                onDoubleClick={() => handlePlay(track)}
-                onContextMenu={(e) => openTrackContextMenu(e, track, historyTracks, undefined)}
-            >
-                {columns.map(col => (
-                    <div
-                        key={col.id}
-                        className={`text-xs truncate pr-4 ${col.width === 0 ? 'flex-1' : ''} ${isPlaying ? 'text-dominant font-bold' : 'text-gray-400'} ${['album', 'genre', 'year', 'bitrate', 'size'].includes(col.id) ? 'hidden md:block' : ''}`}
-                        style={col.width !== 0 ? { width: col.width } : {}}
-                    >
-                        {(() => {
-                            switch (col.id) {
-                                case 'number': return index + 1;
-                                case 'artwork':
-                                    const fallbackVersionWithArtwork = track.versions?.find(v =>
-                                        v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0]
-                                    );
-                                    const art = track.artworks?.track_artwork?.[0]
-                                        || track.artworks?.album_artwork?.[0]
-                                        || fallbackVersionWithArtwork?.artworks?.track_artwork?.[0]
-                                        || fallbackVersionWithArtwork?.artworks?.album_artwork?.[0];
-                                    return (
-                                        <div className="w-11 h-11 rounded-md bg-white/5 overflow-hidden">
-                                            {art ? (
-                                                <ArtworkImage details={art} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-[10px]">?</div>
-                                            )}
-                                        </div>
-                                    );
-                                case 'title':
-                                    return (
-                                        <div className="flex flex-col">
-                                            <span className={`truncate ${isPlaying ? 'text-white' : 'text-gray-200'}`}>{track.metadata?.title || track.logic.track_name}</span>
-                                            <span className="text-[10px] opacity-60 truncate">{track.metadata?.artists?.join(', ') || 'Unknown Artist'}</span>
-                                        </div>
-                                    );
-                                case 'album': return track.metadata?.album || '-';
-                                case 'year': return track.metadata?.year || '-';
-                                case 'genre': return track.metadata?.genre || '-';
-                                case 'duration': return track.audio_specs.duration;
-                                case 'bitrate': return track.audio_specs.bitrate + ' kbps';
-                                case 'size': return track.file.size_mb.toFixed(1) + ' MB';
-                                default: return '-';
-                            }
-                        })()}
-                    </div>
-                ))}
-
-                <div className="w-10 flex justify-end opacity-0 group-hover:opacity-100">
-                    <button className="p-1.5 sm:p-1 min-w-8 min-h-8 sm:min-w-auto sm:min-h-auto flex items-center justify-center hover:text-white"><MoreHorizontal size={14} /></button>
-                </div>
-            </div>
+                track={track}
+                index={index}
+                isPlaying={isPlaying}
+                list={historyTracks}
+                query={undefined}
+                showIndex={true}
+                showArtwork={true}
+                showCollection={false}
+                showRating={false}
+                showDuration
+                onPlay={(t) => handlePlay(t)}
+                onContextMenu={(e, t) => openTrackContextMenu(e, t, historyTracks, undefined)}
+                className={`border-b border-white/[0.02] last:border-0 rounded-none px-4 py-2 ${isPlaying ? 'bg-dominant/10' : ''}`}
+                artworkClassName="w-11 h-11 rounded-md"
+                subtitleClassName="opacity-60"
+            />
         );
     };
 
@@ -147,40 +109,22 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                 <div className="space-y-1.5">
                     {historyTracks.map((track, index) => {
                         const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
-                        const fallbackVersionWithArtwork = track.versions?.find(v =>
-                            v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0]
-                        );
-                        const art = track.artworks?.track_artwork?.[0]
-                            || track.artworks?.album_artwork?.[0]
-                            || fallbackVersionWithArtwork?.artworks?.track_artwork?.[0]
-                            || fallbackVersionWithArtwork?.artworks?.album_artwork?.[0];
-
                         return (
-                            <div
+                            <TrackRow
                                 key={`${track.logic.hash_sha256}-${index}`}
-                                className={`flex items-center gap-2.5 p-2.5 rounded-xl border border-white/10 transition-colors ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'bg-white/[0.02] hover:bg-white/5'}`}
-                                onDoubleClick={() => handlePlay(track)}
-                                onContextMenu={(e) => openTrackContextMenu(e, track, historyTracks, undefined)}
-                            >
-                                <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden border border-white/10 flex-shrink-0">
-                                    {art ? (
-                                        <ArtworkImage details={art} alt={track.metadata?.title || track.logic.track_name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[10px]">?</div>
-                                    )}
-                                </div>
-
-                                <div className="min-w-0 flex-1">
-                                    <div className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
-                                        {track.metadata?.title || track.logic.track_name}
-                                    </div>
-                                    <div className="text-[10px] text-gray-500 truncate">{track.metadata?.artists?.join(', ') || 'Unknown Artist'}</div>
-                                </div>
-
-                                <div className="text-[10px] text-gray-400 font-mono text-right">
-                                    {track.audio_specs.duration || '0:00'}
-                                </div>
-                            </div>
+                                track={track}
+                                index={index}
+                                isPlaying={isPlaying}
+                                list={historyTracks}
+                                showIndex={false}
+                                showArtwork={true}
+                                showCollection={false}
+                                showRating={false}
+                                showDuration
+                                onPlay={(t) => handlePlay(t)}
+                                onContextMenu={(e, t) => openTrackContextMenu(e, t, historyTracks, undefined)}
+                                className={`rounded-xl border border-white/10 transition-colors ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'bg-white/[0.02] hover:bg-white/5'}`}
+                            />
                         );
                     })}
                 </div>

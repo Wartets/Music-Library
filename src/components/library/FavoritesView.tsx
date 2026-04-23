@@ -3,10 +3,10 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { Play, Heart } from 'lucide-react';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
-import { ArtworkImage } from '../shared/ArtworkImage';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
+import { TrackRow } from '../shared/TrackRow';
 
 interface FavoritesViewProps {
     onNavigate?: (view: any, data?: any) => void;
@@ -63,40 +63,19 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
                     const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
 
                     return (
-                        <div
+                        <TrackRow
                             key={track.logic.hash_sha256}
-                            className={`flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 cursor-pointer transition-all group ${isPlaying ? 'bg-dominant/10' : ''}`}
-                            onClick={() => playTrack(track, favoriteTracks)}
-                            onContextMenu={(e) => onRightClick(e, track)}
-                        >
-                            <span className="text-xs text-gray-600 w-6 text-right font-mono">{idx + 1}</span>
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
-                                <ArtworkImage
-                                    details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]}
-                                    alt={track.metadata?.title || track.logic.track_name}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className={`truncate text-sm font-bold ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
-                                    {track.metadata?.title || track.logic.track_name}
-                                </div>
-                                <div className="truncate text-xs text-gray-500">
-                                    {track.metadata?.artists?.join(', ') || 'Unknown Artist'}
-                                </div>
-                            </div>
-                            <div className="hidden md:block text-xs text-gray-500 truncate w-32">
-                                {getTrackCollectionLabel(track)}
-                            </div>
-                            {rating > 0 && (
-                                <div className="text-xs text-yellow-500 font-bold">
-                                    {'\u2605'.repeat(rating)}
-                                </div>
-                            )}
-                            <div className="text-xs text-gray-500 font-mono w-12 text-right">
-                                {track.audio_specs?.duration || '0:00'}
-                            </div>
-                        </div>
+                            index={idx}
+                            track={track}
+                            isPlaying={isPlaying}
+                            query={libraryState.searchQuery}
+                            list={favoriteTracks}
+                            rating={rating}
+                            collectionLabel={getTrackCollectionLabel(track)}
+                            showCollection
+                            onPlay={(t) => playTrack(t, favoriteTracks)}
+                            onContextMenu={(e, t) => onRightClick(e, t)}
+                        />
                     );
                 })}
             </div>
