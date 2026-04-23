@@ -17,6 +17,8 @@ interface TrackRowProps {
     showRating?: boolean;
     showCollection?: boolean;
     showDuration?: boolean;
+    interactionMode?: 'hover' | 'always';
+    actions?: React.ReactNode;
     onPlay?: (track: TrackItem, list?: TrackItem[]) => void;
     onContextMenu?: (e: React.MouseEvent, track: TrackItem, list?: TrackItem[]) => void;
     className?: string;
@@ -57,6 +59,8 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     showRating = false,
     showCollection = false,
     showDuration = true,
+    interactionMode = 'hover',
+    actions,
     onPlay,
     onContextMenu,
     className,
@@ -70,7 +74,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
 
     return (
         <div
-            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all group cursor-pointer ${isPlaying ? 'bg-dominant/5' : ''} ${className || ''}`}
+            className={`flex items-center gap-4 p-3 min-h-[56px] md:min-h-[52px] rounded-xl hover:bg-white/5 transition-all group cursor-pointer ${isPlaying ? 'bg-dominant/5' : ''} ${className || ''}`}
             onClick={onClick}
             onContextMenu={(e) => onContextMenu?.(e, track, list)}
         >
@@ -111,6 +115,14 @@ export const TrackRow: React.FC<TrackRowProps> = ({
 
             {showDuration && (
                 <span className="text-[11px] font-mono text-gray-500">{duration || track.audio_specs?.duration || '0:00'}</span>
+            )}
+
+            {actions && (
+                <div
+                    className={`flex items-center gap-2 ${interactionMode === 'hover' ? 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto md:group-hover:opacity-100 md:group-hover:pointer-events-auto' : 'opacity-100 pointer-events-auto'}`}
+                >
+                    {actions}
+                </div>
             )}
         </div>
     );

@@ -11,6 +11,8 @@ import { ArtworkImage } from '../shared/ArtworkImage';
 import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
+import { useLibraryBrowserColumns } from './useLibraryBrowserColumns';
+import { useLibraryBrowserSort } from './useLibraryBrowserSort';
 
 const HighlightText: React.FC<{ text: string, query: string }> = ({ text, query }) => {
     if (!query.trim()) return <>{text}</>;
@@ -55,6 +57,12 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     const [showColumnConfig, setShowColumnConfig] = useState(false);
     const isMobile = useIsMobile();
     const columnConfigRef = React.useRef<HTMLDivElement>(null);
+    const { visibleColumns, gridTemplate } = useLibraryBrowserColumns(libraryState.columnConfig);
+    const { handleSortColumn, isColumnSorted, getSortDirection } = useLibraryBrowserSort(
+        libraryState.sortBy,
+        libraryState.sortOrder,
+        setSortBy,
+    );
 
     const moveColumn = useCallback((index: number, direction: number) => {
         const newIndex = index + direction;
@@ -64,16 +72,6 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
         newConfig.splice(newIndex, 0, moved);
         updateColumnConfig(newConfig);
     }, [libraryState.columnConfig, updateColumnConfig]);
-
-    const gridTemplate = useMemo(() => {
-        return libraryState.columnConfig
-            .filter(col => col.visible)
-            .map(col => {
-                if (col.id === 'title') return 'minmax(200px, 1fr)';
-                return col.width === 0 ? '1fr' : `${col.width}px`;
-            })
-            .join(' ');
-    }, [libraryState.columnConfig]);
 
     const toggleFolder = useCallback((folderKey: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -124,12 +122,12 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
 
         return (
             <div
-                className={`grid items-center px-6 py-2 hover:bg-white/5 cursor-pointer border-b border-white/5 group transition-all duration-200 ${isPlaying ? 'bg-dominant/10' : ''} ${isVersion ? 'bg-black/20' : ''}`}
+                className={`grid items-center px-6 py-2 min-h-[52px] hover:bg-white/5 cursor-pointer border-b border-white/5 group transition-all duration-200 ${isPlaying ? 'bg-dominant/10' : ''} ${isVersion ? 'bg-black/20' : ''}`}
                 style={{ gridTemplateColumns: gridTemplate, gap: '1.5rem' }}
                 onClick={() => playTrack(item, tracks)}
                 onContextMenu={(e) => onRightClick(e, item)}
             >
-                {libraryState.columnConfig.filter((c: any) => c.visible).map((col: any) => {
+                {visibleColumns.map((col: any) => {
                     const isRightAligned = ['year', 'bpm', 'duration', 'bitrate', 'size'].includes(col.id);
                     const responsiveClass =
                         col.id === 'bitrate' || col.id === 'size' ? 'hidden xl:flex' :
@@ -159,9 +157,10 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                     {item._hasVersions && (
                                         <button
                                             onClick={(e) => toggleFolder(item._folderKey, e)}
-                                            className="p-2 sm:p-1.5 min-w-10 min-h-10 sm:min-w-9 sm:min-h-9 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white"
+                                            className="p-2 min-w-10 min-h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white active:scale-95"
+                                            aria-label={item._isExpanded ? 'Collapse versions' : 'Expand versions'}
                                         >
-                                            {item._isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                            {item._isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                         </button>
                                     )}
                                     <div className="flex flex-col min-w-0 flex-1">
@@ -259,9 +258,21 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
         );
     }, [playerState.currentTrack?.logic.hash_sha256, libraryState, gridTemplate, playTrack, tracks, onRightClick, toggleFolder]);
 
+    const mobileRowHeight = 76;
+    const desktopRowHeight = 52;
+
+    const renderVirtualizedList = (rowHeight: number) => (
+        <VirtualList
+            items={flatList}
+            rowHeight={rowHeight}
+            renderRow={renderRow}
+            overscan={isMobile ? 4 : 8}
+        />
+    );
+
     if (isMobile) {
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-3 sm:px-4 pb-28 bg-surface-primary">
+            <div className="h-full flex flex-col overflow-hidden pt-14 px-3 sm:px-4 pb-0 bg-surface-primary">
                 <div className="mb-3 flex items-center gap-3">
                     {artworkPath ? (
                         <div className="w-14 h-14 rounded-xl overflow-hidden shadow-lg flex-shrink-0 border border-white/10 relative">
@@ -324,54 +335,8 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                     </span>
                 </div>
 
-                <div className="space-y-1.5">
-                    {flatList.map((item: any, index: number) => {
-                        const isPlaying = playerState.currentTrack?.logic.hash_sha256 === item.logic.hash_sha256;
-                        const isVersion = item._isVersion;
-                        const artwork = item.artworks?.track_artwork?.[0] || item.artworks?.album_artwork?.[0];
-
-                        return (
-                            <div
-                                key={item.logic.hash_sha256 + (item._isVersion ? `-v-${index}` : `-${index}`)}
-                                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl border transition-colors ${isVersion ? 'ml-5 border-white/5 bg-black/20' : 'border-white/10 bg-white/[0.02]'} ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'hover:bg-white/5'}`}
-                                onClick={() => playTrack(item, tracks)}
-                                onContextMenu={(e) => onRightClick(e, item)}
-                            >
-                                {item._hasVersions && !isVersion && (
-                                    <button
-                                        onClick={(e) => toggleFolder(item._folderKey, e)}
-                                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                        className="p-2 min-w-10 min-h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white touch-manufacturer-90"
-                                        aria-label={item._isExpanded ? 'Collapse versions' : 'Expand versions'}
-                                    >
-                                        {item._isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </button>
-                                )}
-
-                                <div className="w-12 h-12 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/10">
-                                    <ArtworkImage
-                                        details={artwork}
-                                        alt={item.metadata?.title || item.logic?.track_name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-
-                                <div className="min-w-0 flex-1">
-                                    <div className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
-                                        {isVersion ? (item.logic.version_name || item.file.name) : (item.logic.track_name || item.metadata?.title || 'Unknown')}
-                                    </div>
-                                    <div className="text-[10px] text-gray-500 truncate">
-                                        {item.metadata?.artists?.join(', ') || 'Unknown Artist'}
-                                    </div>
-                                </div>
-
-                                <div className="text-[10px] text-gray-400 font-mono text-right leading-tight">
-                                    <div>{item.audio_specs?.duration || '0:00'}</div>
-                                    {!isVersion && <div className="text-gray-600 truncate max-w-[90px]">{getTrackCollectionLabel(item)}</div>}
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    {renderVirtualizedList(mobileRowHeight)}
                 </div>
             </div>
         );
@@ -440,7 +405,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                 className="grid px-3 md:px-6 py-2.5 md:py-3 text-[10px] font-black text-white/20 uppercase tracking-[0.26em] md:tracking-[0.3em] border-b border-white/10 select-none items-center bg-white/2"
                 style={{ gridTemplateColumns: gridTemplate, gap: '1.5rem' }}
             >
-                {libraryState.columnConfig.filter(c => c.visible).map(col => {
+                {visibleColumns.map(col => {
                     const isRightAligned = ['year', 'bpm', 'duration', 'bitrate', 'size'].includes(col.id);
                     const responsiveClass =
                         col.id === 'bitrate' || col.id === 'size' ? 'hidden xl:flex' :
@@ -451,9 +416,14 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                         <div
                             key={col.id}
                             className={`${responsiveClass} items-center ${isRightAligned ? 'justify-end' : ''} ${col.sortable ? 'cursor-pointer hover:text-white transition-colors' : ''} pr-2`}
-                            onClick={() => col.sortable && setSortBy(col.id === 'year' ? 'date' : col.id)}
+                            onClick={() => handleSortColumn(col)}
                         >
                             <span className="truncate">{col.label}</span>
+                            {isColumnSorted(col.id) && getSortDirection(col.id) && (
+                                <span className="ml-1 text-dominant/70">
+                                    {getSortDirection(col.id) === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </span>
+                            )}
                         </div>
                     );
                 })}
@@ -521,11 +491,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
             </div>
 
             <div className="flex-1 overflow-hidden relative">
-                <VirtualList
-                    items={flatList}
-                    rowHeight={52}
-                    renderRow={renderRow}
-                />
+                {renderVirtualizedList(desktopRowHeight)}
             </div>
         </div>
     );
