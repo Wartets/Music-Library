@@ -1,7 +1,36 @@
 import { TrackItem } from '../types/music';
+import { isPathWithin, normalizePath } from '../utils/pathUtils';
 
 // A simple in-memory store for the worker
 let tracksCache: TrackItem[] = [];
+
+const tokenizeQuery = (query: string): string[] => {
+    return (query.match(/(?:[^\s"]+|"[^"]*")+/g) || [])
+        .map(token => token.trim())
+        .filter(Boolean);
+};
+
+const parseFilterToken = (token: string): { key: string; value: string } | null => {
+    const separatorIndex = token.indexOf(':');
+    if (separatorIndex <= 0) {
+        return null;
+    }
+
+    const rawKey = token.slice(0, separatorIndex).toLowerCase();
+    let rawValue = token.slice(separatorIndex + 1).trim();
+    if (!rawValue) {
+        return null;
+    }
+
+    if (rawValue.startsWith('"') && rawValue.endsWith('"') && rawValue.length >= 2) {
+        rawValue = rawValue.slice(1, -1);
+    }
+
+    return {
+        key: rawKey,
+        value: rawValue.toLowerCase()
+    };
+};
 
 self.onmessage = (e: MessageEvent) => {
     const { type, payload } = e.data;
@@ -17,12 +46,13 @@ self.onmessage = (e: MessageEvent) => {
             return;
         }
 
-        const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const terms = tokenizeQuery(query.toLowerCase());
 
         const results = tracksCache.filter(track => {
             return terms.every((term: string) => {
-                if (term.includes(':')) {
-                    const [key, val] = term.split(':');
+                const filter = parseFilterToken(term);
+                if (filter) {
+                    const { key, value: val } = filter;
                     if (key === 'year') {
                         const yearText = String(track.metadata?.year || '').trim().toLowerCase();
                         if (/^\d{3}0s$|^\d{4}0s$/.test(val)) {
@@ -32,7 +62,11 @@ self.onmessage = (e: MessageEvent) => {
                         }
                         return yearText === val;
                     }
-                    if (key === 'folder') return String(track.file?.dir || '').toLowerCase().includes(val);
+                    if (key === 'folder') {
+                        const trackFolder = normalizePath(track.file?.dir || '').toLowerCase();
+                        const requestedFolder = normalizePath(val).toLowerCase();
+                        return isPathWithin(requestedFolder, trackFolder);
+                    }
                     if (key === 'format') return String(track.file?.ext || '').toLowerCase() === val;
                     if (key === 'artist') return (track.metadata?.artists || []).some(a => a.toLowerCase().includes(val));
                     if (key === 'genre') return String(track.metadata?.genre || '').toLowerCase().includes(val);

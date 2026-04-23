@@ -17,7 +17,8 @@ export const AllTracksView: React.FC<AllTracksViewProps> = ({ onNavigate, initia
     useEffect(() => {
         if (initialFilter) {
             const { type, value } = initialFilter;
-            setSearchQuery(`${type}:${value}`);
+            const normalizedValue = /\s/.test(value) ? `"${value}"` : value;
+            setSearchQuery(`${type}:${normalizedValue}`);
         }
     }, [initialFilter, setSearchQuery]);
 
