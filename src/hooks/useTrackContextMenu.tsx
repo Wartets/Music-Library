@@ -18,12 +18,18 @@ export const useTrackContextMenu = () => {
     const { state: libraryState, setEditingTracks, refresh } = useLibrary();
     const previewTimerRef = React.useRef<number | null>(null);
 
-    const clearPreviewTimer = () => {
+    const clearPreviewTimer = React.useCallback(() => {
         if (previewTimerRef.current !== null) {
             window.clearTimeout(previewTimerRef.current);
             previewTimerRef.current = null;
         }
-    };
+    }, []);
+
+    React.useEffect(() => {
+        return () => {
+            clearPreviewTimer();
+        };
+    }, [clearPreviewTimer]);
 
     const exportM3U = (name: string, tracks: TrackItem[]) => {
         let m3u = '#EXTM3U\n';
@@ -61,6 +67,7 @@ export const useTrackContextMenu = () => {
                 label: 'Play',
                 icon: <Play size={14} fill="currentColor" />,
                 onClick: () => {
+                    clearPreviewTimer();
                     playTrack(track, list.length > 0 ? list : [track]);
                     showToast(`Playing ${track.metadata?.title || track.logic.track_name}`);
                 }
