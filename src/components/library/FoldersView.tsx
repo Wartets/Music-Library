@@ -16,6 +16,7 @@ import {
 import { TrackItem } from '../../types/music';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
 import { getBestArtwork } from '../../utils/artworkResolver';
+import type { GroupedTracks } from '../../utils/grouping';
 
 interface FoldersViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -35,24 +36,26 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
     const { showContextMenu, showToast } = useUI();
     const [currentPath, setCurrentPath] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'count'>('name');
+    const normalizedCurrentPath = useMemo(() => normalizePath(currentPath), [currentPath]);
 
     const folders = useMemo(() => {
         const { groups } = groupTracks(libraryState.filteredTracks, {
-            keyExtractor: (track) => normalizePath(track.file?.dir),
+            keyExtractor: (track) => track.file?.dir,
             unknownLabel: 'Unknown Folder',
             normalizeKey: (value) => normalizePath(value).toLowerCase(),
+            nameResolver: (value) => normalizePath(value),
             isUnknownValue: (value) => normalizePath(value).length === 0,
         });
 
         const nodes = new Map<string, FolderNode>();
 
-        for (const group of groups.values()) {
+        for (const group of groups.values() as Iterable<GroupedTracks<TrackItem>>) {
             if (group.isUnknown) {
                 continue;
             }
 
-            const normalizedGroupPath = normalizePath(group.name);
-            const childPath = getDirectChildPath(currentPath, normalizedGroupPath);
+            const normalizedGroupPath = group.name;
+            const childPath = getDirectChildPath(normalizedCurrentPath, normalizedGroupPath);
             if (!childPath) {
                 continue;
             }
@@ -84,7 +87,7 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
             return sorted.sort((a, b) => a.name.localeCompare(b.name));
         }
         return sorted.sort((a, b) => b.tracks.length - a.tracks.length || a.name.localeCompare(b.name));
-    }, [currentPath, libraryState.filteredTracks, sortBy]);
+    }, [libraryState.filteredTracks, normalizedCurrentPath, sortBy]);
 
     const onRightClick = (e: React.MouseEvent, folder: FolderNode) => {
         e.preventDefault();
@@ -107,7 +110,7 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
         }));
     };
 
-    const parentPath = getParentPath(currentPath);
+    const parentPath = getParentPath(normalizedCurrentPath);
 
     const gridItems: GridItem[] = [
         ...(currentPath ? [{
@@ -126,42 +129,42 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
             onContextMenu: (_e: React.MouseEvent) => { },
         }] : []),
         ...folders.map(folder => {
-        const palette = getMutedVisualStyle(seedFromText(folder.path));
-        const firstArtworkTrack = folder.tracks.find((t: TrackItem) =>
-            t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length
-        );
-        const artworkDetails = getBestArtwork(firstArtworkTrack);
+            const palette = getMutedVisualStyle(seedFromText(folder.path));
+            const firstArtworkTrack = folder.tracks.find((t: TrackItem) =>
+                t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length
+            );
+            const artworkDetails = getBestArtwork(firstArtworkTrack);
 
-        return {
-            id: folder.path,
-            title: folder.name,
-            subtitle: folder.hasChildren
-                ? `${folder.tracks.length} tracks • ${folder.directTrackCount} here`
-                : `${folder.tracks.length} tracks`,
-            imageDetails: artworkDetails,
-            visualToken: artworkDetails ? undefined : {
-                style: {
-                    background: palette.background,
-                    borderColor: palette.borderColor
+            return {
+                id: folder.path,
+                title: folder.name,
+                subtitle: folder.hasChildren
+                    ? `${folder.tracks.length} tracks • ${folder.directTrackCount} here`
+                    : `${folder.tracks.length} tracks`,
+                imageDetails: artworkDetails,
+                visualToken: artworkDetails ? undefined : {
+                    style: {
+                        background: palette.background,
+                        borderColor: palette.borderColor
+                    },
+                    symbol: <FolderOpen size={44} style={{ color: palette.accentColor }} />,
+                    label: 'Folder',
                 },
-                symbol: <FolderOpen size={44} style={{ color: palette.accentColor }} />,
-                label: 'Folder',
-            },
-            onClick: () => {
-                if (folder.hasChildren) {
-                    setCurrentPath(folder.path);
-                    return;
-                }
-                onNavigate('AllTracks', { filter: { type: 'folder', value: folder.path } });
-            },
-            onContextMenu: (e: React.MouseEvent) => onRightClick(e, folder)
-        };
-    })
+                onClick: () => {
+                    if (folder.hasChildren) {
+                        setCurrentPath(folder.path);
+                        return;
+                    }
+                    onNavigate('AllTracks', { filter: { type: 'folder', value: folder.path } });
+                },
+                onContextMenu: (e: React.MouseEvent) => onRightClick(e, folder)
+            };
+        })
     ];
 
     return (
         <CollectionGridView
-            title={currentPath ? `Folders · ${currentPath}` : 'Folders'}
+            title={normalizedCurrentPath ? `Folders · ${normalizedCurrentPath}` : 'Folders'}
             subtitle={currentPath ? `${folders.length} directories in this level` : `${folders.length} root directories`}
             items={gridItems}
             sortOptions={[
