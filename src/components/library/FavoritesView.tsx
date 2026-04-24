@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { Play, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
 import { TrackRow } from '../shared/TrackRow';
+import { resolveTrackVersion } from '../../utils/trackUtils';
+import { EmptyState } from '../shared/EmptyState';
+import { PlaybackControls } from './PlaybackControls';
 
 interface FavoritesViewProps {
     onNavigate?: (view: any, data?: any) => void;
@@ -19,10 +22,10 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
 
     const favoriteTracks = useMemo(() => {
         const favIds = persistenceService.getFavorites();
-        const trackMap = new Map<string, TrackItem>();
-        libraryState.tracks.forEach(t => trackMap.set(t.logic.hash_sha256, t));
-        return favIds.map(id => trackMap.get(id)).filter((t): t is TrackItem => !!t);
-    }, [libraryState.tracks]);
+        return favIds
+            .map(id => resolveTrackVersion(id, libraryState.tracks, libraryState.versionToPrimaryMap))
+            .filter((t): t is TrackItem => !!t);
+    }, [libraryState.tracks, libraryState.versionToPrimaryMap]);
 
     const onRightClick = (e: React.MouseEvent, track: TrackItem) => {
         openItemContextMenu(e, track, favoriteTracks, onNavigate);
@@ -38,23 +41,23 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">{favoriteTracks.length} tracks</p>
                 </div>
                 {favoriteTracks.length > 0 && (
-                    <button
-                        onClick={() => playTrack(favoriteTracks[0], favoriteTracks)}
-                        className="flex items-center gap-2 px-4 md:px-5 py-2.5 bg-dominant text-black rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-dominant-light transition-all shadow-lg shadow-dominant/10"
-                    >
-                        <Play size={14} fill="currentColor" /> Play All
-                    </button>
+                    <PlaybackControls
+                        trackCount={favoriteTracks.length}
+                        onPlayAll={() => playTrack(favoriteTracks[0], favoriteTracks)}
+                        variant="compact"
+                    />
                 )}
             </div>
 
             {favoriteTracks.length === 0 && (
-                <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
-                    <div className="text-center">
-                        <Heart size={48} className="mx-auto mb-4 text-gray-600" />
-                        <p className="font-bold">No favorites yet</p>
-                        <p className="text-xs mt-1">Right-click any track and select "Favorite" to add it here.</p>
-                    </div>
-                </div>
+                <EmptyState
+                    icon={<Heart size={48} className="text-gray-600" />}
+                    title="No favorites yet"
+                    subtitle='Right-click any track and select "Favorite" to add it here.'
+                    className="flex-1"
+                    titleClassName="font-bold text-white/40 mb-1"
+                    subtitleClassName="text-xs text-gray-500"
+                />
             )}
 
             <div className="space-y-1 pb-32">

@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
-import { Play, ListPlus, FolderPlus, FolderOpen, Hash } from 'lucide-react';
-import { persistenceService } from '../../services/persistence';
+import { FolderOpen, Hash } from 'lucide-react';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
 import { groupTracks } from '../../utils/grouping';
@@ -15,6 +14,8 @@ import {
     getPathBasename,
 } from '../../utils/pathUtils';
 import { TrackItem } from '../../types/music';
+import { createGroupContextMenu } from '../../utils/contextMenuPresets';
+import { getBestArtwork } from '../../utils/artworkResolver';
 
 interface FoldersViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -30,14 +31,14 @@ interface FolderNode {
 
 export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
-    const { playTrack, addToQueue } = usePlayer();
+    const { playTrack, addToQueue, addToNext } = usePlayer();
     const { showContextMenu, showToast } = useUI();
     const [currentPath, setCurrentPath] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'count'>('name');
 
     const folders = useMemo(() => {
-        const groupedFolders = groupTracks(libraryState.filteredTracks, {
-            getValues: (track) => normalizePath(track.file?.dir),
+        const { groups } = groupTracks(libraryState.filteredTracks, {
+            keyExtractor: (track) => normalizePath(track.file?.dir),
             unknownLabel: 'Unknown Folder',
             normalizeKey: (value) => normalizePath(value).toLowerCase(),
             isUnknownValue: (value) => normalizePath(value).length === 0,
@@ -45,7 +46,7 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
 
         const nodes = new Map<string, FolderNode>();
 
-        for (const group of groupedFolders) {
+        for (const group of groups.values()) {
             if (group.isUnknown) {
                 continue;
             }
@@ -88,46 +89,22 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
     const onRightClick = (e: React.MouseEvent, folder: FolderNode) => {
         e.preventDefault();
         e.stopPropagation();
-        const playlists = persistenceService.getPlaylists();
-
-        showContextMenu(e.clientX, e.clientY, [
-            {
-                label: `Play Folder`,
-                icon: <Play size={14} fill="currentColor" />,
-                onClick: () => {
-                    if (folder.tracks.length === 0) {
-                        showToast(`No tracks in ${folder.name}`, 'error');
-                        return;
-                    }
-                    playTrack(folder.tracks[0], folder.tracks);
-                    showToast(`Playing folder: ${folder.name}`);
+        showContextMenu(e.clientX, e.clientY, createGroupContextMenu({
+            name: folder.name,
+            tracks: folder.tracks,
+            playTrack,
+            addToNext,
+            addToQueue,
+            showToast,
+            playLabel: 'Play Folder',
+            extraItems: [
+                {
+                    label: 'Open Folder Tracks',
+                    icon: <FolderOpen size={14} />,
+                    onClick: () => onNavigate('AllTracks', { filter: { type: 'folder', value: folder.path } })
                 }
-            },
-            {
-                label: 'Open Folder Tracks',
-                icon: <FolderOpen size={14} />,
-                onClick: () => onNavigate('AllTracks', { filter: { type: 'folder', value: folder.path } })
-            },
-            {
-                label: 'Add to Queue',
-                icon: <ListPlus size={14} />,
-                onClick: () => {
-                    folder.tracks.forEach((t: TrackItem) => addToQueue(t));
-                    showToast(`Added ${folder.tracks.length} tracks`);
-                }
-            },
-            { divider: true, label: '', onClick: () => { } },
-            {
-                label: 'Add to Playlist', icon: <FolderPlus size={14} />, onClick: () => { },
-                subItems: playlists.map(pl => ({
-                    label: pl.name,
-                    onClick: () => {
-                        folder.tracks.forEach((t: TrackItem) => persistenceService.addTrackToPlaylist(pl.id, t.logic.hash_sha256));
-                        showToast(`Added to ${pl.name}`, 'success');
-                    }
-                }))
-            },
-        ]);
+            ]
+        }));
     };
 
     const parentPath = getParentPath(currentPath);
@@ -153,7 +130,7 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
         const firstArtworkTrack = folder.tracks.find((t: TrackItem) =>
             t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length
         );
-        const artworkDetails = firstArtworkTrack?.artworks?.track_artwork?.[0] || firstArtworkTrack?.artworks?.album_artwork?.[0];
+        const artworkDetails = getBestArtwork(firstArtworkTrack);
 
         return {
             id: folder.path,

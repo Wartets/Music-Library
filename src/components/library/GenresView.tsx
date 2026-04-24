@@ -3,13 +3,13 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
 import {
-    Play, ListPlus, FolderPlus, Filter, Hash, AudioWaveform,
+    Filter, Hash, AudioWaveform,
     Disc3, Film, Mic2, Music, Radio, Waves, Zap
 } from 'lucide-react';
-import { persistenceService } from '../../services/persistence';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
-import { groupTracks } from '../../utils/grouping';
+import { groupTracks, sortGroupsAlphabeticallyWithUnknownLast, sortGroupsByCountWithUnknownLast } from '../../utils/grouping';
+import { createGroupContextMenu } from '../../utils/contextMenuPresets';
 
 interface GenresViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -64,87 +64,30 @@ export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
     const [sortBy, setSortBy] = useState<'name' | 'count'>('name');
 
     const genres = useMemo(() => {
-        const grouped = groupTracks(libraryState.filteredTracks, {
-            getValues: (track) => {
-                const genre = track.metadata?.genre;
-                if (Array.isArray(genre)) {
-                    return genre;
-                }
-                return genre;
-            },
+        const { groups } = groupTracks(libraryState.filteredTracks, {
+            keyExtractor: (track) => track.metadata?.genre,
             unknownLabel: 'Unknown Genre'
         });
 
-        const sorted = [...grouped];
         if (sortBy === 'name') {
-            return sorted.sort((a, b) => {
-                if (a.isUnknown) return 1;
-                if (b.isUnknown) return -1;
-                return a.name.localeCompare(b.name);
-            });
-        } else {
-            return sorted.sort((a, b) => {
-                if (a.isUnknown) return 1;
-                if (b.isUnknown) return -1;
-                return b.tracks.length - a.tracks.length || a.name.localeCompare(b.name);
-            });
+            return sortGroupsAlphabeticallyWithUnknownLast(groups.values());
         }
+
+        return sortGroupsByCountWithUnknownLast(groups.values());
     }, [libraryState.filteredTracks, sortBy]);
 
     const onRightClick = (e: React.MouseEvent, genreGroup: any) => {
         e.preventDefault();
         e.stopPropagation();
-        const playlists = persistenceService.getPlaylists();
-
-        showContextMenu(e.clientX, e.clientY, [
-            {
-                label: `Play Genre: ${genreGroup.name}`,
-                icon: <Play size={14} fill="currentColor" />,
-                onClick: () => {
-                    playTrack(genreGroup.tracks[0], genreGroup.tracks);
-                    showToast(`Playing genre: ${genreGroup.name}`);
-                }
-            },
-            {
-                label: 'Play Next',
-                icon: <Play size={14} className="text-dominant-light" />,
-                onClick: () => {
-                    [...genreGroup.tracks].reverse().forEach((t: any) => addToNext(t));
-                    showToast(`Genre ${genreGroup.name} will play next`, 'success');
-                }
-            },
-            {
-                label: 'Add to Queue',
-                icon: <ListPlus size={14} />,
-                onClick: () => {
-                    genreGroup.tracks.forEach((t: any) => addToQueue(t));
-                    showToast(`Added ${genreGroup.tracks.length} tracks to queue`);
-                }
-            },
-            { divider: true, label: '', onClick: () => { } },
-            {
-                label: 'Add to Playlist',
-                icon: <FolderPlus size={14} />,
-                onClick: () => { },
-                subItems: playlists.map(pl => ({
-                    label: pl.name,
-                    onClick: () => {
-                        genreGroup.tracks.forEach((t: any) => persistenceService.addTrackToPlaylist(pl.id, t.logic.hash_sha256));
-                        showToast(`Added genre to ${pl.name}`, 'success');
-                    }
-                }))
-            },
-            { divider: true, label: '', onClick: () => { } },
-            {
-                label: 'Save as New Playlist',
-                icon: <FolderPlus size={14} />,
-                onClick: () => {
-                    const newPl = persistenceService.createPlaylist(genreGroup.name);
-                    genreGroup.tracks.forEach((t: any) => persistenceService.addTrackToPlaylist(newPl.id, t.logic.hash_sha256));
-                    showToast(`Created playlist "${genreGroup.name}"`, 'success');
-                }
-            }
-        ]);
+        showContextMenu(e.clientX, e.clientY, createGroupContextMenu({
+            name: genreGroup.name,
+            tracks: genreGroup.tracks,
+            playTrack,
+            addToNext,
+            addToQueue,
+            showToast,
+            playLabel: `Play Genre: ${genreGroup.name}`
+        }));
     };
 
     const gridItems: GridItem[] = genres.map(genre => {

@@ -5,36 +5,27 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { TrackItem } from '../../types/music';
 import { VirtualList } from '../shared/VirtualList';
-import { persistenceService } from '../../services/persistence';
 import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { TrackRow } from '../shared/TrackRow';
+import { resolveHistoryTracks } from '../../utils/historyUtils';
+import { EmptyState } from '../shared/EmptyState';
 
 
 interface HistoryViewProps {
     onNavigate: (view: ViewType, data?: any) => void;
 }
 
-export const HistoryView: React.FC<HistoryViewProps> = () => {
+export const HistoryView: React.FC<HistoryViewProps> = ({ onNavigate: _onNavigate }) => {
     const { state: libState } = useLibrary();
     const { state: playerState, playTrack } = usePlayer();
     const { openItemContextMenu } = useItemContextMenu<TrackItem>();
     const isMobile = useIsMobile();
 
     // Map history IDs to actual tracks
-    const historyTracks = React.useMemo(() => {
-        const historyIds = persistenceService.getHistoryIds();
-        const trackMap = new Map<string, TrackItem>();
-        libState.tracks.forEach(track => {
-            trackMap.set(track.logic.hash_sha256, track);
-        });
-        return historyIds
-            .map(id => {
-                const primaryId = libState.versionToPrimaryMap[id] || id;
-                return trackMap.get(primaryId) || null;
-            })
-            .filter((t): t is TrackItem => !!t);
-    }, [libState.tracks, libState.versionToPrimaryMap, playerState.history]);
+    const historyTracks = React.useMemo(() => (
+        resolveHistoryTracks(libState.tracks, libState.versionToPrimaryMap)
+    ), [libState.tracks, libState.versionToPrimaryMap, playerState.history]);
 
     const handlePlay = (track: TrackItem) => {
         playTrack(track, historyTracks);
@@ -106,28 +97,39 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                     </button>
                 </div>
 
-                <div className="space-y-1.5">
-                    {historyTracks.map((track, index) => {
-                        const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
-                        return (
-                            <TrackRow
-                                key={`${track.logic.hash_sha256}-${index}`}
-                                track={track}
-                                index={index}
-                                isPlaying={isPlaying}
-                                list={historyTracks}
-                                showIndex={false}
-                                showArtwork={true}
-                                showCollection={false}
-                                showRating={false}
-                                showDuration
-                                onPlay={(t) => handlePlay(t)}
-                                onContextMenu={(e, t) => openItemContextMenu(e, t, historyTracks, undefined)}
-                                className={`rounded-xl border border-white/10 transition-colors ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'bg-white/[0.02] hover:bg-white/5'}`}
-                            />
-                        );
-                    })}
-                </div>
+                {historyTracks.length === 0 ? (
+                    <EmptyState
+                        icon={<Clock size={40} />}
+                        title="No playback history yet"
+                        subtitle="Recent tracks across all sessions will show up here."
+                        className="min-h-[40vh] rounded-3xl border border-dashed border-white/10"
+                        titleClassName="text-sm font-bold text-white/40 mb-2"
+                        subtitleClassName="text-xs text-gray-500"
+                    />
+                ) : (
+                    <div className="space-y-1.5">
+                        {historyTracks.map((track, index) => {
+                            const isPlaying = playerState.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256;
+                            return (
+                                <TrackRow
+                                    key={`${track.logic.hash_sha256}-${index}`}
+                                    track={track}
+                                    index={index}
+                                    isPlaying={isPlaying}
+                                    list={historyTracks}
+                                    showIndex={false}
+                                    showArtwork={true}
+                                    showCollection={false}
+                                    showRating={false}
+                                    showDuration
+                                    onPlay={(t) => handlePlay(t)}
+                                    onContextMenu={(e, t) => openItemContextMenu(e, t, historyTracks, undefined)}
+                                    className={`rounded-xl border border-white/10 transition-colors ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'bg-white/[0.02] hover:bg-white/5'}`}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         );
     }
@@ -155,12 +157,23 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
             <div className="flex-1 overflow-hidden flex flex-col bg-[#111]/40 rounded-t-2xl border-x border-t border-white/5">
                 {renderHeader()}
                 <div className="flex-1 overflow-hidden">
-                    <VirtualList
-                        items={historyTracks}
-                        rowHeight={isMobile ? 48 : 56}
-                        renderRow={(track: TrackItem, idx: number) => renderRow(track, idx)}
-                        overscan={isMobile ? 3 : 5}
-                    />
+                    {historyTracks.length === 0 ? (
+                        <EmptyState
+                            icon={<Clock size={48} />}
+                            title="No playback history yet"
+                            subtitle="Tracks you listen to will start showing up here."
+                            className="h-full"
+                            titleClassName="text-base font-bold text-white/40 mb-2"
+                            subtitleClassName="text-sm text-gray-500"
+                        />
+                    ) : (
+                        <VirtualList
+                            items={historyTracks}
+                            rowHeight={isMobile ? 48 : 56}
+                            renderRow={(track: TrackItem, idx: number) => renderRow(track, idx)}
+                            overscan={isMobile ? 3 : 5}
+                        />
+                    )}
                 </div>
             </div>
         </div>

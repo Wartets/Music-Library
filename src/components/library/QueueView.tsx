@@ -32,6 +32,9 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getBestArtwork } from '../../utils/artworkResolver';
+import { resolveHistoryTracks } from '../../utils/historyUtils';
+import { EmptyState } from '../shared/EmptyState';
 
 export interface QueueDisplayItem extends Omit<TrackItem, 'id'> {
     originalIndex: number;
@@ -51,13 +54,6 @@ interface QueueListItemProps {
     onContextMenu?: (e: React.MouseEvent) => void;
 }
 
-const getArtworkForTrack = (track: any) => {
-    const fromTrack = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
-    if (fromTrack) return fromTrack;
-    const fromVersion = track.versions?.find((v: any) => v.artworks?.track_artwork?.[0] || v.artworks?.album_artwork?.[0]);
-    return fromVersion?.artworks?.track_artwork?.[0] || fromVersion?.artworks?.album_artwork?.[0];
-};
-
 const trackTitle = (track: any) => track.metadata?.title || track.logic.track_name;
 
 const QueueListItem: React.FC<QueueListItemProps> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
@@ -76,7 +72,7 @@ const QueueListItem: React.FC<QueueListItemProps> = React.memo(({ track, index, 
         zIndex: isDragging ? 100 : 1,
     };
 
-    const artwork = getArtworkForTrack(track);
+    const artwork = getBestArtwork(track);
 
     return (
         <div
@@ -176,18 +172,7 @@ export const QueueView: React.FC = () => {
     const currentTrack = playerState.currentTrack;
     const queue = playerState.queue;
     const history = useMemo(() => {
-        const historyIds = persistenceService.getHistoryIds();
-        const trackMap = new Map<string, any>();
-        libState.tracks.forEach(track => {
-            trackMap.set(track.logic.hash_sha256, track);
-        });
-
-        return historyIds
-            .map(id => {
-                const primaryId = libState.versionToPrimaryMap[id] || id;
-                return trackMap.get(primaryId) || null;
-            })
-            .filter((track): track is any => Boolean(track));
+        return resolveHistoryTracks(libState.tracks, libState.versionToPrimaryMap);
     }, [libState.tracks, libState.versionToPrimaryMap, playerState.history]);
 
     const curIdx = currentTrack
@@ -375,10 +360,13 @@ export const QueueView: React.FC = () => {
                 {activeTab === 'queue' ? (
                     <div className="space-y-2 pb-4">
                         {filteredQueueDisplay.length === 0 ? (
-                            <div className="h-44 flex flex-col items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
-                                <ListMusic size={36} className="opacity-20 mb-2" />
-                                <p className="text-sm font-bold text-white/30">Queue empty</p>
-                            </div>
+                            <EmptyState
+                                icon={<ListMusic size={36} />}
+                                title="Queue empty"
+                                className="h-44 border border-dashed border-white/10 rounded-2xl"
+                                iconClassName="opacity-20 mb-2"
+                                titleClassName="text-sm font-bold text-white/30"
+                            />
                         ) : (
                             filteredQueueDisplay.map((track) => (
                                 <div
@@ -390,7 +378,7 @@ export const QueueView: React.FC = () => {
                                         <Play size={14} fill="currentColor" />
                                     </button>
                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10">
-                                        <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
+                                        <ArtworkImage details={getBestArtwork(track)} alt={trackTitle(track)} />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="text-xs font-bold text-white truncate">{trackTitle(track)}</div>
@@ -415,9 +403,13 @@ export const QueueView: React.FC = () => {
                             <button onClick={clearHistory} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400">Clear</button>
                         </div>
                         {history.length === 0 ? (
-                            <div className="h-40 flex items-center justify-center rounded-2xl border border-dashed border-white/10 text-gray-500 text-xs">
-                                No playback history yet.
-                            </div>
+                            <EmptyState
+                                icon={<History size={32} />}
+                                title="No playback history yet."
+                                className="h-40 rounded-2xl border border-dashed border-white/10"
+                                iconClassName="opacity-20 mb-2"
+                                titleClassName="text-xs text-gray-500"
+                            />
                         ) : (
                             history.map((track: any, index: number) => (
                                 <div
@@ -427,7 +419,7 @@ export const QueueView: React.FC = () => {
                                     onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, history, undefined)}
                                 >
                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10">
-                                        <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
+                                        <ArtworkImage details={getBestArtwork(track)} alt={trackTitle(track)} />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="text-xs font-bold text-white truncate">{trackTitle(track)}</div>
@@ -572,7 +564,7 @@ export const QueueView: React.FC = () => {
                                 <div className="bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 flex items-center gap-4 md:gap-8 shadow-2xl overflow-hidden relative group">
                                     <div className="absolute inset-0 bg-dominant/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                     <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 ring-1 ring-white/10 relative z-10">
-                                        <ArtworkImage details={getArtworkForTrack(currentTrack)} alt={trackTitle(currentTrack)} />
+                                        <ArtworkImage details={getBestArtwork(currentTrack)} alt={trackTitle(currentTrack)} />
                                     </div>
                                     <div className="flex-1 min-w-0 relative z-10">
                                         <h3 className="text-xl md:text-3xl font-black text-white truncate leading-tight">{trackTitle(currentTrack)}</h3>
@@ -600,10 +592,13 @@ export const QueueView: React.FC = () => {
                         <section>
                             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 px-2">Next up in list</h2>
                             {filteredQueueDisplay.length === 0 ? (
-                                <div className="h-64 flex flex-col items-center justify-center text-gray-500 border-2 border-dashed border-white/5 rounded-3xl">
-                                    <ListMusic size={64} className="opacity-10 mb-4" />
-                                    <p className="text-xl font-bold text-white/20">Queue empty</p>
-                                </div>
+                                <EmptyState
+                                    icon={<ListMusic size={64} />}
+                                    title="Queue empty"
+                                    className="h-64 border-2 border-dashed border-white/5 rounded-3xl"
+                                    iconClassName="opacity-10 mb-4"
+                                    titleClassName="text-xl font-bold text-white/20"
+                                />
                             ) : isDragEnabled ? (
                                 <DndContext
                                     sensors={sensors}
@@ -661,9 +656,13 @@ export const QueueView: React.FC = () => {
                             <button onClick={clearHistory} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400 transition-colors">Clear History</button>
                         </div>
                         {history.length === 0 ? (
-                            <div className="h-56 flex items-center justify-center rounded-3xl border border-dashed border-white/10 text-gray-500 text-sm">
-                                No playback history yet.
-                            </div>
+                            <EmptyState
+                                icon={<History size={40} />}
+                                title="No playback history yet."
+                                className="h-56 rounded-3xl border border-dashed border-white/10"
+                                iconClassName="opacity-20 mb-3"
+                                titleClassName="text-sm text-gray-500"
+                            />
                         ) : (
                             <div className="h-[min(70vh,720px)] rounded-2xl border border-white/5 overflow-hidden">
                                 <VirtualList
@@ -678,7 +677,7 @@ export const QueueView: React.FC = () => {
                                                 onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, history, undefined)}
                                             >
                                                 <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
-                                                    <ArtworkImage details={getArtworkForTrack(track)} alt={trackTitle(track)} />
+                                                    <ArtworkImage details={getBestArtwork(track)} alt={trackTitle(track)} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-sm font-bold text-white truncate">{trackTitle(track)}</div>

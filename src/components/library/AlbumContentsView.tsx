@@ -3,6 +3,8 @@ import { AlbumGroup } from '../../types/music';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { LibraryBrowser } from './LibraryBrowser';
 import { getTrackCollectionKey, getTrackCollectionLabel } from '../../utils/collectionLabels';
+import { EmptyState } from '../shared/EmptyState';
+import { Folder } from 'lucide-react';
 
 
 interface AlbumContentsViewProps {
@@ -36,15 +38,20 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
     }, [initialAlbum, libraryState.tracks]);
 
     if (!album) return (
-        <div className="h-full flex flex-col items-center justify-center text-gray-500 font-bold uppercase tracking-widest gap-4 px-6 text-center">
-            <div>Collection not found</div>
-            <button
-                onClick={() => onNavigate('Albums', null)}
-                className="px-4 py-2.5 min-h-11 rounded-xl border border-white/10 text-white/80 hover:text-white hover:bg-white/5 transition-colors text-[10px] font-black tracking-[0.25em]"
-            >
-                Back to Albums
-            </button>
-        </div>
+        <EmptyState
+            icon={<Folder size={36} />}
+            title="Collection not found"
+            className="h-full px-6"
+            titleClassName="font-bold uppercase tracking-widest text-white/40"
+            action={
+                <button
+                    onClick={() => onNavigate('Albums', null)}
+                    className="px-4 py-2.5 min-h-11 rounded-xl border border-white/10 text-white/80 hover:text-white hover:bg-white/5 transition-colors text-[10px] font-black tracking-[0.25em]"
+                >
+                    Back to Albums
+                </button>
+            }
+        />
     );
 
     return (

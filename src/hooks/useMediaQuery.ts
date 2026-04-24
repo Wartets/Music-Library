@@ -14,13 +14,11 @@ export const useMediaQuery = (query: string, initialValue?: boolean): boolean =>
         const media = window.matchMedia(query);
         const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
 
-        if (media.matches !== matches) {
-            setMatches(media.matches);
-        }
+        setMatches(media.matches);
 
         media.addEventListener('change', handler);
         return () => media.removeEventListener('change', handler);
-    }, [query, matches]);
+    }, [query]);
 
     return matches;
 };

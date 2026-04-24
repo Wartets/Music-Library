@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
-import { Play, ListPlus, FolderPlus, Calendar, Hash, CalendarRange } from 'lucide-react';
-import { persistenceService } from '../../services/persistence';
+import { Calendar, Hash, CalendarRange } from 'lucide-react';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromYear } from '../../utils/collectionVisuals';
-import { groupTracks } from '../../utils/grouping';
+import { groupTracks, sortGroupsByCountWithUnknownLast, sortGroupsAlphabeticallyWithUnknownLast } from '../../utils/grouping';
+import { createGroupContextMenu } from '../../utils/contextMenuPresets';
 
 interface YearsViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -28,8 +28,8 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
     };
 
     const years = useMemo(() => {
-        const grouped = groupTracks(libraryState.filteredTracks, {
-            getValues: (track) => {
+        const { groups } = groupTracks(libraryState.filteredTracks, {
+            keyExtractor: (track) => {
                 const parsedYear = parseYear(track.metadata?.year);
                 if (parsedYear === null) {
                     return null;
@@ -45,78 +45,29 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
             unknownLabel: 'Unknown Year'
         });
 
-        const sorted = [...grouped];
         if (sortBy === 'year') {
-            return sorted.sort((a, b) => {
-                if (a.isUnknown) return 1;
-                if (b.isUnknown) return -1;
+            return sortGroupsAlphabeticallyWithUnknownLast(groups.values(), (a, b) => {
                 const yearA = parseInt(a.name, 10) || 0;
                 const yearB = parseInt(b.name, 10) || 0;
                 return yearB - yearA || a.name.localeCompare(b.name);
             });
-        } else {
-            return sorted.sort((a, b) => {
-                if (a.isUnknown) return 1;
-                if (b.isUnknown) return -1;
-                return b.tracks.length - a.tracks.length || (parseInt(b.name, 10) - parseInt(a.name, 10));
-            });
         }
+
+        return sortGroupsByCountWithUnknownLast(groups.values(), (a, b) => (parseInt(b.name, 10) - parseInt(a.name, 10)));
     }, [groupBy, libraryState.filteredTracks, sortBy]);
 
     const onRightClick = (e: React.MouseEvent, yearGroup: any) => {
         e.preventDefault();
         e.stopPropagation();
-        const playlists = persistenceService.getPlaylists();
-
-        showContextMenu(e.clientX, e.clientY, [
-            {
-                label: `Play Year: ${yearGroup.name}`,
-                icon: <Play size={14} fill="currentColor" />,
-                onClick: () => {
-                    playTrack(yearGroup.tracks[0], yearGroup.tracks);
-                    showToast(`Playing year: ${yearGroup.name}`);
-                }
-            },
-            {
-                label: 'Play Next',
-                icon: <Play size={14} className="text-dominant-light" />,
-                onClick: () => {
-                    [...yearGroup.tracks].reverse().forEach((t: any) => addToNext(t));
-                    showToast(`Year ${yearGroup.name} will play next`, 'success');
-                }
-            },
-            {
-                label: 'Add to Queue',
-                icon: <ListPlus size={14} />,
-                onClick: () => {
-                    yearGroup.tracks.forEach((t: any) => addToQueue(t));
-                    showToast(`Added ${yearGroup.tracks.length} tracks to queue`);
-                }
-            },
-            { divider: true, label: '', onClick: () => { } },
-            {
-                label: 'Add to Playlist',
-                icon: <FolderPlus size={14} />,
-                onClick: () => { },
-                subItems: playlists.map(pl => ({
-                    label: pl.name,
-                    onClick: () => {
-                        yearGroup.tracks.forEach((t: any) => persistenceService.addTrackToPlaylist(pl.id, t.logic.hash_sha256));
-                        showToast(`Added year to ${pl.name}`, 'success');
-                    }
-                }))
-            },
-            { divider: true, label: '', onClick: () => { } },
-            {
-                label: 'Save as New Playlist',
-                icon: <FolderPlus size={14} />,
-                onClick: () => {
-                    const newPl = persistenceService.createPlaylist(yearGroup.name);
-                    yearGroup.tracks.forEach((t: any) => persistenceService.addTrackToPlaylist(newPl.id, t.logic.hash_sha256));
-                    showToast(`Created playlist "${yearGroup.name}"`, 'success');
-                }
-            }
-        ]);
+        showContextMenu(e.clientX, e.clientY, createGroupContextMenu({
+            name: yearGroup.name,
+            tracks: yearGroup.tracks,
+            playTrack,
+            addToNext,
+            addToQueue,
+            showToast,
+            playLabel: `Play Year: ${yearGroup.name}`
+        }));
     };
 
     const gridItems: GridItem[] = years.map(yearGroup => {

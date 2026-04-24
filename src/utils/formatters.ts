@@ -1,3 +1,5 @@
+import type { TrackItem } from '../types/music';
+
 /**
  * Formats a duration in seconds to a mm:ss string.
  * @param seconds - Total seconds
@@ -73,4 +75,11 @@ export const formatSizeMb = (bytes?: number): string => {
  */
 export const getLosslessBadge = (isLossless?: boolean): string | null => {
     return isLossless ? 'LOSSLESS' : null;
+};
+
+export const formatTotalDuration = (tracks: TrackItem[]): string => {
+    const totalSeconds = tracks.reduce((sum, track) => sum + parseDuration(track.audio_specs?.duration || '0:00'), 0);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 };

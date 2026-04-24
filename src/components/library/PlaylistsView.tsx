@@ -4,12 +4,15 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
 import { TrackItem } from '../../types/music';
-import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus, Edit3, Clock, Database, Copy, Download } from 'lucide-react';
+import { Play, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Edit3, Clock, Database, Copy, Download } from 'lucide-react';
 import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { SmartPlaylistBuilder } from './SmartPlaylistBuilder';
 import { PlaylistEditor } from './PlaylistEditor';
 import { evaluateSmartPlaylist, SmartPlaylistDefinition } from '../../utils/smartPlaylistEvaluator';
+import { createPlaylistTrackContextMenu } from '../../utils/contextMenuPresets';
+import { getBestArtwork } from '../../utils/artworkResolver';
+import { EmptyState } from '../shared/EmptyState';
 
 interface PlaylistsViewProps {
     onNavigate?: (view: any, data?: any) => void;
@@ -17,7 +20,7 @@ interface PlaylistsViewProps {
 
 export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     const { state, setEditingTracks, refresh } = useLibrary();
-    const { playTrack } = usePlayer();
+    const { playTrack, addToQueue } = usePlayer();
     const { showContextMenu, showToast } = useUI();
     const { openItemContextMenu } = useItemContextMenu<TrackItem>();
     const [playlists, setPlaylists] = useState<Playlist[]>(persistenceService.getPlaylists());
@@ -40,13 +43,18 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     };
 
     const onRightClickTrack = (e: React.MouseEvent, track: TrackItem, playlist: Playlist) => {
-        openItemContextMenu(e, track, state.tracks, onNavigate, [
-            { divider: true, label: '', onClick: () => { } },
-            {
-                label: 'Remove from Playlist',
-                icon: <ListMinus size={14} />,
-                danger: true,
-                onClick: () => {
+        openItemContextMenu(
+            e,
+            track,
+            state.tracks,
+            onNavigate,
+            createPlaylistTrackContextMenu({
+                isSmart: false,
+                track,
+                playTrack,
+                addToQueue,
+                showToast,
+                onRemoveFromPlaylist: () => {
                     persistenceService.removeFromPlaylist(playlist.id, track.logic.hash_sha256);
                     const updated = persistenceService.getPlaylists();
                     setPlaylists(updated);
@@ -55,8 +63,8 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                     showToast('Track removed from playlist');
                     refresh();
                 }
-            }
-        ]);
+            })
+        );
     };
 
     const onRightClickPlaylist = (e: React.MouseEvent, pl: Playlist) => {
@@ -293,10 +301,15 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                 {/* Left: List of Playlists */}
                 <div className="w-full lg:w-80 max-h-[32vh] lg:max-h-none flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 md:pr-2 pb-4 md:pb-8">
                     {playlists.length === 0 && smartPlaylists.length === 0 && !isCreating ? (
-                        <div className="text-gray-600 font-bold uppercase tracking-widest text-[10px] flex flex-col h-48 items-center justify-center border-2 border-dashed border-white/5 rounded-3xl gap-4">
-                            <FolderPlus size={32} className="opacity-20" />
-                            Your library is quiet.
-                        </div>
+                        <EmptyState
+                            icon={<FolderPlus size={32} />}
+                            title="No playlists yet"
+                            subtitle="Create a playlist or smart playlist to get started."
+                            className="h-48 border-2 border-dashed border-white/5 rounded-3xl"
+                            iconClassName="opacity-20 mb-2"
+                            titleClassName="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-2"
+                            subtitleClassName="text-xs text-gray-500"
+                        />
                     ) : (
                         <>
                             {smartPlaylists.map(pl => (
@@ -443,12 +456,13 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
 
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
                                     {activeTrackIds.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-center text-gray-600 gap-4">
-                                            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center">
-                                                <ListMusic size={32} className="opacity-20" />
-                                            </div>
-                                            <p className="font-black uppercase tracking-[0.2em] text-xs">This collection is currently empty</p>
-                                        </div>
+                                        <EmptyState
+                                            icon={<ListMusic size={32} />}
+                                            title="This collection is currently empty"
+                                            className="h-full"
+                                            iconClassName="opacity-20 mb-3"
+                                            titleClassName="font-black uppercase tracking-[0.2em] text-xs text-white/30"
+                                        />
                                     ) : (
                                         <div className="space-y-2 pb-20">
                                             {activeTrackIds.map((hash, idx) => {
@@ -475,19 +489,25 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                             } else {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                showContextMenu(e.clientX, e.clientY, [
-                                                                    { label: 'Play Now', icon: <Play size={14} fill="currentColor" />, onClick: () => playTrack(track, state.tracks) },
-                                                                    { label: 'Add to Queue', icon: <ListPlus size={14} />, onClick: () => showToast('Added to queue') },
-                                                                    { divider: true, label: '', onClick: () => { } },
-                                                                    { label: 'Edit Metadata', icon: <Pencil size={14} />, onClick: () => setEditingTracks([track]) }
-                                                                ]);
+                                                                showContextMenu(
+                                                                    e.clientX,
+                                                                    e.clientY,
+                                                                    createPlaylistTrackContextMenu({
+                                                                        isSmart: true,
+                                                                        track,
+                                                                        playTrack: (selectedTrack) => playTrack(selectedTrack, state.tracks),
+                                                                        addToQueue,
+                                                                        showToast,
+                                                                        onEditMetadata: () => setEditingTracks([track])
+                                                                    })
+                                                                );
                                                             }
                                                         }}
                                                     >
                                                         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 sm:h-8 bg-dominant rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                                         <div className="flex items-center min-w-0 flex-1 gap-3 sm:gap-5">
                                                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-black/50 overflow-hidden flex items-center justify-center text-xs text-white/30 flex-shrink-0 border border-white/10 group-hover:border-white/20 transition-all">
-                                                                <ArtworkImage details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]} alt={track.metadata?.title || track.logic.track_name} />
+                                                                <ArtworkImage details={getBestArtwork(track)} alt={track.metadata?.title || track.logic.track_name} />
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <h4 className="text-white font-black text-sm truncate group-hover:text-dominant-light transition-colors">{track.metadata?.title || track.logic.track_name}</h4>
@@ -514,14 +534,15 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 select-none animate-in fade-in duration-700">
-                                <div className="w-32 h-32 rounded-full bg-white/5 mb-8 flex items-center justify-center relative">
-                                    <div className="absolute inset-0 bg-dominant/5 blur-3xl rounded-full"></div>
-                                    <Plus size={48} className="opacity-10" />
-                                </div>
-                                <h2 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">Select a Collection</h2>
-                                <p className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-600">to view and manage your curated tracks</p>
-                            </div>
+                            <EmptyState
+                                icon={<ListMusic size={40} />}
+                                title="Select a Collection"
+                                subtitle="Choose a playlist to view and manage its tracks."
+                                className="h-full animate-in fade-in duration-700"
+                                iconClassName="opacity-10 mb-6"
+                                titleClassName="text-xl font-black text-white/20 uppercase tracking-[0.4em] mb-4"
+                                subtitleClassName="text-xs font-bold uppercase tracking-widest text-gray-600"
+                            />
                         )}
                     </AnimatePresence>
                 </div>

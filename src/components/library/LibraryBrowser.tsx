@@ -5,7 +5,7 @@ import { VirtualList } from '../shared/VirtualList';
 import { TrackItem } from '../../types/music';
 import { formatSizeMb } from '../../utils/formatters';
 import {
-    ChevronDown, ChevronRight, Folder, Play, SlidersHorizontal, ChevronUp, Shuffle
+    ChevronDown, ChevronRight, Folder, Play, SlidersHorizontal, ChevronUp
 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { useItemContextMenu } from '../../hooks/useItemContextMenu';
@@ -13,22 +13,9 @@ import { useIsMobile } from '../../hooks/useMediaQuery';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
 import { useLibraryBrowserColumns } from './useLibraryBrowserColumns';
 import { useLibraryBrowserSort } from './useLibraryBrowserSort';
-
-const HighlightText: React.FC<{ text: string, query: string }> = ({ text, query }) => {
-    if (!query.trim()) return <>{text}</>;
-    const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-    return (
-        <>
-            {parts.map((part, i) =>
-                part.toLowerCase() === query.toLowerCase() ? (
-                    <mark key={i} className="bg-dominant/30 text-white rounded-sm px-0.5">{part}</mark>
-                ) : (
-                    part
-                )
-            )}
-        </>
-    );
-};
+import { HighlightText } from '../shared/HighlightText';
+import { getBestArtwork } from '../../utils/artworkResolver';
+import { PlaybackControls } from './PlaybackControls';
 
 interface LibraryBrowserProps {
     title: string;
@@ -145,7 +132,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                             return (
                                 <div key={col.id} className={`${responsiveClass} w-12 h-12 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/5 group-hover:border-white/20 transition-all`}>
                                     <ArtworkImage
-                                        details={item.artworks?.track_artwork?.[0] || item.artworks?.album_artwork?.[0]}
+                                        details={getBestArtwork(item)}
                                         alt={item.metadata?.title || item.logic?.track_name}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                     />
@@ -299,7 +286,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                     return (
                                         <div key={col.id} className={`${responsiveClass} w-12 h-12 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/5`}>
                                             <ArtworkImage
-                                                details={sectionItem.artworks?.track_artwork?.[0] || sectionItem.artworks?.album_artwork?.[0]}
+                                                details={getBestArtwork(sectionItem)}
                                                 alt={sectionItem.metadata?.title || sectionItem.logic?.track_name}
                                                 className="w-full h-full object-cover"
                                             />
@@ -428,27 +415,16 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                 )}
 
                 <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => {
-                                if (tracks.length > 0) {
-                                    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-                                    playTrack(shuffled[0], shuffled);
-                                }
-                            }}
-                            className="flex items-center gap-2 px-3 py-3 bg-white/10 text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95 hover:bg-white/15 min-h-11"
-                            aria-label="Shuffle play"
-                        >
-                            <Shuffle size={14} /> Shuffle
-                        </button>
-                        <button
-                            onClick={onShufflePlay || (() => playTrack(tracks[0], tracks))}
-                            className="flex items-center gap-2 px-3.5 py-3 bg-dominant text-on-dominant rounded-xl text-[10px] font-black uppercase tracking-[0.14em] active:scale-95 min-h-11"
-                            aria-label="Play all in order"
-                        >
-                            <Play size={14} fill="currentColor" /> Play All
-                        </button>
-                    </div>
+                    <PlaybackControls
+                        trackCount={tracks.length}
+                        onPlayAll={onShufflePlay || (() => playTrack(tracks[0], tracks))}
+                        onShuffle={() => {
+                            const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+                            playTrack(shuffled[0], shuffled);
+                        }}
+                        showShuffle
+                        variant="default"
+                    />
                     <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
                         {tracks.length} tracks
                     </span>

@@ -2,6 +2,8 @@ import React from 'react';
 import { Star } from 'lucide-react';
 import { TrackItem } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
+import { HighlightText } from './HighlightText';
+import { getBestArtwork } from '../../utils/artworkResolver';
 
 interface TrackRowProps {
     track: TrackItem;
@@ -26,24 +28,6 @@ interface TrackRowProps {
     titleClassName?: string;
     subtitleClassName?: string;
 }
-
-const HighlightText: React.FC<{ text: string; query?: string }> = ({ text, query }) => {
-    const safeQuery = query?.trim() || '';
-    if (!safeQuery) return <>{text}</>;
-
-    const parts = text.split(new RegExp(`(${safeQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-    return (
-        <>
-            {parts.map((part, i) =>
-                part.toLowerCase() === safeQuery.toLowerCase() ? (
-                    <mark key={i} className="bg-dominant/30 text-white rounded-sm px-0.5">{part}</mark>
-                ) : (
-                    part
-                )
-            )}
-        </>
-    );
-};
 
 export const TrackRow: React.FC<TrackRowProps> = ({
     track,
@@ -85,7 +69,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
             {showArtwork && (
                 <div className={`w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/5 ${artworkClassName || ''}`}>
                     <ArtworkImage
-                        details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]}
+                        details={getBestArtwork(track)}
                         alt={title}
                         className="w-full h-full object-cover"
                     />

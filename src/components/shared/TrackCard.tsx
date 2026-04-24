@@ -2,6 +2,8 @@ import React from 'react';
 import { Play } from 'lucide-react';
 import { TrackItem } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
+import { HighlightText } from './HighlightText';
+import { getBestArtwork } from '../../utils/artworkResolver';
 
 interface TrackCardProps {
     track: TrackItem;
@@ -12,24 +14,6 @@ interface TrackCardProps {
     onContextMenu?: (e: React.MouseEvent, track: TrackItem, list?: TrackItem[]) => void;
     className?: string;
 }
-
-const HighlightText: React.FC<{ text: string; query?: string }> = ({ text, query }) => {
-    const safeQuery = query?.trim() || '';
-    if (!safeQuery) return <>{text}</>;
-
-    const parts = text.split(new RegExp(`(${safeQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-    return (
-        <>
-            {parts.map((part, i) =>
-                part.toLowerCase() === safeQuery.toLowerCase() ? (
-                    <mark key={i} className="bg-dominant/30 text-white rounded-sm px-0.5">{part}</mark>
-                ) : (
-                    part
-                )
-            )}
-        </>
-    );
-};
 
 export const TrackCard: React.FC<TrackCardProps> = ({
     track,
@@ -51,7 +35,7 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         >
             <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 shadow-xl group-hover:shadow-dominant/20 transition-all duration-500 bg-white/5 border border-white/5 group-hover:border-dominant/20">
                 <ArtworkImage
-                    details={track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0]}
+                    details={getBestArtwork(track)}
                     alt={title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     loading="lazy"

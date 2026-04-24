@@ -6,10 +6,12 @@ export interface GroupedTracks<T> {
 }
 
 interface GroupTracksOptions<T> {
-    getValues: (item: T) => string | string[] | null | undefined;
+    keyExtractor: (item: T) => string | string[] | null | undefined;
     unknownLabel: string;
     unknownKey?: string;
+    shouldGroupUnknown?: boolean;
     normalizeKey?: (value: string) => string;
+    nameResolver?: (value: string) => string;
     isUnknownValue?: (value: string) => boolean;
 }
 
@@ -25,20 +27,22 @@ const toArray = (value: string | string[] | null | undefined): string[] => {
 
 const defaultNormalizeKey = (value: string) => value.toLowerCase();
 
-export const groupTracks = <T>(items: T[], options: GroupTracksOptions<T>): GroupedTracks<T>[] => {
+export const groupTracks = <T>(items: T[], options: GroupTracksOptions<T>) => {
     const {
-        getValues,
+        keyExtractor,
         unknownLabel,
         unknownKey = '__unknown__',
+        shouldGroupUnknown = true,
         normalizeKey = defaultNormalizeKey,
+        nameResolver = (value: string) => value,
         isUnknownValue
     } = options;
 
-    const groups: Record<string, GroupedTracks<T>> = {};
+    const groups = new Map<string, GroupedTracks<T>>();
     const unknownTracks: T[] = [];
 
     items.forEach(item => {
-        const rawValues = toArray(getValues(item))
+        const rawValues = toArray(keyExtractor(item))
             .map(value => value.trim())
             .filter(Boolean);
 
@@ -52,25 +56,62 @@ export const groupTracks = <T>(items: T[], options: GroupTracksOptions<T>): Grou
 
         validValues.forEach(value => {
             const key = normalizeKey(value);
-            if (!groups[key]) {
-                groups[key] = {
+            if (!groups.has(key)) {
+                groups.set(key, {
                     key,
-                    name: value,
+                    name: nameResolver(value),
                     tracks: []
-                };
+                });
             }
-            groups[key].tracks.push(item);
+            groups.get(key)!.tracks.push(item);
         });
     });
 
-    if (unknownTracks.length > 0) {
-        groups[unknownKey] = {
+    if (shouldGroupUnknown && unknownTracks.length > 0) {
+        groups.set(unknownKey, {
             key: unknownKey,
             name: unknownLabel,
             tracks: unknownTracks,
             isUnknown: true
-        };
+        });
     }
 
-    return Object.values(groups);
+    return {
+        groups,
+        unknown: unknownTracks
+    };
+};
+
+const toGroupList = <T>(groups: Iterable<GroupedTracks<T>>): GroupedTracks<T>[] => Array.from(groups);
+
+export const sortGroupsAlphabeticallyWithUnknownLast = <T>(
+    groups: Iterable<GroupedTracks<T>>,
+    compare?: (a: GroupedTracks<T>, b: GroupedTracks<T>) => number
+): GroupedTracks<T>[] => {
+    const comparer = compare || ((a: GroupedTracks<T>, b: GroupedTracks<T>) => a.name.localeCompare(b.name));
+
+    return toGroupList(groups).sort((a, b) => {
+        if (a.isUnknown) return 1;
+        if (b.isUnknown) return -1;
+        return comparer(a, b);
+    });
+};
+
+export const sortGroupsByCountWithUnknownLast = <T>(
+    groups: Iterable<GroupedTracks<T>>,
+    tieBreaker?: (a: GroupedTracks<T>, b: GroupedTracks<T>) => number
+): GroupedTracks<T>[] => {
+    const resolveTie = tieBreaker || ((a: GroupedTracks<T>, b: GroupedTracks<T>) => a.name.localeCompare(b.name));
+
+    return toGroupList(groups).sort((a, b) => {
+        if (a.isUnknown) return 1;
+        if (b.isUnknown) return -1;
+
+        const countDiff = b.tracks.length - a.tracks.length;
+        if (countDiff !== 0) {
+            return countDiff;
+        }
+
+        return resolveTie(a, b);
+    });
 };

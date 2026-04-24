@@ -6,10 +6,12 @@ import { TrackItem } from '../../types/music';
 import { Play } from 'lucide-react';
 import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { parseDuration } from '../../utils/formatters';
-
 import { ViewType } from '../layout/AppLayout';
 import { TrackRow } from '../shared/TrackRow';
 import { TrackCard } from '../shared/TrackCard';
+import { resolveHistoryTracks } from '../../utils/historyUtils';
+import { resolveTrackVersion } from '../../utils/trackUtils';
+import { EmptyState } from '../shared/EmptyState';
 
 interface DashboardViewProps {
     onNavigate: (view: ViewType, data?: any) => void;
@@ -55,28 +57,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         ratings
     } = useMemo(() => {
         const tracks = libraryState.tracks;
-        const historyIds = persistenceService.getHistoryIds();
         const favs = persistenceService.getFavorites();
         const playCounts = persistenceService.getAllPlayCounts();
         const ratings = persistenceService.getAllRatings();
-        const trackIndex = new Map(tracks.map(track => [track.logic.hash_sha256, track] as const));
-
-        // Statistical calculations
         const { versionToPrimaryMap } = libraryState;
-
-        const resolvePrimaryTrack = (id: string) => {
-            const primaryId = versionToPrimaryMap[id] || id;
-            return trackIndex.get(primaryId);
-        };
-
-        const recentlyPlayedTracks = historyIds.slice(0, 10)
-            .map(resolvePrimaryTrack)
-            .filter((t): t is TrackItem => !!t);
+        const recentlyPlayedTracks = resolveHistoryTracks(tracks, versionToPrimaryMap).slice(0, 10);
 
         const mostPlayedTracks = Object.entries(playCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
-            .map(entry => resolvePrimaryTrack(entry[0]))
+            .map(entry => resolveTrackVersion(entry[0], tracks, versionToPrimaryMap))
             .filter((t): t is TrackItem => !!t);
 
         const sixMonthsAgo = (Date.now() / 1000) - (6 * 30 * 24 * 3600);
@@ -86,7 +76,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             .slice(0, 20);
 
         const favoriteTracks = favs
-            .map(resolvePrimaryTrack)
+            .map(id => resolveTrackVersion(id, tracks, versionToPrimaryMap))
             .filter((t): t is TrackItem => !!t)
             .slice(0, 10);
 
@@ -186,7 +176,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             averageSampleRateKhz: sampleRateCount > 0 ? (totalSampleRate / sampleRateCount) / 1000 : 0,
             oldestYear: years.length ? Math.min(...years) : null,
             newestYear: years.length ? Math.max(...years) : null,
-            historyCount: historyIds.length,
+            historyCount: persistenceService.getHistoryIds().length,
             favoritesCount: favs.length,
             ratings
         };
@@ -349,19 +339,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     {/* Empty State Content for Returning Users with No History */}
                     {totalTracks > 0 && recentlyPlayed.length === 0 && mostPlayed.length === 0 && newArrivals.length === 0 && (
                         <section className="py-8">
-                            <div className="text-center">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-                                    <Play size={24} className="text-gray-500" />
-                                </div>
-                                <h2 className="text-xl font-black text-white mb-2">Start Listening</h2>
-                                <p className="text-gray-500 text-sm mb-6">Play some music from your library to see it here.</p>
-                                <button 
-                                    onClick={() => onNavigate('AllTracks')}
-                                    className="px-6 py-3 bg-dominant text-on-dominant rounded-xl font-black uppercase tracking-widest text-xs"
-                                >
-                                    Browse Library
-                                </button>
-                            </div>
+                            <EmptyState
+                                icon={<Play size={24} />}
+                                title="Start Listening"
+                                subtitle="Play some music from your library to see it here."
+                                className="min-h-[18rem]"
+                                titleClassName="text-xl font-black text-white mb-2"
+                                subtitleClassName="text-sm text-gray-500"
+                                action={
+                                    <button
+                                        onClick={() => onNavigate('AllTracks')}
+                                        className="px-6 py-3 bg-dominant text-on-dominant rounded-xl font-black uppercase tracking-widest text-xs"
+                                    >
+                                        Browse Library
+                                    </button>
+                                }
+                            />
                         </section>
                     )}
                 </div>

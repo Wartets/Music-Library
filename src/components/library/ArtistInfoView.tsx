@@ -5,6 +5,8 @@ import { TrackItem } from '../../types/music';
 import { Play } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { ViewType } from '../layout/AppLayout';
+import { getBestArtwork } from '../../utils/artworkResolver';
+import { sortTracksByTrackNumber } from '../../utils/trackSorting';
 
 const normalizeArtistKey = (value: string | null | undefined): string => {
     return String(value || '')
@@ -65,13 +67,16 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
             if (!albums[albumName]) {
                 albums[albumName] = {
                     name: albumName,
-                    artwork: t.artworks?.album_artwork?.[0] || t.artworks?.track_artwork?.[0],
+                    artwork: getBestArtwork(t),
                     tracks: []
                 };
             }
             albums[albumName].tracks.push(t);
         });
-        return Object.values(albums);
+        return Object.values(albums).map(album => ({
+            ...album,
+            tracks: sortTracksByTrackNumber(album.tracks)
+        }));
     }, [artistTracks]);
 
     return (
