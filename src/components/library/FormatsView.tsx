@@ -8,6 +8,7 @@ import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals
 import { TrackItem } from '../../types/music';
 import { groupTracks, sortGroupsAlphabeticallyWithUnknownLast, sortGroupsByCountWithUnknownLast } from '../../utils/grouping';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
+import type { GroupedTracks } from '../../utils/grouping';
 
 interface FormatsViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -17,6 +18,11 @@ interface FormatGroup {
     key: string;
     name: string;
     tracks: TrackItem[];
+    losslessCount: number;
+    lossyCount: number;
+}
+
+interface FormatStats {
     losslessCount: number;
     lossyCount: number;
 }
@@ -40,12 +46,29 @@ export const FormatsView: React.FC<FormatsViewProps> = ({ onNavigate }) => {
             ? sortGroupsAlphabeticallyWithUnknownLast(groups.values())
             : sortGroupsByCountWithUnknownLast(groups.values());
 
-        return sortedGroups.map(group => ({
+        const statsByKey = new Map<string, FormatStats>();
+
+        sortedGroups.forEach(group => {
+            const stats: FormatStats = { losslessCount: 0, lossyCount: 0 };
+
+            group.tracks.forEach(track => {
+                if (track.audio_specs?.is_lossless) {
+                    stats.losslessCount += 1;
+                    return;
+                }
+
+                stats.lossyCount += 1;
+            });
+
+            statsByKey.set(group.key, stats);
+        });
+
+        return sortedGroups.map((group: GroupedTracks<TrackItem>) => ({
             key: group.key,
             name: group.name,
             tracks: group.tracks,
-            losslessCount: group.tracks.filter(track => track.audio_specs?.is_lossless).length,
-            lossyCount: group.tracks.filter(track => !track.audio_specs?.is_lossless).length
+            losslessCount: statsByKey.get(group.key)?.losslessCount || 0,
+            lossyCount: statsByKey.get(group.key)?.lossyCount || 0
         }));
     }, [libraryState.filteredTracks, sortBy]);
 
@@ -74,7 +97,7 @@ export const FormatsView: React.FC<FormatsViewProps> = ({ onNavigate }) => {
                     background: palette.background,
                     borderColor: palette.borderColor
                 },
-symbol: (
+                symbol: (
                     <div className="flex flex-col items-center justify-center gap-2 max-w-full">
                         <span className="text-2xl sm:text-3xl font-black tracking-tight truncate" style={{ color: palette.accentColor }}>
                             {fmt.name}
