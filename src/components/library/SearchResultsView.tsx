@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { Search, Clock, Disc3, Mic2, Hash } from 'lucide-react';
 import { ViewType } from '../layout/AppLayout';
@@ -17,7 +17,7 @@ const compactViews = new Set<ViewType>(['Albums', 'AlbumDetail', 'Artists', 'Yea
 export const SearchResultsView: React.FC<SearchResultsViewProps> = ({ query, sourceView, onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack } = usePlayer();
-    const { openTrackContextMenu } = useTrackContextMenu();
+    const { openItemContextMenu } = useItemContextMenu();
 
     const safeQuery = (query || libraryState.searchQuery || '').trim();
     const results = libraryState.filteredTracks;
@@ -97,7 +97,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({ query, sou
                                     <button
                                         key={track.logic.hash_sha256}
                                         onClick={() => openTrack(track)}
-                                        onContextMenu={(e) => openTrackContextMenu(e, track, results, onNavigate)}
+                                        onContextMenu={(e) => openItemContextMenu(e, track, results, onNavigate)}
                                         className="flex items-center gap-3 text-left p-3 rounded-2xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors"
                                     >
                                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">
@@ -126,7 +126,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({ query, sou
                                 <div
                                     key={track.logic.hash_sha256}
                                     onClick={() => openTrack(track)}
-                                    onContextMenu={(e) => openTrackContextMenu(e, track, results, onNavigate)}
+                                    onContextMenu={(e) => openItemContextMenu(e, track, results, onNavigate)}
                                     className="flex items-center gap-4 p-3 rounded-2xl bg-black/20 border border-transparent hover:bg-white/5 hover:border-white/5 cursor-pointer transition-colors"
                                 >
                                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/5">

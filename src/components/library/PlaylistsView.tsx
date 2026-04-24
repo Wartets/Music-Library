@@ -5,7 +5,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useUI } from '../../contexts/UIContext';
 import { TrackItem } from '../../types/music';
 import { Play, ListPlus, ListMinus, Trash2, FolderPlus, ListMusic, ScanSearch, Pencil, Plus, Edit3, Clock, Database, Copy, Download } from 'lucide-react';
-import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { SmartPlaylistBuilder } from './SmartPlaylistBuilder';
 import { PlaylistEditor } from './PlaylistEditor';
@@ -19,7 +19,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     const { state, setEditingTracks, refresh } = useLibrary();
     const { playTrack } = usePlayer();
     const { showContextMenu, showToast } = useUI();
-    const { openTrackContextMenu } = useTrackContextMenu();
+    const { openItemContextMenu } = useItemContextMenu<TrackItem>();
     const [playlists, setPlaylists] = useState<Playlist[]>(persistenceService.getPlaylists());
     const [smartPlaylists, setSmartPlaylists] = useState<SmartPlaylistDefinition[]>(persistenceService.getSmartPlaylists());
     const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | SmartPlaylistDefinition | null>(null);
@@ -40,7 +40,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     };
 
     const onRightClickTrack = (e: React.MouseEvent, track: TrackItem, playlist: Playlist) => {
-        openTrackContextMenu(e, track, state.tracks, onNavigate, [
+        openItemContextMenu(e, track, state.tracks, onNavigate, [
             { divider: true, label: '', onClick: () => { } },
             {
                 label: 'Remove from Playlist',

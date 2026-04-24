@@ -8,7 +8,7 @@ import {
     ChevronDown, ChevronRight, Folder, Play, SlidersHorizontal, ChevronUp, Shuffle
 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
-import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
 import { useLibraryBrowserColumns } from './useLibraryBrowserColumns';
@@ -111,11 +111,11 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
         return flat;
     }, [tracks, expandedFolders]);
 
-    const { openTrackContextMenu } = useTrackContextMenu();
+    const { openItemContextMenu } = useItemContextMenu<TrackItem>();
 
     const onRightClick = useCallback((e: React.MouseEvent, item: TrackItem) => {
-        openTrackContextMenu(e, item, tracks, onNavigate);
-    }, [openTrackContextMenu, tracks, onNavigate]);
+        openItemContextMenu(e, item, tracks, onNavigate);
+    }, [openItemContextMenu, tracks, onNavigate]);
 
     const LibraryRow = React.memo(({ item, index, isPlaying, libraryState, gridTemplate, playTrack, tracks, onRightClick, toggleFolder }: any) => {
         const isVersion = item._isVersion;

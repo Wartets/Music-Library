@@ -6,7 +6,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { TrackItem } from '../../types/music';
 import { VirtualList } from '../shared/VirtualList';
 import { persistenceService } from '../../services/persistence';
-import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import { TrackRow } from '../shared/TrackRow';
 
@@ -18,7 +18,7 @@ interface HistoryViewProps {
 export const HistoryView: React.FC<HistoryViewProps> = () => {
     const { state: libState } = useLibrary();
     const { state: playerState, playTrack } = usePlayer();
-    const { openTrackContextMenu } = useTrackContextMenu();
+    const { openItemContextMenu } = useItemContextMenu<TrackItem>();
     const isMobile = useIsMobile();
 
     // Map history IDs to actual tracks
@@ -75,7 +75,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                 showRating={false}
                 showDuration
                 onPlay={(t) => handlePlay(t)}
-                onContextMenu={(e, t) => openTrackContextMenu(e, t, historyTracks, undefined)}
+                onContextMenu={(e, t) => openItemContextMenu(e, t, historyTracks, undefined)}
                 className={`border-b border-white/[0.02] last:border-0 rounded-none px-4 py-2 ${isPlaying ? 'bg-dominant/10' : ''}`}
                 artworkClassName="w-11 h-11 rounded-md"
                 subtitleClassName="opacity-60"
@@ -122,7 +122,7 @@ export const HistoryView: React.FC<HistoryViewProps> = () => {
                                 showRating={false}
                                 showDuration
                                 onPlay={(t) => handlePlay(t)}
-                                onContextMenu={(e, t) => openTrackContextMenu(e, t, historyTracks, undefined)}
+                                onContextMenu={(e, t) => openItemContextMenu(e, t, historyTracks, undefined)}
                                 className={`rounded-xl border border-white/10 transition-colors ${isPlaying ? 'ring-1 ring-dominant/60 bg-dominant/10' : 'bg-white/[0.02] hover:bg-white/5'}`}
                             />
                         );

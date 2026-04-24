@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { Play, Heart } from 'lucide-react';
-import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
 import { getTrackCollectionLabel } from '../../utils/collectionLabels';
@@ -15,7 +15,7 @@ interface FavoritesViewProps {
 export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
-    const { openTrackContextMenu } = useTrackContextMenu();
+    const { openItemContextMenu } = useItemContextMenu<TrackItem>();
 
     const favoriteTracks = useMemo(() => {
         const favIds = persistenceService.getFavorites();
@@ -25,7 +25,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
     }, [libraryState.tracks]);
 
     const onRightClick = (e: React.MouseEvent, track: TrackItem) => {
-        openTrackContextMenu(e, track, favoriteTracks, onNavigate);
+        openItemContextMenu(e, track, favoriteTracks, onNavigate);
     };
 
     return (

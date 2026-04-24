@@ -13,7 +13,26 @@ import {
 } from 'lucide-react';
 import { ContextMenuItem } from '../components/shared/ContextMenu';
 
-export const useTrackContextMenu = () => {
+interface NavigationHandler {
+    (view: any, data?: any): void;
+}
+
+export interface UseItemContextMenuOptions<T> {
+    getItems?: (args: {
+        item: T;
+        list: T[];
+        onNavigate?: NavigationHandler;
+        additionalItems?: ContextMenuItem[];
+    }) => ContextMenuItem[];
+}
+
+const isTrackItem = (item: unknown): item is TrackItem => {
+    if (!item || typeof item !== 'object') return false;
+    const maybeTrack = item as Partial<TrackItem>;
+    return Boolean(maybeTrack.logic?.hash_sha256);
+};
+
+export const useItemContextMenu = <T = TrackItem>(options?: UseItemContextMenuOptions<T>) => {
     const { showContextMenu, showToast } = useUI();
     const { playTrack, addToQueue, addToNext, seek, setRepeat, stop } = usePlayer();
     const { state: libraryState, setEditingTracks, refresh } = useLibrary();
@@ -32,7 +51,7 @@ export const useTrackContextMenu = () => {
         };
     }, [clearPreviewTimer]);
 
-    const exportM3U = (name: string, tracks: TrackItem[]) => {
+    const exportM3U = React.useCallback((name: string, tracks: TrackItem[]) => {
         let m3u = '#EXTM3U\n';
         tracks.forEach((t) => {
             const secs = parseDuration(t.audio_specs?.duration || '0:00');
@@ -46,18 +65,15 @@ export const useTrackContextMenu = () => {
         a.download = `${name}.m3u`;
         a.click();
         URL.revokeObjectURL(url);
-    };
+    }, []);
 
-    const openTrackContextMenu = (
-        e: React.MouseEvent,
-        track: TrackItem,
-        list: TrackItem[] = [],
-        onNavigate?: (view: any, data?: any) => void,
-        additionalItems: any[] = []
-    ) => {
-        e.preventDefault();
-        e.stopPropagation();
-
+    const createTrackContextMenu = React.useCallback((args: {
+        item: TrackItem;
+        list: TrackItem[];
+        onNavigate?: NavigationHandler;
+        additionalItems?: ContextMenuItem[];
+    }): ContextMenuItem[] => {
+        const { item: track, list, onNavigate, additionalItems = [] } = args;
         const playlists = persistenceService.getPlaylists();
         const isFavorite = persistenceService.isFavorite(track.logic.hash_sha256);
         const containingPlaylists = playlists.filter(pl => pl.trackIds.includes(track.logic.hash_sha256));
@@ -352,7 +368,7 @@ export const useTrackContextMenu = () => {
             },
         ];
 
-        showContextMenu(e.clientX, e.clientY, [
+        return [
             {
                 label: 'Play',
                 icon: <Play size={14} fill="currentColor" />,
@@ -380,8 +396,56 @@ export const useTrackContextMenu = () => {
             { divider: true, label: '', onClick: () => { } },
             ...groupedMenus,
             ...additionalItems,
-        ]);
-    };
+        ];
+    }, [
+        addToNext,
+        addToQueue,
+        clearPreviewTimer,
+        exportM3U,
+        libraryState.tracks,
+        playTrack,
+        refresh,
+        seek,
+        setEditingTracks,
+        setRepeat,
+        showToast,
+        stop,
+    ]);
 
-    return { openTrackContextMenu };
+    const openItemContextMenu = React.useCallback((
+        e: React.MouseEvent,
+        item: T,
+        list: T[] = [],
+        onNavigate?: NavigationHandler,
+        additionalItems: ContextMenuItem[] = [],
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const items = options?.getItems
+            ? options.getItems({ item, list, onNavigate, additionalItems })
+            : isTrackItem(item)
+                ? createTrackContextMenu({
+                    item,
+                    list: (list as unknown as TrackItem[]),
+                    onNavigate,
+                    additionalItems,
+                })
+                : additionalItems;
+
+        showContextMenu(e.clientX, e.clientY, items);
+    }, [createTrackContextMenu, options, showContextMenu]);
+
+    return {
+        openItemContextMenu,
+        createTrackContextMenu,
+    };
+};
+
+export const useTrackContextMenu = () => {
+    const { openItemContextMenu } = useItemContextMenu<TrackItem>();
+
+    return {
+        openTrackContextMenu: openItemContextMenu,
+    };
 };

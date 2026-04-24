@@ -4,7 +4,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
 import { Play } from 'lucide-react';
-import { useTrackContextMenu } from '../../hooks/useTrackContextMenu';
+import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { parseDuration } from '../../utils/formatters';
 
 import { ViewType } from '../layout/AppLayout';
@@ -18,12 +18,12 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
-    const { openTrackContextMenu } = useTrackContextMenu();
+    const { openItemContextMenu } = useItemContextMenu<TrackItem>();
     const [visibleCounts, setVisibleCounts] = useState({ recentlyPlayed: 8, newArrivals: 8 });
 
     const handleContextMenu = useCallback((e: React.MouseEvent, track: TrackItem, list: TrackItem[]) => {
-        openTrackContextMenu(e, track, list, onNavigate);
-    }, [onNavigate, openTrackContextMenu]);
+        openItemContextMenu(e, track, list, onNavigate);
+    }, [onNavigate, openItemContextMenu]);
 
     const {
         recentlyPlayed,
