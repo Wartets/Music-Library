@@ -29,6 +29,7 @@ interface CollectionGridViewProps {
     sortOptions: { id: string; label: string; icon: React.ReactNode }[];
     currentSort: string;
     onSortChange: (sortId: string) => void;
+    layoutMode?: 'full' | 'drawer' | 'mobile' | 'desktop';
 }
 
 export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
@@ -37,7 +38,8 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
     items,
     sortOptions,
     currentSort,
-    onSortChange
+    onSortChange,
+    layoutMode
 }) => {
     const { state: libraryState } = useLibrary(); // local require to avoid circular deps if any
     const listRef = useRef<HTMLDivElement>(null);
@@ -46,17 +48,19 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
     const [viewportHeight, setViewportHeight] = useState(600);
     const [containerWidth, setContainerWidth] = useState(900);
 
-    const isDesktop = containerWidth >= 768;
-    const gridGap = isDesktop ? 24 : 12;
+    const resolvedLayoutMode = useMemo<'mobile' | 'desktop'>(() => {
+        if (layoutMode === 'mobile') return 'mobile';
+        if (layoutMode === 'desktop') return 'desktop';
+        return containerWidth >= 768 ? 'desktop' : 'mobile';
+    }, [containerWidth, layoutMode]);
 
-    const gridColumns = useMemo(() => {
-        if (containerWidth >= 1536) return 8;
-        if (containerWidth >= 1280) return 6;
-        if (containerWidth >= 1024) return 5;
-        if (containerWidth >= 768) return 4;
-        if (containerWidth >= 640) return 3;
-        return 2;
-    }, [containerWidth]);
+    const isDesktop = resolvedLayoutMode === 'desktop';
+    const gridGap = isDesktop ? 24 : 12;
+    const gridColumns = isDesktop ? 4 : 2;
+    const cardMinHeight = isDesktop ? 100 : 120;
+    const symbolDisplaySizeClass = isDesktop ? 'text-[40px]' : 'text-[48px]';
+
+    const symbolContainerClassName = 'min-w-12 min-h-12 w-12 h-12 flex items-center justify-center';
 
     const virtualized = items.length >= 1000;
     const overscanRows = 2;
@@ -160,18 +164,18 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
         return (
             <div
                 key={item.id}
-                className="group flex flex-col cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="group flex flex-col cursor-pointer transition-colors duration-200"
                 onClick={item.onClick}
                 onContextMenu={item.onContextMenu}
             >
                 <div
-                    className="relative aspect-square min-h-[120px] md:min-h-[100px] rounded-2xl overflow-hidden shadow-2xl bg-white/5 border border-white/5 group-hover:border-white/20 transition-all flex items-center justify-center mb-3"
-                    style={usesVisualToken ? visualToken?.style : undefined}
+                    className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl bg-white/5 border border-white/5 group-hover:border-white/20 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-[border-color,box-shadow,background-color] duration-250 flex items-center justify-center mb-3"
+                    style={{ minHeight: `${cardMinHeight}px`, ...(usesVisualToken ? (visualToken?.style || {}) : {}) }}
                 >
                     {item.isTextIcon ? (
                         <>
                             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="text-4xl md:text-[40px] font-black text-white/20 group-hover:text-dominant transition-colors group-hover:scale-110 duration-700 select-none">
+                            <span className="text-4xl md:text-[40px] font-black text-white/20 group-hover:text-dominant transition-colors duration-500 select-none">
                                 {item.imageDetails}
                             </span>
                         </>
@@ -179,15 +183,17 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                         <ArtworkImage
                             details={item.imageDetails}
                             alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            className="w-full h-full object-cover transition-[filter] duration-300 group-hover:brightness-110 group-hover:saturate-110"
                             loading="lazy"
                         />
                     ) : usesVisualToken ? (
                         <>
                             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/25"></div>
                             <div className="relative z-10 flex flex-col items-center justify-center px-3 text-center gap-2">
-                                <div className={visualToken?.symbolClassName || 'text-[48px] md:text-[40px] font-black text-white/70 group-hover:text-white transition-colors duration-500'}>
-                                    {visualToken?.symbol}
+                                <div className={symbolContainerClassName}>
+                                    <div className={visualToken?.symbolClassName || `${symbolDisplaySizeClass} font-black text-white/70 group-hover:text-white transition-colors duration-500`}>
+                                        {visualToken?.symbol}
+                                    </div>
                                 </div>
                                 {visualToken?.label && (
                                     <span className={visualToken.labelClassName || 'text-[10px] font-bold uppercase tracking-[0.18em] text-white/65'}>
@@ -202,8 +208,8 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                             {item.icon || <div className="w-12 h-12 bg-white/10 rounded-full"></div>}
                         </>
                     )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                        <Play size={isDesktop ? 32 : 28} fill="currentColor" className="text-white drop-shadow-2xl translate-y-2 group-hover:translate-y-0 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-250 flex items-center justify-center backdrop-blur-[1px]">
+                        <Play size={isDesktop ? 32 : 28} fill="currentColor" className="text-white drop-shadow-2xl" />
                     </div>
                 </div>
                 <div className="min-w-0 pr-1 px-1">
@@ -216,7 +222,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                 </div>
             </div>
         );
-    }, [isDesktop, libraryState.searchQuery]);
+    }, [cardMinHeight, isDesktop, libraryState.searchQuery, symbolDisplaySizeClass]);
 
     return (
         <div className="h-full flex flex-col p-2 sm:p-3 md:p-6 pt-14 md:pt-20 bg-surface-primary">
@@ -248,7 +254,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                 className="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
             >
                 <div
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 md:gap-6 pb-24 md:pb-28"
+                    className={`grid ${isDesktop ? 'grid-cols-4 gap-6' : 'grid-cols-2 gap-3'} pb-24 md:pb-28`}
                     style={virtualized ? { paddingTop: visibleRange.topPadding, paddingBottom: visibleRange.bottomPadding } : undefined}
                 >
                     {(virtualized ? visibleItems : items).map(renderCard)}
