@@ -5,6 +5,32 @@ import { RepeatMode } from '../types/playback';
 export type ShuffleMode = 'standard' | 'weighted' | 'discovery' | 'recent';
 export type MetadataWriteTarget = 'musicbib' | 'file' | 'both';
 
+export interface ShortcutConfig {
+    key: string;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+    alt: boolean;
+}
+
+export interface KeyboardShortcuts {
+    togglePlay: ShortcutConfig;
+    seekForward: ShortcutConfig;
+    seekBackward: ShortcutConfig;
+    playNext: ShortcutConfig;
+    playPrevious: ShortcutConfig;
+    focusSearch: ShortcutConfig;
+}
+
+export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
+    togglePlay: { key: ' ', ctrl: false, meta: false, shift: false, alt: false },
+    seekForward: { key: 'ArrowRight', ctrl: false, meta: false, shift: false, alt: false },
+    seekBackward: { key: 'ArrowLeft', ctrl: false, meta: false, shift: false, alt: false },
+    playNext: { key: 'ArrowRight', ctrl: true, meta: true, shift: false, alt: false },
+    playPrevious: { key: 'ArrowLeft', ctrl: true, meta: true, shift: false, alt: false },
+    focusSearch: { key: 'f', ctrl: true, meta: true, shift: false, alt: false }
+};
+
 export interface Playlist {
     id: string;
     name: string;
@@ -25,6 +51,7 @@ export interface UserPreferences {
     normalizationEnabled: boolean;
     normalizationStrength: number;
     metadataWriteTarget: MetadataWriteTarget;
+    keyboardShortcuts?: KeyboardShortcuts;
 }
 
 export interface PlaybackState {
@@ -99,7 +126,8 @@ const DEFAULT_DATA: UserDataStore = {
         crossfadeDuration: 3,
         normalizationEnabled: false,
         normalizationStrength: 45,
-        metadataWriteTarget: 'musicbib'
+        metadataWriteTarget: 'musicbib',
+        keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS
     },
     playCounts: {},
     metadataOverrides: {},

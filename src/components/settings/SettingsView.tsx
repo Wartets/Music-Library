@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
-import { MetadataWriteTarget, persistenceService } from '../../services/persistence';
+import { MetadataWriteTarget, persistenceService, DEFAULT_KEYBOARD_SHORTCUTS } from '../../services/persistence';
+import type { ShortcutConfig, KeyboardShortcuts } from '../../services/persistence';
 import { audioEngine } from '../../services/audioEngine';
 import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
 import { usePlayer } from '../../contexts/PlayerContext';
@@ -8,8 +9,115 @@ import { TrackItem } from '../../types/music';
 import {
     Sparkles, Volume2, Database, ShieldAlert,
     Download, RefreshCcw, FileWarning, Zap,
-    Sliders, Monitor, Palette, BarChart3, FileText, User, ExternalLink
+    Sliders, Monitor, Palette, BarChart3, FileText, User, ExternalLink, Keyboard
 } from 'lucide-react';
+
+type ActionKey = keyof KeyboardShortcuts;
+
+const actionDefinitions: Record<ActionKey, { label: string; description: string }> = {
+    togglePlay: { label: 'Play/Pause', description: 'Toggle playback' },
+    seekForward: { label: 'Seek Forward', description: 'Seek forward by 5 seconds' },
+    seekBackward: { label: 'Seek Backward', description: 'Seek backward by 5 seconds' },
+    playNext: { label: 'Next Track', description: 'Skip to next track' },
+    playPrevious: { label: 'Previous Track', description: 'Go to previous track' },
+    focusSearch: { label: 'Focus Search', description: 'Focus the search input' }
+};
+
+const ShortcutEditor: React.FC = () => {
+    const [shortcuts, setShortcuts] = useState<KeyboardShortcuts>(() => {
+        const prefs = persistenceService.getPreferences();
+        return prefs.keyboardShortcuts || DEFAULT_KEYBOARD_SHORTCUTS;
+    });
+    const [recordingAction, setRecordingAction] = useState<ActionKey | null>(null);
+
+    useEffect(() => {
+        const handler = () => {
+            const prefs = persistenceService.getPreferences();
+            setShortcuts(prefs.keyboardShortcuts || DEFAULT_KEYBOARD_SHORTCUTS);
+        };
+        window.addEventListener('storage', handler);
+        return () => window.removeEventListener('storage', handler);
+    }, []);
+
+    const startRecording = (action: ActionKey) => {
+        setRecordingAction(action);
+    };
+
+    const captureShortcut = useCallback((e: KeyboardEvent) => {
+        if (!recordingAction) return;
+        if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+
+        const newShortcut: ShortcutConfig = {
+            key: e.key,
+            ctrl: e.ctrlKey,
+            meta: e.metaKey,
+            shift: e.shiftKey,
+            alt: e.altKey
+        };
+
+        setShortcuts(prev => {
+            const updated = { ...prev, [recordingAction]: newShortcut };
+            persistenceService.updatePreferences({ keyboardShortcuts: updated });
+            return updated;
+        });
+        setRecordingAction(null);
+    }, [recordingAction]);
+
+    useEffect(() => {
+        if (!recordingAction) return;
+        const handler = (e: KeyboardEvent) => {
+            captureShortcut(e);
+        };
+        window.addEventListener('keydown', handler, { capture: true });
+        return () => window.removeEventListener('keydown', handler, { capture: true });
+    }, [recordingAction, captureShortcut]);
+
+    const resetToDefault = () => {
+        setShortcuts(DEFAULT_KEYBOARD_SHORTCUTS);
+        persistenceService.updatePreferences({ keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS });
+    };
+
+    const formatShortcut = (sc: ShortcutConfig): string => {
+        const parts: string[] = [];
+        if (sc.ctrl) parts.push('Ctrl');
+        if (sc.meta) parts.push('Meta');
+        if (sc.alt) parts.push('Alt');
+        if (sc.shift) parts.push('Shift');
+        let key = sc.key;
+        if (key === ' ') key = 'Space';
+        else if (key === 'ArrowRight') key = '→';
+        else if (key === 'ArrowLeft') key = '←';
+        else if (key.length === 1) key = key.toUpperCase();
+        parts.push(key);
+        return parts.join('+');
+    };
+
+    return (
+        <div className="space-y-3">
+            {(Object.keys(actionDefinitions) as ActionKey[]).map(action => (
+                <div key={action} className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
+                    <div>
+                        <div className="font-bold text-sm text-white">{actionDefinitions[action].label}</div>
+                        <div className="text-[10px] text-gray-500">{actionDefinitions[action].description}</div>
+                    </div>
+                    <button
+                        onClick={() => startRecording(action)}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${recordingAction === action ? 'bg-red-500/20 text-red-500 border border-red-500/50' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                    >
+                        {recordingAction === action ? 'Press keys...' : formatShortcut(shortcuts[action])}
+                    </button>
+                </div>
+            ))}
+            <div className="flex justify-end">
+                <button onClick={resetToDefault} className="text-xs text-gray-500 hover:text-white uppercase tracking-widest">Reset to defaults</button>
+            </div>
+        </div>
+    );
+};
 
 export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) => {
     const { state: libState, setEditingTracks } = useLibrary();
@@ -252,8 +360,17 @@ export const SettingsView: React.FC<{ initialTab?: string }> = ({ initialTab }) 
                                 <span className="truncate">{tab.label}</span>
                             </button>
                         ))}
-                    </div>
-                </div>
+                                </div>
+                            {/* Keyboard Shortcuts */}
+                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                                <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3">
+                                    <Keyboard className="text-dominant" size={20} />
+                                    Keyboard Shortcuts
+                                </h3>
+                                <p className="text-sm text-gray-500 mb-6">Customize global hotkeys for playback control.</p>
+                                <ShortcutEditor />
+                            </div>
+                            </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20">
                     {activeTab === 'interface' && (
