@@ -8,12 +8,13 @@ import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getInitials, getMutedVisualStyle, seedFromArtistName } from '../../utils/collectionVisuals';
 import { groupTracks, sortGroupsAlphabeticallyWithUnknownLast } from '../../utils/grouping';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
+import type { GroupedTracks } from '../../utils/grouping';
 
 
 interface ArtistGroup {
     name: string;
     tracks: TrackItem[];
-    albums: Set<string>;
+    albumCount: number;
 }
 
 interface ArtistsViewProps {
@@ -25,25 +26,49 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({ onNavigate }) => {
     const { playTrack, addToQueue, addToNext } = usePlayer();
     const { showContextMenu, showToast } = useUI();
 
+    const isUnknownArtist = (value: string): boolean => {
+        const normalized = value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+
+        return normalized.length === 0 || normalized === '-' || normalized === 'unknown' || normalized === 'unknown artist' || normalized === 'n/a' || normalized === 'na';
+    };
+
+    const getAlbumIdentity = (track: TrackItem): string | null => {
+        const albumName = track.metadata?.album?.trim() || track.logic?.hierarchy?.album?.trim() || '';
+        if (!albumName) {
+            return null;
+        }
+
+        const albumArtist = track.metadata?.album_artist?.trim()
+            || track.metadata?.artists?.[0]?.trim()
+            || 'unknown artist';
+
+        return `${albumArtist.toLowerCase()}::${albumName.toLowerCase()}`;
+    };
+
     const artists = useMemo(() => {
         const { groups } = groupTracks(libraryState.filteredTracks, {
             keyExtractor: track => track.metadata?.artists ?? [],
-            unknownLabel: 'Unknown Artist'
+            unknownLabel: 'Unknown Artist',
+            isUnknownValue: isUnknownArtist
         });
 
-        return sortGroupsAlphabeticallyWithUnknownLast(groups.values()).map(group => {
+        return sortGroupsAlphabeticallyWithUnknownLast(groups.values()).map((group: GroupedTracks<TrackItem>) => {
             const albums = new Set<string>();
             group.tracks.forEach(track => {
-                const albumName = track.metadata?.album?.trim();
-                if (albumName) {
-                    albums.add(albumName.toLowerCase());
+                const albumId = getAlbumIdentity(track);
+                if (albumId) {
+                    albums.add(albumId);
                 }
             });
 
             return {
                 name: group.name,
                 tracks: group.tracks,
-                albums
+                albumCount: albums.size
             };
         });
     }, [libraryState.filteredTracks]);
@@ -74,7 +99,7 @@ export const ArtistsView: React.FC<ArtistsViewProps> = ({ onNavigate }) => {
         return {
             id: artist.name,
             title: artist.name,
-            subtitle: `${artist.tracks.length} tracks • ${artist.albums.size} albums`,
+            subtitle: `${artist.tracks.length} tracks • ${artist.albumCount} albums`,
             visualToken: {
                 style: {
                     background: palette.background,
