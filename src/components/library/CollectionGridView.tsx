@@ -208,7 +208,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                             {item.icon || <div className="w-12 h-12 bg-white/10 rounded-full"></div>}
                         </>
                     )}
-                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-250 flex items-center justify-center backdrop-blur-[1px]">
+                    <div className="absolute inset-0 z-20 pointer-events-none bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-250 flex items-center justify-center backdrop-blur-[1px]">
                         <Play size={isDesktop ? 32 : 28} fill="currentColor" className="text-white drop-shadow-2xl" />
                     </div>
                 </div>
