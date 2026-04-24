@@ -1,14 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useLibrary } from '../../contexts/LibraryContext';
-import { ArtworkImage } from '../shared/ArtworkImage';
 import { TrackItem } from '../../types/music';
 import { RepeatMode, getRepeatModeLabel } from '../../types/playback';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import {
-    Play, Trash2, GripVertical, ListMusic, History,
+    ListMusic, History,
     Search, Download, Save,
-    Zap, Clock, Filter, Shuffle, Repeat, Repeat1
+    Zap, Clock, Filter, Shuffle, Repeat, Repeat1, Trash2
 } from 'lucide-react';
 import { formatDuration, parseDuration } from '../../utils/formatters';
 import { useUI } from '../../contexts/UIContext';
@@ -29,103 +28,14 @@ import {
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
-    useSortable
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { getBestArtwork } from '../../utils/artworkResolver';
 import { resolveHistoryTracks } from '../../utils/historyUtils';
 import { EmptyState } from '../shared/EmptyState';
-
-export interface QueueDisplayItem extends Omit<TrackItem, 'id'> {
-    originalIndex: number;
-    id: string;
-    startTimeSeconds: number;
-}
-
-
-
-interface QueueListItemProps {
-    track: QueueDisplayItem;
-    index: number;
-    curIdx: number;
-    playTrack: any;
-    removeFromQueue: any;
-    originalQueue: any[];
-    onContextMenu?: (e: React.MouseEvent) => void;
-}
+import { QueueTrackItem, QueueDisplayItem } from '../queue/QueueTrackItem';
+import { ArtworkImage } from '../shared/ArtworkImage';
 
 const trackTitle = (track: any) => track.metadata?.title || track.logic.track_name;
-
-const QueueListItem: React.FC<QueueListItemProps> = React.memo(({ track, index, curIdx, playTrack, removeFromQueue, originalQueue, onContextMenu }) => {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: track.logic.hash_sha256 + '-' + index });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 100 : 1,
-    };
-
-    const artwork = getBestArtwork(track);
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={`group flex items-center gap-5 p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 relative ${isDragging ? 'opacity-50 shadow-2xl bg-white/10' : ''}`}
-            onContextMenu={onContextMenu}
-        >
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-dominant rounded-r-full opacity-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity"></div>
-
-            <div className="text-[10px] font-black text-white/10 w-6 text-center md:group-hover:hidden font-mono">
-                {(index + 1).toString().padStart(2, '0')}
-            </div>
-            <button
-                onClick={() => playTrack(track, originalQueue)}
-                className="hidden md:hidden group-hover:flex w-6 h-6 items-center justify-center text-dominant bg-dominant/10 rounded-lg hover:bg-dominant/20 transition-colors"
-            >
-                <Play size={14} fill="currentColor" />
-            </button>
-
-            <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/5 group-hover:border-white/10 transition-colors shadow-lg">
-                <ArtworkImage details={artwork} alt={trackTitle(track)} />
-            </div>
-
-            <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-white truncate group-hover:text-dominant-light transition-colors">{trackTitle(track)}</div>
-                <div className="text-[10px] font-bold text-gray-500 truncate uppercase tracking-tighter mt-0.5">{track.metadata?.artists?.join(', ')}</div>
-            </div>
-
-            <div className="flex flex-col items-end gap-1 min-w-[80px]">
-                <div className="text-[10px] font-black text-gray-600 font-mono">+{formatDuration(track.startTimeSeconds)}</div>
-                <div className="text-xs font-bold text-white/40">{track.audio_specs?.duration}</div>
-            </div>
-
-            <div className="hidden md:hidden group-hover:flex items-center gap-1 border-l border-white/5 pl-3 ml-2">
-                <button
-                    onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
-                    className="p-2 text-gray-500 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg"
-                    title="Remove from queue"
-                >
-                    <Trash2 size={16} />
-                </button>
-                <div
-                    {...attributes}
-                    {...listeners}
-                    className="p-2 text-gray-600 cursor-grab active:cursor-grabbing hover:text-white transition-colors"
-                >
-                    <GripVertical size={16} />
-                </div>
-            </div>
-        </div>
-    );
-});
 
 export const QueueView: React.FC = () => {
     const {
@@ -368,32 +278,29 @@ export const QueueView: React.FC = () => {
                                 titleClassName="text-sm font-bold text-white/30"
                             />
                         ) : (
-                            filteredQueueDisplay.map((track) => (
-                                <div
-                                    key={track.id}
-                                    className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
-                                    onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={filteredQueueDisplay.map(t => t.id)}
+                                    strategy={verticalListSortingStrategy}
                                 >
-                                    <button onClick={() => playTrack(track as unknown as TrackItem, playerState.queue)} className="w-10 h-10 rounded-lg bg-dominant/20 text-dominant flex items-center justify-center hover:bg-dominant/30 transition-colors active:scale-95" aria-label="Play track">
-                                        <Play size={14} fill="currentColor" />
-                                    </button>
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10">
-                                        <ArtworkImage details={getBestArtwork(track)} alt={trackTitle(track)} />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="text-xs font-bold text-white truncate">{trackTitle(track)}</div>
-                                        <div className="text-[10px] text-gray-500 truncate">{track.metadata?.artists?.join(', ')}</div>
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 font-mono">{track.audio_specs?.duration}</div>
-                                    <button
-                                        onClick={() => removeFromQueue(curIdx + 1 + track.originalIndex)}
-                                        className="p-2 min-w-10 min-h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors active:scale-95"
-                                        aria-label="Remove from queue"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            ))
+                                    {filteredQueueDisplay.map((track) => (
+                                        <QueueTrackItem
+                                            key={track.id}
+                                            track={track}
+                                            index={filteredQueueDisplay.indexOf(track)}
+                                            layout="full-mobile"
+                                            originalIndex={curIdx + 1 + track.originalIndex}
+                                            onPlay={(t) => playTrack(t, playerState.queue)}
+                                            onRemove={removeFromQueue}
+                                            onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
+                                        />
+                                    ))}
+                                </SortableContext>
+                            </DndContext>
                         )}
                     </div>
                 ) : (
@@ -412,21 +319,16 @@ export const QueueView: React.FC = () => {
                             />
                         ) : (
                             history.map((track: any, index: number) => (
-                                <div
+                                <QueueTrackItem
                                     key={`${track.logic.hash_sha256}-${index}`}
-                                    className="group flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10"
-                                    onClick={() => playTrack(track)}
+                                    track={track}
+                                    index={index}
+                                    layout="full-mobile"
+                                    isHistory={true}
+                                    onPlay={playTrack}
+                                    onRemove={() => {}}
                                     onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, history, undefined)}
-                                >
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10">
-                                        <ArtworkImage details={getBestArtwork(track)} alt={trackTitle(track)} />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="text-xs font-bold text-white truncate">{trackTitle(track)}</div>
-                                        <div className="text-[10px] text-gray-500 truncate">{track.metadata?.artists?.join(', ')}</div>
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 font-mono">{track.audio_specs?.duration}</div>
-                                </div>
+                                />
                             ))
                         )}
                     </div>
@@ -611,14 +513,14 @@ export const QueueView: React.FC = () => {
                                     >
                                         <div className="space-y-2">
                                             {filteredQueueDisplay.map((track, index) => (
-                                                <QueueListItem
+                                                <QueueTrackItem
                                                     key={track.id}
                                                     track={track}
                                                     index={index}
-                                                    curIdx={curIdx}
-                                                    playTrack={playTrack}
-                                                    removeFromQueue={removeFromQueue}
-                                                    originalQueue={playerState.queue}
+                                                    layout="full-desktop"
+                                                    originalIndex={curIdx + 1 + track.originalIndex}
+                                                    onPlay={(t) => playTrack(t, playerState.queue)}
+                                                    onRemove={removeFromQueue}
                                                     onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
                                                 />
                                             ))}
@@ -628,17 +530,17 @@ export const QueueView: React.FC = () => {
                             ) : (
                                 <div className="h-[min(70vh,720px)] rounded-2xl border border-white/5 overflow-hidden">
                                     <VirtualList
-                                        items={queueDisplay}
+                                        items={filteredQueueDisplay}
                                         rowHeight={74}
                                         renderRow={(track: QueueDisplayItem, index: number) => (
                                             <div className="px-1 py-1">
-                                                <QueueListItem
+                                                <QueueTrackItem
                                                     track={track}
                                                     index={index}
-                                                    curIdx={curIdx}
-                                                    playTrack={playTrack}
-                                                    removeFromQueue={removeFromQueue}
-                                                    originalQueue={playerState.queue}
+                                                    layout="full-desktop"
+                                                    originalIndex={curIdx + 1 + track.originalIndex}
+                                                    onPlay={(t) => playTrack(t, playerState.queue)}
+                                                    onRemove={removeFromQueue}
                                                     onContextMenu={(e) => openItemContextMenu(e, track as unknown as TrackItem, playerState.queue, undefined)}
                                                 />
                                             </div>

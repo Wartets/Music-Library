@@ -1,8 +1,5 @@
 import React from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
-import { TrackItem } from '../../types/music';
-import { ArtworkImage } from '../shared/ArtworkImage';
-import { getBestArtwork } from '../../utils/artworkResolver';
 import {
     DndContext,
     closestCenter,
@@ -17,87 +14,8 @@ import {
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
-    useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
-interface SortableTrackProps {
-    track: TrackItem;
-    index: number;
-    onRemove: (index: number) => void;
-    onPlay: (track: TrackItem) => void;
-    isCurrent: boolean;
-}
-
-const SortableTrackRow: React.FC<SortableTrackProps> = ({ track, index, onRemove, onPlay, isCurrent }) => {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-    } = useSortable({ id: track.logic.hash_sha256 });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        padding: '10px',
-        margin: '6px 0',
-        backgroundColor: isCurrent ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        color: '#fff',
-        cursor: 'default',
-        minHeight: '56px'
-    };
-
-    return (
-        <div ref={setNodeRef} style={style} {...attributes}>
-            <div
-                {...listeners}
-                style={{ cursor: 'grab', opacity: 0.5, userSelect: 'none', padding: '8px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                title="Drag to reorder"
-            >
-                ☰
-            </div>
-            <div
-                style={{ flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }}
-                onClick={() => onPlay(track)}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-                        <ArtworkImage
-                            details={getBestArtwork(track)}
-                            alt={track.metadata?.title || track.logic.track_name}
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontWeight: isCurrent ? 'bold' : 'normal' }}>
-                            {track.metadata?.title || track.logic.track_name}
-                        </div>
-                        <div style={{ fontSize: '0.8em', opacity: 0.7 }}>
-                            {track.metadata?.artists?.[0] || 'Unknown Artist'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <button
-                onClick={(e) => { e.stopPropagation(); onRemove(index); }}
-                style={{
-                    background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer',
-                    padding: '8px', borderRadius: '4px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-                title="Remove from queue"
-            >
-                ✕
-            </button>
-        </div>
-    );
-};
+import { QueueTrackItem, QueueDisplayItem } from '../queue/QueueTrackItem';
 
 interface QueueDrawerProps {
     isOpen: boolean;
@@ -119,7 +37,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
             originalIndex: i,
             id: track.logic.hash_sha256 + '-' + i,
             startTimeSeconds: 0
-        }));
+        })) as QueueDisplayItem[];
     }, [state.currentTrack, state.queue]);
 
     const sensors = useSensors(
@@ -188,13 +106,14 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                             strategy={verticalListSortingStrategy}
                         >
                             {state.queue.map((track, index) => (
-                                <SortableTrackRow
+                                <QueueTrackItem
                                     key={track.logic.hash_sha256}
                                     track={track}
                                     index={index}
-                                    onRemove={removeFromQueue}
-                                    onPlay={(t) => playTrack(t, state.queue)}
+                                    layout="drawer"
                                     isCurrent={state.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
+                                    onPlay={(t) => playTrack(t, state.queue)}
+                                    onRemove={removeFromQueue}
                                 />
                             ))}
                         </SortableContext>
