@@ -287,11 +287,12 @@ export const QueueView: React.FC = () => {
                                     items={filteredQueueDisplay.map(t => t.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
-                                    {filteredQueueDisplay.map((track) => (
+                                    {filteredQueueDisplay.map((track, index) => (
                                         <QueueTrackItem
                                             key={track.id}
                                             track={track}
-                                            index={filteredQueueDisplay.indexOf(track)}
+                                            index={index}
+                                            sortableId={track.id}
                                             layout="full-mobile"
                                             originalIndex={curIdx + 1 + track.originalIndex}
                                             onPlay={(t) => playTrack(t, playerState.queue)}
@@ -323,6 +324,7 @@ export const QueueView: React.FC = () => {
                                     key={`${track.logic.hash_sha256}-${index}`}
                                     track={track}
                                     index={index}
+                                    isDraggable={false}
                                     layout="full-mobile"
                                     isHistory={true}
                                     onPlay={playTrack}
@@ -517,6 +519,7 @@ export const QueueView: React.FC = () => {
                                                     key={track.id}
                                                     track={track}
                                                     index={index}
+                                                    sortableId={track.id}
                                                     layout="full-desktop"
                                                     originalIndex={curIdx + 1 + track.originalIndex}
                                                     onPlay={(t) => playTrack(t, playerState.queue)}
@@ -537,6 +540,7 @@ export const QueueView: React.FC = () => {
                                                 <QueueTrackItem
                                                     track={track}
                                                     index={index}
+                                                    isDraggable={false}
                                                     layout="full-desktop"
                                                     originalIndex={curIdx + 1 + track.originalIndex}
                                                     onPlay={(t) => playTrack(t, playerState.queue)}

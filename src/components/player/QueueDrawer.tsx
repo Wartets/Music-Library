@@ -110,6 +110,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                                     key={track.logic.hash_sha256}
                                     track={track}
                                     index={index}
+                                    sortableId={track.logic.hash_sha256}
                                     layout="drawer"
                                     isCurrent={state.currentTrack?.logic.hash_sha256 === track.logic.hash_sha256}
                                     onPlay={(t) => playTrack(t, state.queue)}

@@ -18,6 +18,8 @@ interface QueueTrackItemProps {
     index: number;
     isCurrent?: boolean;
     isHistory?: boolean;
+    isDraggable?: boolean;
+    sortableId?: string;
     layout: 'full-desktop' | 'full-mobile' | 'drawer';
     onPlay: (track: TrackItem) => void;
     onRemove: (index: number) => void;
@@ -32,6 +34,8 @@ export const QueueTrackItem: React.FC<QueueTrackItemProps> = React.memo(({
     index,
     isCurrent = false,
     isHistory = false,
+    isDraggable = true,
+    sortableId,
     layout,
     onPlay,
     onRemove,
@@ -45,9 +49,9 @@ export const QueueTrackItem: React.FC<QueueTrackItemProps> = React.memo(({
         transform,
         transition,
         isDragging
-    } = useSortable({ 
-        id: track.logic.hash_sha256 + '-' + index,
-        disabled: isHistory || layout === 'drawer'
+    } = useSortable({
+        id: sortableId ?? track.logic.hash_sha256 + '-' + index,
+        disabled: isHistory || !isDraggable
     });
 
     const style = {
