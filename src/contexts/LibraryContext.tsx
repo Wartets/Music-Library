@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
 import { TrackItem, LibraryState, ColumnConfig } from '../types/music';
 import { dbService } from '../services/db';
 import { searchService } from '../services/search';
@@ -131,7 +131,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         loadDb();
     }, []);
 
-    const sortTracks = (tracks: TrackItem[], sortBy: string, sortOrder: 'asc' | 'desc'): TrackItem[] => {
+    const sortTracks = useCallback((tracks: TrackItem[], sortBy: string, sortOrder: 'asc' | 'desc'): TrackItem[] => {
         const sorted = tracks.sort((a, b) => {
             let res = 0;
             if (sortBy === 'title') {
@@ -167,57 +167,68 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         });
 
         return sortOrder === 'desc' ? sorted.reverse() : sorted;
-    }
+    }, []);
 
     const currentSearchQueryRef = useRef(state.searchQuery);
     const metadataExportTimerRef = useRef<number | null>(null);
+    const searchTimeoutRef = useRef<number | null>(null);
+
+    // Memoized debounced search function
+    const performSearch = useCallback(async (query: string, tracks: TrackItem[], isLoading: boolean) => {
+        if (isLoading) return;
+
+        if (!query.trim()) {
+            // If no search, we sort tracks
+            const sorted = sortTracks([...tracks], state.sortBy, state.sortOrder);
+            setState(prev => ({ ...prev, filteredTracks: sorted }));
+            return;
+        }
+
+        const results = await searchService.search(query);
+
+        // Prevent race conditions: only update if this is still the active search
+        if (currentSearchQueryRef.current !== query) {
+            return;
+        }
+
+        const sorted = sortTracks([...results], state.sortBy, state.sortOrder);
+        setState(prev => ({ ...prev, filteredTracks: sorted }));
+    }, [sortTracks, state.sortBy, state.sortOrder]);
 
     useEffect(() => {
         currentSearchQueryRef.current = state.searchQuery;
 
-        const timer = setTimeout(() => {
-            const performSearch = async () => {
-                if (!state.searchQuery.trim()) {
-                    // If no search, we sort tracks
-                    const sorted = sortTracks([...state.tracks], state.sortBy, state.sortOrder);
-                    setState(prev => ({ ...prev, filteredTracks: sorted }));
-                    return;
-                }
+        // Clear previous timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
 
-                const querySnapshot = state.searchQuery;
-                const results = await searchService.search(querySnapshot);
-
-                // Prevent race conditions: only update if this is still the active search
-                if (currentSearchQueryRef.current !== querySnapshot) {
-                    return;
-                }
-
-                const sorted = sortTracks([...results], state.sortBy, state.sortOrder);
-                setState(prev => ({ ...prev, filteredTracks: sorted }));
-            };
-
-            if (!state.isLoading) {
-                performSearch();
-            }
+        // Set new debounced timeout
+        searchTimeoutRef.current = window.setTimeout(() => {
+            performSearch(state.searchQuery, state.tracks, state.isLoading);
         }, 300); // 300ms debounce
 
-        return () => clearTimeout(timer);
-    }, [state.searchQuery, state.sortBy, state.sortOrder, state.isLoading, state.tracks]);
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, [state.searchQuery, state.sortBy, state.sortOrder, state.isLoading, state.tracks, performSearch]);
 
 
-    const setSearchQuery = (query: string) => {
+    const setSearchQuery = useCallback((query: string) => {
         setState(prev => ({ ...prev, searchQuery: query }));
-    };
+    }, []);
 
-    const setSortBy = (sortBy: string) => {
+    const setSortBy = useCallback((sortBy: string) => {
         setState(prev => {
             const isSame = prev.sortBy === sortBy;
             const newOrder = isSame ? (prev.sortOrder === 'asc' ? 'desc' : 'asc') : (sortBy === 'date' || sortBy === 'year' ? 'desc' : 'asc');
             return { ...prev, sortBy, sortOrder: newOrder };
         });
-    };
+    }, []);
 
-    const updateTrackMetadata = async (hash_sha256: string, override: Partial<TrackMetadata>, target?: MetadataWriteTarget) => {
+    const updateTrackMetadata = useCallback(async (hash_sha256: string, override: Partial<TrackMetadata>, target?: MetadataWriteTarget) => {
         const activeTarget = target || persistenceService.getPreferences().metadataWriteTarget || 'musicbib';
 
         if (activeTarget === 'musicbib' || activeTarget === 'both') {
@@ -264,9 +275,9 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 URL.revokeObjectURL(url);
             }, 250);
         }
-    };
+    }, []);
 
-    const updateArtworkOverride = (hash_sha256: string, artwork: import('../types/music').ImageDetails[]) => {
+    const updateArtworkOverride = useCallback((hash_sha256: string, artwork: import('../types/music').ImageDetails[]) => {
         persistenceService.setArtworkOverride(hash_sha256, artwork);
         setState(prev => {
             const updateTracksArray = (tracks: TrackItem[]) => tracks.map(t => {
@@ -282,18 +293,18 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 filteredTracks: updateTracksArray(prev.filteredTracks)
             };
         });
-    }
+    }, []);
 
     const [editingTracks, setEditingTracks] = useState<TrackItem[] | null>(null);
 
-    const updateColumnConfig = (config: ColumnConfig[]) => {
+    const updateColumnConfig = useCallback((config: ColumnConfig[]) => {
         persistenceService.set('library_columns', config);
         setState(prev => ({ ...prev, columnConfig: config }));
-    };
+    }, []);
 
-    const refresh = () => {
+    const refresh = useCallback(() => {
         setState(prev => ({ ...prev }));
-    };
+    }, []);
 
     return (
         <LibraryContext.Provider value={{
