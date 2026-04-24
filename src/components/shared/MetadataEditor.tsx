@@ -1,9 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { MetadataWriteTarget, persistenceService } from '../../services/persistence';
 import { Heart, Star, Disc, Hash, Music, Type, Save, X, Image as ImageIcon, Trash2, Edit2, Globe, Tag, Calendar, Mic, Link, Users, Building, ShieldCheck, Bookmark, FileText, Activity } from 'lucide-react';
 import { TrackItem, TrackMetadata } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
+
+interface MetadataEditorSnapshot {
+    title: string;
+    artist: string;
+    album: string;
+    albumArtist: string;
+    genre: string;
+    year: string;
+    composer: string;
+    trackNumber: string;
+    totalTracks: string;
+    discNumber: string;
+    totalDiscs: string;
+    bpm: string;
+    lyrics: string;
+    comment: string;
+    description: string;
+    artworkUrl: string;
+    rating: number | 'mixed';
+    isFav: boolean | 'mixed';
+    producer: string;
+    label: string;
+    publisher: string;
+    isrc: string;
+    upc: string;
+    mood: string;
+    language: string;
+    category: string;
+    tags: string;
+    remixArtist: string;
+    edition: string;
+    recordingYear: string;
+    videoLink: string;
+    streamingLink: string;
+    writeTarget: MetadataWriteTarget;
+    mixedFields: string[];
+}
 
 export const MetadataEditor: React.FC = () => {
     const { editingTracks, setEditingTracks, updateTrackMetadata, updateArtworkOverride } = useLibrary();
@@ -48,6 +85,165 @@ export const MetadataEditor: React.FC = () => {
 
     // Mixed value placeholders
     const [mixedFields, setMixedFields] = useState<Set<string>>(new Set());
+    const [history, setHistory] = useState<MetadataEditorSnapshot[]>([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    const [isArtworkDialogOpen, setIsArtworkDialogOpen] = useState(false);
+    const [artworkDraftUrl, setArtworkDraftUrl] = useState('');
+    const [artworkDraftError, setArtworkDraftError] = useState<string | null>(null);
+
+    const isApplyingSnapshotRef = useRef(false);
+
+    const createSnapshot = useCallback((overrides: Partial<MetadataEditorSnapshot> = {}): MetadataEditorSnapshot => ({
+        title,
+        artist,
+        album,
+        albumArtist,
+        genre,
+        year,
+        composer,
+        trackNumber,
+        totalTracks,
+        discNumber,
+        totalDiscs,
+        bpm,
+        lyrics,
+        comment,
+        description,
+        artworkUrl,
+        rating,
+        isFav,
+        producer,
+        label,
+        publisher,
+        isrc,
+        upc,
+        mood,
+        language,
+        category,
+        tags,
+        remixArtist,
+        edition,
+        recordingYear,
+        videoLink,
+        streamingLink,
+        writeTarget,
+        mixedFields: Array.from(mixedFields),
+        ...overrides,
+    }), [
+        title,
+        artist,
+        album,
+        albumArtist,
+        genre,
+        year,
+        composer,
+        trackNumber,
+        totalTracks,
+        discNumber,
+        totalDiscs,
+        bpm,
+        lyrics,
+        comment,
+        description,
+        artworkUrl,
+        rating,
+        isFav,
+        producer,
+        label,
+        publisher,
+        isrc,
+        upc,
+        mood,
+        language,
+        category,
+        tags,
+        remixArtist,
+        edition,
+        recordingYear,
+        videoLink,
+        streamingLink,
+        writeTarget,
+        mixedFields,
+    ]);
+
+    const applySnapshot = useCallback((snapshot: MetadataEditorSnapshot) => {
+        isApplyingSnapshotRef.current = true;
+        setTitle(snapshot.title);
+        setArtist(snapshot.artist);
+        setAlbum(snapshot.album);
+        setAlbumArtist(snapshot.albumArtist);
+        setGenre(snapshot.genre);
+        setYear(snapshot.year);
+        setComposer(snapshot.composer);
+        setTrackNumber(snapshot.trackNumber);
+        setTotalTracks(snapshot.totalTracks);
+        setDiscNumber(snapshot.discNumber);
+        setTotalDiscs(snapshot.totalDiscs);
+        setBpm(snapshot.bpm);
+        setLyrics(snapshot.lyrics);
+        setComment(snapshot.comment);
+        setDescription(snapshot.description);
+        setArtworkUrl(snapshot.artworkUrl);
+        setRating(snapshot.rating);
+        setIsFav(snapshot.isFav);
+        setProducer(snapshot.producer);
+        setLabel(snapshot.label);
+        setPublisher(snapshot.publisher);
+        setIsrc(snapshot.isrc);
+        setUpc(snapshot.upc);
+        setMood(snapshot.mood);
+        setLanguage(snapshot.language);
+        setCategory(snapshot.category);
+        setTags(snapshot.tags);
+        setRemixArtist(snapshot.remixArtist);
+        setEdition(snapshot.edition);
+        setRecordingYear(snapshot.recordingYear);
+        setVideoLink(snapshot.videoLink);
+        setStreamingLink(snapshot.streamingLink);
+        setWriteTarget(snapshot.writeTarget);
+        setMixedFields(new Set(snapshot.mixedFields));
+
+        window.setTimeout(() => {
+            isApplyingSnapshotRef.current = false;
+        }, 0);
+    }, []);
+
+    const pushHistorySnapshot = useCallback((snapshot: MetadataEditorSnapshot) => {
+        if (isApplyingSnapshotRef.current) return;
+
+        setHistory(prev => {
+            const base = prev.slice(0, historyIndex + 1);
+            const next = [...base, snapshot];
+            const bounded = next.length > 100 ? next.slice(next.length - 100) : next;
+            const nextIndex = bounded.length - 1;
+            setHistoryIndex(nextIndex);
+            return bounded;
+        });
+    }, [historyIndex]);
+
+    const canUndo = historyIndex > 0;
+    const canRedo = historyIndex >= 0 && historyIndex < history.length - 1;
+
+    const undo = useCallback(() => {
+        if (!canUndo) return;
+        const nextIndex = historyIndex - 1;
+        const snapshot = history[nextIndex];
+        if (!snapshot) return;
+        setHistoryIndex(nextIndex);
+        applySnapshot(snapshot);
+    }, [applySnapshot, canUndo, history, historyIndex]);
+
+    const redo = useCallback(() => {
+        if (!canRedo) return;
+        const nextIndex = historyIndex + 1;
+        const snapshot = history[nextIndex];
+        if (!snapshot) return;
+        setHistoryIndex(nextIndex);
+        applySnapshot(snapshot);
+    }, [applySnapshot, canRedo, history, historyIndex]);
 
     useEffect(() => {
         if (editingTracks && editingTracks.length > 0) {
@@ -144,7 +340,7 @@ export const MetadataEditor: React.FC = () => {
             if (composerInfo.isMixed) mixed.add('composer');
             if (trackNumInfo.isMixed) mixed.add('trackNumber');
             if (totalTracksInfo.isMixed) mixed.add('totalTracks');
-            if (discNumber) if (discNumInfo.isMixed) mixed.add('discNumber');
+            if (discNumInfo.isMixed) mixed.add('discNumber');
             if (totalDiscsInfo.isMixed) mixed.add('totalDiscs');
             if (bpmInfo.isMixed) mixed.add('bpm');
             if (lyricsInfo.isMixed) mixed.add('lyrics');
@@ -169,94 +365,232 @@ export const MetadataEditor: React.FC = () => {
             if (streamingLinkInfo.isMixed) mixed.add('streamingLink');
 
             setMixedFields(mixed);
+
+            const initialSnapshot: MetadataEditorSnapshot = {
+                title: titleInfo.value,
+                artist: artistInfo.value,
+                album: albumInfo.value,
+                albumArtist: albumArtistInfo.value,
+                genre: genreInfo.value,
+                year: yearInfo.value,
+                composer: composerInfo.value,
+                trackNumber: trackNumInfo.value,
+                totalTracks: totalTracksInfo.value,
+                discNumber: discNumInfo.value,
+                totalDiscs: totalDiscsInfo.value,
+                bpm: bpmInfo.value,
+                lyrics: lyricsInfo.value,
+                comment: commentInfo.value,
+                description: descriptionInfo.value,
+                artworkUrl: artworkUrlInfo.value,
+                rating: ratingMixed ? 'mixed' : ratingValues[0],
+                isFav: favMixed ? 'mixed' : favValues[0],
+                producer: producerInfo.value,
+                label: labelInfo.value,
+                publisher: publisherInfo.value,
+                isrc: isrcInfo.value,
+                upc: upcInfo.value,
+                mood: moodInfo.value,
+                language: languageInfo.value,
+                category: categoryInfo.value,
+                tags: tagsInfo.value,
+                remixArtist: remixArtistInfo.value,
+                edition: editionInfo.value,
+                recordingYear: recordingYearInfo.value,
+                videoLink: videoLinkInfo.value,
+                streamingLink: streamingLinkInfo.value,
+                writeTarget,
+                mixedFields: Array.from(mixed),
+            };
+
+            setHistory([initialSnapshot]);
+            setHistoryIndex(0);
+            setSaveError(null);
         }
     }, [editingTracks]);
+
+    useEffect(() => {
+        if (!editingTracks || editingTracks.length === 0) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            const key = event.key.toLowerCase();
+            const isModifier = event.ctrlKey || event.metaKey;
+            if (!isModifier) return;
+
+            if (key === 'z' && event.shiftKey) {
+                event.preventDefault();
+                redo();
+                return;
+            }
+
+            if (key === 'z') {
+                event.preventDefault();
+                undo();
+                return;
+            }
+
+            if (key === 'y') {
+                event.preventDefault();
+                redo();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [editingTracks, redo, undo]);
 
     if (!editingTracks || editingTracks.length === 0) return null;
 
     const handleSave = async () => {
-        persistenceService.updatePreferences({ metadataWriteTarget: writeTarget });
-        await Promise.all(editingTracks.map(async track => {
-            const hash = track.logic?.hash_sha256;
-            if (!hash) return;
+        if (isSaving) return;
 
-            const update: Partial<TrackMetadata> = {};
-            if (!mixedFields.has('title')) update.title = title.trim();
-            if (!mixedFields.has('artist')) update.artists = artist ? artist.split(',').map(a => a.trim()) : undefined;
-            if (!mixedFields.has('album')) update.album = album.trim();
-            if (!mixedFields.has('albumArtist')) update.album_artist = albumArtist.trim();
-            if (!mixedFields.has('genre')) update.genre = genre ? genre.trim() : null;
-            if (!mixedFields.has('year')) update.year = year.trim() || null;
-            if (!mixedFields.has('composer')) update.composer = composer.trim();
-            if (!mixedFields.has('trackNumber')) update.track_number = trackNumber.trim() || null;
-            if (!mixedFields.has('totalTracks')) update.total_tracks = totalTracks.trim() || null;
-            if (!mixedFields.has('discNumber')) update.disc_number = discNumber.trim() || null;
-            if (!mixedFields.has('totalDiscs')) update.total_discs = totalDiscs.trim() || null;
-            if (!mixedFields.has('bpm')) update.bpm = bpm.trim() || null;
-            if (!mixedFields.has('lyrics')) update.lyrics = lyrics.trim() || null;
-            if (!mixedFields.has('comment')) update.comment = comment.trim() || null;
-            if (!mixedFields.has('description')) update.description = description.trim() || null;
+        const update: Partial<TrackMetadata> = {};
+        if (!mixedFields.has('title')) update.title = title.trim();
+        if (!mixedFields.has('artist')) update.artists = artist ? artist.split(',').map(a => a.trim()) : undefined;
+        if (!mixedFields.has('album')) update.album = album.trim();
+        if (!mixedFields.has('albumArtist')) update.album_artist = albumArtist.trim();
+        if (!mixedFields.has('genre')) update.genre = genre ? genre.trim() : null;
+        if (!mixedFields.has('year')) update.year = year.trim() || null;
+        if (!mixedFields.has('composer')) update.composer = composer.trim();
+        if (!mixedFields.has('trackNumber')) update.track_number = trackNumber.trim() || null;
+        if (!mixedFields.has('totalTracks')) update.total_tracks = totalTracks.trim() || null;
+        if (!mixedFields.has('discNumber')) update.disc_number = discNumber.trim() || null;
+        if (!mixedFields.has('totalDiscs')) update.total_discs = totalDiscs.trim() || null;
+        if (!mixedFields.has('bpm')) update.bpm = bpm.trim() || null;
+        if (!mixedFields.has('lyrics')) update.lyrics = lyrics.trim() || null;
+        if (!mixedFields.has('comment')) update.comment = comment.trim() || null;
+        if (!mixedFields.has('description')) update.description = description.trim() || null;
 
-            // Expanded saves
-            if (!mixedFields.has('producer')) update.producer = producer.trim() || null;
-            if (!mixedFields.has('label')) update.label = label.trim() || null;
-            if (!mixedFields.has('publisher')) update.publisher = publisher.trim() || null;
-            if (!mixedFields.has('isrc')) update.isrc = isrc.trim() || null;
-            if (!mixedFields.has('upc')) update.upc = upc.trim() || null;
-            if (!mixedFields.has('mood')) update.mood = mood.trim() || null;
-            if (!mixedFields.has('language')) update.language = language.trim() || null;
-            if (!mixedFields.has('category')) update.category = category.trim() || null;
-            if (!mixedFields.has('tags')) update.tags = tags ? tags.split(',').map(t => t.trim()) : null;
-            if (!mixedFields.has('remixArtist')) update.remix_artist = remixArtist.trim() || null;
-            if (!mixedFields.has('edition')) update.edition = edition.trim() || null;
-            if (!mixedFields.has('recordingYear')) update.recording_year = recordingYear.trim() || null;
-            if (!mixedFields.has('videoLink')) update.video_link = videoLink.trim() || null;
-            if (!mixedFields.has('streamingLink')) update.streaming_link = streamingLink.trim() || null;
+        // Expanded saves
+        if (!mixedFields.has('producer')) update.producer = producer.trim() || null;
+        if (!mixedFields.has('label')) update.label = label.trim() || null;
+        if (!mixedFields.has('publisher')) update.publisher = publisher.trim() || null;
+        if (!mixedFields.has('isrc')) update.isrc = isrc.trim() || null;
+        if (!mixedFields.has('upc')) update.upc = upc.trim() || null;
+        if (!mixedFields.has('mood')) update.mood = mood.trim() || null;
+        if (!mixedFields.has('language')) update.language = language.trim() || null;
+        if (!mixedFields.has('category')) update.category = category.trim() || null;
+        if (!mixedFields.has('tags')) update.tags = tags ? tags.split(',').map(t => t.trim()) : null;
+        if (!mixedFields.has('remixArtist')) update.remix_artist = remixArtist.trim() || null;
+        if (!mixedFields.has('edition')) update.edition = edition.trim() || null;
+        if (!mixedFields.has('recordingYear')) update.recording_year = recordingYear.trim() || null;
+        if (!mixedFields.has('videoLink')) update.video_link = videoLink.trim() || null;
+        if (!mixedFields.has('streamingLink')) update.streaming_link = streamingLink.trim() || null;
 
-            await updateTrackMetadata(hash, update, writeTarget);
+        const batchSize = 20;
+        const chunks: TrackItem[][] = [];
+        for (let i = 0; i < editingTracks.length; i += batchSize) {
+            chunks.push(editingTracks.slice(i, i + batchSize));
+        }
 
-            if (!mixedFields.has('artworkUrl')) {
-                if (artworkUrl !== (track.artworks?.track_artwork?.[0]?.path || '')) {
-                    if (artworkUrl === '') {
-                        updateArtworkOverride(hash, []);
-                    } else {
-                        updateArtworkOverride(hash, [{
-                            name: 'Custom Artwork',
-                            type: 'URL',
-                            path: artworkUrl,
-                            size_bytes: 0,
-                            dimensions: 'Unknown',
-                            aspect_ratio: 'Square',
-                            dominant_color: '#888888'
-                        }]);
+        setSaveError(null);
+        setIsSaving(true);
+
+        try {
+            persistenceService.updatePreferences({ metadataWriteTarget: writeTarget });
+
+            for (const batch of chunks) {
+                await Promise.all(batch.map(async track => {
+                    const hash = track.logic?.hash_sha256;
+                    if (!hash) return;
+
+                    await updateTrackMetadata(hash, update, writeTarget);
+
+                    if (!mixedFields.has('artworkUrl')) {
+                        if (artworkUrl !== (track.artworks?.track_artwork?.[0]?.path || '')) {
+                            if (artworkUrl === '') {
+                                updateArtworkOverride(hash, []);
+                            } else {
+                                updateArtworkOverride(hash, [{
+                                    name: 'Custom Artwork',
+                                    type: 'URL',
+                                    path: artworkUrl,
+                                    size_bytes: 0,
+                                    dimensions: 'Unknown',
+                                    aspect_ratio: 'Square',
+                                    dominant_color: '#888888'
+                                }]);
+                            }
+                        }
                     }
-                }
+
+                    if (rating !== 'mixed') {
+                        persistenceService.setRating(hash, rating);
+                    }
+                    if (isFav !== 'mixed' && isFav !== persistenceService.isFavorite(hash)) {
+                        persistenceService.toggleFavorite(hash);
+                    }
+                }));
             }
 
-            if (rating !== 'mixed') {
-                persistenceService.setRating(hash, rating);
-            }
-            if (isFav !== 'mixed') {
-                if (isFav !== persistenceService.isFavorite(hash)) {
-                    persistenceService.toggleFavorite(hash);
-                }
-            }
-        }));
-
-        setEditingTracks(null);
+            setEditingTracks(null);
+        } catch (error) {
+            console.error('Failed to save metadata edits', error);
+            setSaveError('Unable to save metadata changes. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const inputClass = (fieldName: string) => `w-full bg-black/50 border ${mixedFields.has(fieldName) ? 'border-yellow-500/30' : 'border-white/10'} rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-dominant focus:ring-1 focus:ring-dominant transition-all`;
 
-    const handleInputChange = (field: string, value: string, setter: (v: string) => void) => {
-        setter(value);
-        if (mixedFields.has(field)) {
-            setMixedFields(prev => {
-                const next = new Set(prev);
-                next.delete(field);
-                return next;
-            });
+    const handleInputChange = (
+        field: string,
+        value: string,
+        setter: (v: string) => void,
+        snapshotKey?: keyof MetadataEditorSnapshot,
+    ) => {
+        const targetKey = (snapshotKey || field) as keyof MetadataEditorSnapshot;
+        const nextMixed = new Set(mixedFields);
+        if (nextMixed.has(field)) {
+            nextMixed.delete(field);
+            setMixedFields(nextMixed);
         }
+
+        setter(value);
+        pushHistorySnapshot(createSnapshot({ [targetKey]: value, mixedFields: Array.from(nextMixed) }));
+    };
+
+    const handleRatingChange = (nextRating: number | 'mixed') => {
+        setRating(nextRating);
+        pushHistorySnapshot(createSnapshot({ rating: nextRating }));
+    };
+
+    const handleFavoriteChange = (nextFav: boolean | 'mixed') => {
+        setIsFav(nextFav);
+        pushHistorySnapshot(createSnapshot({ isFav: nextFav }));
+    };
+
+    const handleWriteTargetChange = (nextTarget: MetadataWriteTarget) => {
+        setWriteTarget(nextTarget);
+        pushHistorySnapshot(createSnapshot({ writeTarget: nextTarget }));
+    };
+
+    const openArtworkUrlDialog = () => {
+        setArtworkDraftError(null);
+        setArtworkDraftUrl(artworkUrl);
+        setIsArtworkDialogOpen(true);
+    };
+
+    const closeArtworkUrlDialog = () => {
+        setArtworkDraftError(null);
+        setIsArtworkDialogOpen(false);
+    };
+
+    const applyArtworkUrlDraft = () => {
+        const normalized = artworkDraftUrl.trim();
+        if (
+            normalized.length > 0 &&
+            !/^https?:\/\//i.test(normalized) &&
+            !/^data:image\//i.test(normalized) &&
+            !/^\//.test(normalized)
+        ) {
+            setArtworkDraftError('Use a valid http(s), data:image, or absolute /path URL.');
+            return;
+        }
+
+        handleInputChange('artworkUrl', normalized, setArtworkUrl, 'artworkUrl');
+        closeArtworkUrlDialog();
     };
 
     return (
@@ -277,9 +611,27 @@ export const MetadataEditor: React.FC = () => {
                             </p>
                         )}
                     </div>
-                    <button onClick={() => setEditingTracks(null)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all active:scale-95">
-                        <X size={24} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={undo}
+                            disabled={!canUndo}
+                            className="px-3 min-h-11 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-gray-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                            title="Undo (Ctrl/Cmd+Z)"
+                        >
+                            Undo
+                        </button>
+                        <button
+                            onClick={redo}
+                            disabled={!canRedo}
+                            className="px-3 min-h-11 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-gray-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                            title="Redo (Ctrl/Cmd+Shift+Z / Ctrl+Y)"
+                        >
+                            Redo
+                        </button>
+                        <button onClick={() => setEditingTracks(null)} className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all active:scale-95">
+                            <X size={24} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Top Section: Artwork & Ratings */}
@@ -295,8 +647,8 @@ export const MetadataEditor: React.FC = () => {
                         ].map(opt => (
                             <button
                                 key={opt.id}
-                                onClick={() => setWriteTarget(opt.id as MetadataWriteTarget)}
-                                className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${writeTarget === opt.id ? 'bg-dominant text-on-dominant border-dominant' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                onClick={() => handleWriteTargetChange(opt.id as MetadataWriteTarget)}
+                                className={`py-2 min-h-11 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${writeTarget === opt.id ? 'bg-dominant text-on-dominant border-dominant' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                             >
                                 {opt.label}
                             </button>
@@ -323,18 +675,15 @@ export const MetadataEditor: React.FC = () => {
                                 )}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
                                     <button
-                                        onClick={() => {
-                                            const url = prompt('Enter Artwork Image URL:', artworkUrl);
-                                            if (url !== null) handleInputChange('artworkUrl', url, setArtworkUrl);
-                                        }}
-                                        className="p-2 bg-dominant text-black rounded-lg hover:scale-110 transition-transform"
-                                        title="Change Image URL"
+                                        onClick={openArtworkUrlDialog}
+                                        className="p-2 min-h-11 min-w-11 flex items-center justify-center bg-dominant text-black rounded-lg hover:scale-110 active:scale-95 transition-transform"
+                                        title="Edit Artwork URL"
                                     >
                                         <Edit2 size={18} />
                                     </button>
                                     <button
                                         onClick={() => handleInputChange('artworkUrl', '', setArtworkUrl)}
-                                        className="p-2 bg-red-500 text-white rounded-lg hover:scale-110 transition-transform"
+                                        className="p-2 min-h-11 min-w-11 flex items-center justify-center bg-red-500 text-white rounded-lg hover:scale-110 active:scale-95 transition-transform"
                                         title="Remove Artwork Overrides"
                                     >
                                         <Trash2 size={18} />
@@ -353,7 +702,7 @@ export const MetadataEditor: React.FC = () => {
                                 {[1, 2, 3, 4, 5].map(s => (
                                     <button
                                         key={s}
-                                        onClick={() => setRating(s === (rating as number) ? 0 : s)}
+                                        onClick={() => handleRatingChange(s === (rating as number) ? 0 : s)}
                                         className={`group relative transition-all ${rating === 'mixed' ? 'text-yellow-500/20' : (s <= (rating as number) ? 'text-yellow-400 scale-110' : 'text-gray-700 hover:text-yellow-400/50')}`}
                                     >
                                         <Star size={20} fill={(rating !== 'mixed' && s <= (rating as number)) ? 'currentColor' : 'none'} strokeWidth={2.5} />
@@ -367,7 +716,7 @@ export const MetadataEditor: React.FC = () => {
 
                         {/* Favorite Row */}
                         <button
-                            onClick={() => setIsFav(isFav === 'mixed' ? true : !isFav)}
+                            onClick={() => handleFavoriteChange(isFav === 'mixed' ? true : !isFav)}
                             className={`flex items-center justify-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black transition-all border w-full uppercase tracking-[0.25em] ${isFav === 'mixed'
                                 ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'
                                 : (isFav ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-white/5 text-gray-500 border-white/5 hover:text-red-400')
@@ -765,25 +1114,67 @@ export const MetadataEditor: React.FC = () => {
                     )}
                 </div>
 
+                {isArtworkDialogOpen && (
+                    <div className="fixed inset-0 z-[100000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={closeArtworkUrlDialog}>
+                        <div className="w-full max-w-xl bg-[#121212] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-white text-lg font-black tracking-tight mb-2">Artwork URL</h3>
+                            <p className="text-gray-400 text-xs mb-4">Paste a direct image URL. You can also use a local absolute path like <span className="font-mono">/Album/art.jpg</span>.</p>
+                            <input
+                                type="text"
+                                value={artworkDraftUrl}
+                                onChange={(e) => {
+                                    setArtworkDraftUrl(e.target.value);
+                                    if (artworkDraftError) setArtworkDraftError(null);
+                                }}
+                                placeholder="https://example.com/cover.jpg"
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-3 text-white text-sm focus:outline-none focus:border-dominant"
+                                autoFocus
+                            />
+                            {artworkDraftError && (
+                                <p className="mt-2 text-red-400 text-xs font-bold">{artworkDraftError}</p>
+                            )}
+                            <div className="mt-5 flex justify-end gap-2">
+                                <button
+                                    onClick={closeArtworkUrlDialog}
+                                    className="px-4 min-h-11 rounded-xl text-xs font-black uppercase tracking-widest bg-white/5 border border-white/10 text-gray-300 hover:text-white active:scale-95 transition-transform"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={applyArtworkUrlDraft}
+                                    className="px-5 min-h-11 rounded-xl text-xs font-black uppercase tracking-widest bg-dominant text-on-dominant hover:bg-dominant-light active:scale-95 transition-transform"
+                                >
+                                    Apply URL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Sticky Actions */}
                 <div className="sticky bottom-0 bg-[#111] pt-6 border-t border-white/10 mt-4 pb-2 z-10">
                     <div className="flex justify-between items-center gap-4">
-                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest max-w-[50%]">
+                        <div className="max-w-[55%]">
+                            <p className="text-[10px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest">
                             * Target: {writeTarget === 'musicbib' ? 'musicBib.json export' : writeTarget === 'file' ? 'file-level override' : 'musicBib.json export + file-level override'}.
-                        </p>
+                            </p>
+                            {saveError && <p className="mt-2 text-xs text-red-400 font-bold">{saveError}</p>}
+                        </div>
                         <div className="flex gap-4">
                             <button
                                 onClick={() => setEditingTracks(null)}
-                                className="px-6 py-3 rounded-xl text-xs font-black text-gray-500 hover:text-white hover:bg-white/5 transition-all uppercase tracking-[0.2em]"
+                                disabled={isSaving}
+                                className="px-6 py-3 min-h-11 rounded-xl text-xs font-black text-gray-500 hover:text-white hover:bg-white/5 transition-all uppercase tracking-[0.2em] disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
                             >
                                 Discard
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="flex items-center gap-3 px-10 py-3 bg-dominant text-on-dominant rounded-xl text-xs font-black hover:bg-dominant-light transition-all shadow-2xl shadow-dominant/40 uppercase tracking-[0.2em]"
+                                disabled={isSaving}
+                                className="flex items-center gap-3 px-10 py-3 min-h-11 bg-dominant text-on-dominant rounded-xl text-xs font-black hover:bg-dominant-light transition-all shadow-2xl shadow-dominant/40 uppercase tracking-[0.2em] disabled:opacity-70 disabled:cursor-wait active:scale-95"
                             >
                                 <Save size={16} />
-                                Apply to {editingTracks.length} track{editingTracks.length > 1 ? 's' : ''}
+                                {isSaving ? 'Saving…' : `Apply to ${editingTracks.length} track${editingTracks.length > 1 ? 's' : ''}`}
                             </button>
                         </div>
                     </div>
