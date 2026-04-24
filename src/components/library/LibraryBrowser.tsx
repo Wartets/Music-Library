@@ -3,7 +3,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { VirtualList } from '../shared/VirtualList';
 import { TrackItem } from '../../types/music';
-import { formatSizeMb } from '../../utils/formatters';
+import { formatSizeMb, formatTotalDuration } from '../../utils/formatters';
 import {
     ChevronDown, ChevronRight, Folder, Play, SlidersHorizontal, ChevronUp
 } from 'lucide-react';
@@ -478,18 +478,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                             <Play size={16} fill="currentColor" /> Play All
                         </button>
                         <span className="hidden sm:block text-gray-600 font-mono text-xs uppercase tracking-widest pl-2">
-                            {tracks.length} tracks • {(() => {
-                                let totalS = 0;
-                                tracks.forEach(t => {
-                                    const p = (t.audio_specs?.duration || '0:00').split(':');
-                                    let s = 0, m = 1;
-                                    while (p.length > 0) { s += m * parseInt(p.pop() || '0'); m *= 60; }
-                                    totalS += s;
-                                });
-                                const h = Math.floor(totalS / 3600);
-                                const min = Math.floor((totalS % 3600) / 60);
-                                return h > 0 ? `${h}h ${min}m` : `${min}m`;
-                            })()}
+                            {tracks.length} tracks • {formatTotalDuration(tracks)}
                         </span>
                     </div>
                 </div>

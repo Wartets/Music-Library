@@ -1,6 +1,8 @@
 import React from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { TrackItem } from '../../types/music';
+import { ArtworkImage } from '../shared/ArtworkImage';
+import { getBestArtwork } from '../../utils/artworkResolver';
 import {
     DndContext,
     closestCenter,
@@ -65,11 +67,22 @@ const SortableTrackRow: React.FC<SortableTrackProps> = ({ track, index, onRemove
                 style={{ flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }}
                 onClick={() => onPlay(track)}
             >
-                <div style={{ fontWeight: isCurrent ? 'bold' : 'normal' }}>
-                    {track.metadata?.title || track.logic.track_name}
-                </div>
-                <div style={{ fontSize: '0.8em', opacity: 0.7 }}>
-                    {track.metadata?.artists?.[0] || 'Unknown Artist'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+                        <ArtworkImage
+                            details={getBestArtwork(track)}
+                            alt={track.metadata?.title || track.logic.track_name}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: isCurrent ? 'bold' : 'normal' }}>
+                            {track.metadata?.title || track.logic.track_name}
+                        </div>
+                        <div style={{ fontSize: '0.8em', opacity: 0.7 }}>
+                            {track.metadata?.artists?.[0] || 'Unknown Artist'}
+                        </div>
+                    </div>
                 </div>
             </div>
             <button
