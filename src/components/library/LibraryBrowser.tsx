@@ -267,6 +267,125 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
             rowHeight={rowHeight}
             renderRow={renderRow}
             overscan={isMobile ? 4 : 8}
+            getSectionKey={(item, index) => { index; return item._isMain ? item._folderKey : null; }}
+            renderSectionHeader={(sectionKey, items, startIndex) => {
+                const sectionItem = items[0];
+                if (!sectionItem) return null;
+                const isPlaying = playerState.currentTrack?.logic.hash_sha256 === sectionItem.logic.hash_sha256;
+                const hasVersions = sectionItem._hasVersions;
+                const isExpanded = sectionItem._isExpanded;
+
+                return (
+                    <div
+                        key={sectionKey}
+                        className={`grid items-center px-6 py-2 min-h-[52px] hover:bg-white/5 cursor-pointer border-b border-white/5 group transition-all duration-200 ${isPlaying ? 'bg-dominant/10' : ''} bg-white/5`}
+                        style={{ gridTemplateColumns: gridTemplate, gap: '1.5rem' }}
+                    >
+                        {visibleColumns.map((col: any) => {
+                            const isRightAligned = ['year', 'bpm', 'duration', 'bitrate', 'size'].includes(col.id);
+                            const responsiveClass =
+                                col.id === 'bitrate' || col.id === 'size' ? 'hidden xl:flex' :
+                                    col.id === 'bpm' || col.id === 'genre' ? 'hidden lg:flex' :
+                                        col.id === 'year' ? 'hidden md:flex' : 'flex';
+
+                            switch (col.id) {
+                                case 'number':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} text-gray-500 text-[10px] font-mono flex-shrink-0 text-center justify-center`}>
+                                            {startIndex + 1}
+                                        </div>
+                                    );
+                                case 'artwork':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} w-12 h-12 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden border border-white/5`}>
+                                            <ArtworkImage
+                                                details={sectionItem.artworks?.track_artwork?.[0] || sectionItem.artworks?.album_artwork?.[0]}
+                                                alt={sectionItem.metadata?.title || sectionItem.logic?.track_name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    );
+                                case 'title':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} min-w-0 items-center gap-2`}>
+                                            {hasVersions && (
+                                                <button
+                                                    onClick={(e) => toggleFolder(sectionItem._folderKey, e)}
+                                                    className="p-2 min-w-10 min-h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-white active:scale-95"
+                                                    aria-label={isExpanded ? 'Collapse versions' : 'Expand versions'}
+                                                >
+                                                    {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                                </button>
+                                            )}
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                                <div className={`truncate font-bold text-sm flex items-center gap-2 ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
+                                                    <span className="truncate">
+                                                        {sectionItem.logic.track_name || sectionItem.metadata?.title || 'Unknown'}
+                                                        {sectionItem.logic.version_name && (
+                                                            <span className="text-white/20 font-medium ml-1.5 text-[10px]">({sectionItem.logic.version_name})</span>
+                                                        )}
+                                                    </span>
+                                                    {hasVersions && !isExpanded && (
+                                                        <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-gray-500 font-bold uppercase tracking-wider flex-shrink-0">
+                                                            {sectionItem._versionCount} vers.
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="truncate text-[11px] text-gray-500">
+                                                    {sectionItem.metadata?.artists?.join(', ') || 'Unknown Artist'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                case 'album':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} truncate text-xs text-gray-500 pr-2`}>
+                                            {getTrackCollectionLabel(sectionItem)}
+                                        </div>
+                                    );
+                                case 'genre':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} truncate text-[11px] text-gray-400 italic pr-2 ${isRightAligned ? 'justify-end' : ''}`}>
+                                            {sectionItem.metadata?.genre || '-'}
+                                        </div>
+                                    );
+                                case 'year':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} text-xs text-gray-400 pr-2 font-mono ${isRightAligned ? 'justify-end' : ''}`}>
+                                            {sectionItem.metadata?.year || '-'}
+                                        </div>
+                                    );
+                                case 'bpm':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} text-xs text-gray-400 pr-2 font-mono ${isRightAligned ? 'justify-end' : ''}`}>
+                                            {sectionItem.metadata?.bpm || '-'}
+                                        </div>
+                                    );
+                                case 'duration':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} text-xs text-gray-300 pr-2 font-mono font-bold ${isRightAligned ? 'justify-end' : ''}`}>
+                                            {sectionItem.audio_specs?.duration || '0:00'}
+                                        </div>
+                                    );
+                                case 'bitrate':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} text-[10px] text-gray-600 pr-2 font-mono ${isRightAligned ? 'justify-end' : ''}`}>
+                                            {sectionItem.audio_specs?.bitrate?.replace(' Kbits/s', '') || '-'}
+                                        </div>
+                                    );
+                                case 'size':
+                                    return (
+                                        <div key={col.id} className={`${responsiveClass} text-[10px] text-gray-600 font-mono pr-2 ${isRightAligned ? 'justify-end' : ''}`}>
+                                            {formatSizeMb(sectionItem.file?.size_bytes)}
+                                        </div>
+                                    );
+                                default:
+                                    return null;
+                            }
+                        })}
+                    </div>
+                );
+            }}
         />
     );
 
