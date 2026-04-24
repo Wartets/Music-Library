@@ -129,7 +129,8 @@ export const QueueTrackItem: React.FC<QueueTrackItemProps> = React.memo(({
             <div
                 ref={setNodeRef}
                 style={style}
-                className={`group flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 min-h-[56px] ${isDragging ? 'opacity-50 shadow-lg' : ''}`}
+                className={`group flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 min-h-[56px] ${isHistory ? 'cursor-pointer' : ''} ${isDragging ? 'opacity-50 shadow-lg' : ''}`}
+                onClick={isHistory ? () => onPlay(track as TrackItem) : undefined}
                 onContextMenu={onContextMenu}
             >
                 <button
@@ -153,13 +154,15 @@ export const QueueTrackItem: React.FC<QueueTrackItemProps> = React.memo(({
                     {!isHistory && displayTrack.startTimeSeconds !== undefined ? `+${formatDuration(startTime)}` : track.audio_specs?.duration}
                 </div>
 
-                <button
-                    onClick={() => onRemove(originalIndex)}
-                    className="p-2 min-w-10 min-h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors active:scale-95 flex-shrink-0"
-                    aria-label="Remove from queue"
-                >
-                    <Trash2 size={14} />
-                </button>
+                {!isHistory && (
+                    <button
+                        onClick={() => onRemove(originalIndex)}
+                        className="p-2 min-w-10 min-h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors active:scale-95 flex-shrink-0"
+                        aria-label="Remove from queue"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                )}
             </div>
         );
     }
