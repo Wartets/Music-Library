@@ -7,6 +7,8 @@ import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromYear } from '../../utils/collectionVisuals';
 import { groupTracks, sortGroupsByCountWithUnknownLast, sortGroupsAlphabeticallyWithUnknownLast } from '../../utils/grouping';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
+import type { TrackItem } from '../../types/music';
+import type { GroupedTracks } from '../../utils/grouping';
 
 interface YearsViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -18,6 +20,15 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
     const { showContextMenu, showToast } = useUI();
     const [groupBy, setGroupBy] = useState<'year' | 'decade'>('year');
     const [sortBy, setSortBy] = useState<'year' | 'count'>('year');
+
+    const parseGroupStartYear = (value: string): number => {
+        const cleaned = value.trim().toLowerCase() === 'unknown year'
+            ? ''
+            : value.replace(/s$/i, '');
+
+        const parsed = parseInt(cleaned, 10);
+        return Number.isNaN(parsed) ? -Infinity : parsed;
+    };
 
     const parseYear = (value: string | null | undefined): number | null => {
         const year = parseInt(String(value || '').trim(), 10);
@@ -47,16 +58,20 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
 
         if (sortBy === 'year') {
             return sortGroupsAlphabeticallyWithUnknownLast(groups.values(), (a, b) => {
-                const yearA = parseInt(a.name, 10) || 0;
-                const yearB = parseInt(b.name, 10) || 0;
+                const yearA = parseGroupStartYear(a.name);
+                const yearB = parseGroupStartYear(b.name);
                 return yearB - yearA || a.name.localeCompare(b.name);
             });
         }
 
-        return sortGroupsByCountWithUnknownLast(groups.values(), (a, b) => (parseInt(b.name, 10) - parseInt(a.name, 10)));
+        return sortGroupsByCountWithUnknownLast(groups.values(), (a, b) => {
+            const yearA = parseGroupStartYear(a.name);
+            const yearB = parseGroupStartYear(b.name);
+            return yearB - yearA;
+        });
     }, [groupBy, libraryState.filteredTracks, sortBy]);
 
-    const onRightClick = (e: React.MouseEvent, yearGroup: any) => {
+    const onRightClick = (e: React.MouseEvent, yearGroup: GroupedTracks<TrackItem>) => {
         e.preventDefault();
         e.stopPropagation();
         showContextMenu(e.clientX, e.clientY, createGroupContextMenu({
