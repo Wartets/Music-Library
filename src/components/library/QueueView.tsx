@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { ArtworkImage } from '../shared/ArtworkImage';
-import { TrackItem, QueueDisplayItem } from '../../types/music';
+import { TrackItem } from '../../types/music';
+import { RepeatMode, getRepeatModeLabel } from '../../types/playback';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import {
     Play, Trash2, GripVertical, ListMusic, History,
@@ -31,6 +32,12 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+export interface QueueDisplayItem extends Omit<TrackItem, 'id'> {
+    originalIndex: number;
+    id: string;
+    startTimeSeconds: number;
+}
 
 
 
@@ -127,7 +134,6 @@ const QueueListItem: React.FC<QueueListItemProps> = React.memo(({ track, index, 
 export const QueueView: React.FC = () => {
     const {
         state: playerState,
-        queueDisplay,
         getProgress,
         removeFromQueue,
         playTrack,
@@ -136,7 +142,8 @@ export const QueueView: React.FC = () => {
         setAutoplay,
         saveQueueAsPlaylist,
         toggleShuffle,
-        setRepeat
+        setRepeat,
+        setShuffleMode
     } = usePlayer();
     const { state: libState } = useLibrary();
     const { showToast } = useUI();
@@ -186,6 +193,27 @@ export const QueueView: React.FC = () => {
     const curIdx = currentTrack
         ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256)
         : -1;
+
+    // Compute queue display locally (unified queue state, removed from PlayerContext)
+    const queueDisplay = useMemo(() => {
+        const nextTracksRaw = curIdx !== -1 ? queue.slice(curIdx + 1) : queue;
+
+        let items: QueueDisplayItem[] = nextTracksRaw.map((track, i) => ({
+            ...track,
+            originalIndex: i,
+            id: track.logic.hash_sha256 + '-' + i,
+            startTimeSeconds: 0
+        }));
+
+        // Calculate start times for each track
+        let accumulatedTime = currentTrack ? getProgress() : 0;
+        items.forEach((item) => {
+            item.startTimeSeconds = accumulatedTime;
+            accumulatedTime += parseDuration(item.audio_specs?.duration) || 0;
+        });
+
+        return items;
+    }, [queue, currentTrack, getProgress, curIdx]);
 
     const filteredQueueDisplay = useMemo(() => {
         let items = [...queueDisplay];
@@ -263,7 +291,7 @@ export const QueueView: React.FC = () => {
         setClockTick(prev => prev + 1);
     };
 
-    const repeatLabel = playerState.repeat === 'one' ? 'Repeat One' : playerState.repeat === 'all' ? 'Repeat All' : 'Repeat Off';
+    const repeatLabel = getRepeatModeLabel(playerState.repeat);
 
     if (isMobile) {
         return (
@@ -324,10 +352,16 @@ export const QueueView: React.FC = () => {
                         aria-label={playerState.shuffle ? 'Disable shuffle' : 'Enable shuffle'}
                     >Shuffle {playerState.shuffle ? 'On' : 'Off'}</button>
                     <button
-                        onClick={() => setRepeat(playerState.repeat === 'none' ? 'all' : playerState.repeat === 'all' ? 'one' : 'none')}
-                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.repeat !== 'none' ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                        onClick={() => setRepeat(playerState.repeat === RepeatMode.None ? RepeatMode.All : playerState.repeat === RepeatMode.All ? RepeatMode.One : RepeatMode.None)}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.repeat !== RepeatMode.None ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
                         aria-label={`Repeat mode: ${repeatLabel}`}
                     >{repeatLabel}</button>
+                    <button
+                        onClick={() => setShuffleMode(playerState.shuffleMode === 'standard' ? 'weighted' : playerState.shuffleMode === 'weighted' ? 'discovery' : playerState.shuffleMode === 'discovery' ? 'recent' : 'standard')}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.shuffleMode !== 'standard' ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                        aria-label={`Shuffle mode: ${playerState.shuffleMode}`}
+                        title="Shuffle: Standard → Weighted → Discovery → Recent"
+                    >Shuffle: {playerState.shuffleMode}</button>
                     <button
                         onClick={() => setAutoplay(!playerState.autoplay)}
                         className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border ${playerState.autoplay ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-white/5 border-white/10 text-gray-400'}`}
@@ -502,12 +536,21 @@ export const QueueView: React.FC = () => {
                         </button>
 
                         <button
-                            onClick={() => setRepeat(playerState.repeat === 'none' ? 'all' : playerState.repeat === 'all' ? 'one' : 'none')}
-                            className={`flex items-center justify-center gap-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors border h-12 ${playerState.repeat !== 'none' ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/5 text-gray-500 hover:text-white'}`}
+                            onClick={() => setRepeat(playerState.repeat === RepeatMode.None ? RepeatMode.All : playerState.repeat === RepeatMode.All ? RepeatMode.One : RepeatMode.None)}
+                            className={`flex items-center justify-center gap-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors border h-12 ${playerState.repeat !== RepeatMode.None ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/5 text-gray-500 hover:text-white'}`}
                             title={`Repeat mode: ${repeatLabel}`}
                         >
-                            {playerState.repeat === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
-                            {playerState.repeat === 'none' ? 'Repeat Off' : playerState.repeat === 'all' ? 'Repeat All' : 'Repeat One'}
+                            {playerState.repeat === RepeatMode.One ? <Repeat1 size={14} /> : <Repeat size={14} />}
+                            {repeatLabel}
+                        </button>
+
+                        <button
+                            onClick={() => setShuffleMode(playerState.shuffleMode === 'standard' ? 'weighted' : playerState.shuffleMode === 'weighted' ? 'discovery' : playerState.shuffleMode === 'discovery' ? 'recent' : 'standard')}
+                            className={`flex items-center justify-center gap-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors border h-12 ${playerState.shuffleMode !== 'standard' ? 'bg-dominant/20 border-dominant/40 text-dominant-light' : 'bg-white/5 border-white/5 text-gray-500 hover:text-white'}`}
+                            title="Shuffle: Standard → Weighted → Discovery → Recent"
+                        >
+                            <Shuffle size={14} />
+                            Shuffle: {playerState.shuffleMode}
                         </button>
 
                         <button

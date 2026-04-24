@@ -1,5 +1,7 @@
 // Persistence Service for Music Library
 
+import { RepeatMode } from '../types/playback';
+
 export type ShuffleMode = 'standard' | 'weighted' | 'discovery' | 'recent';
 export type MetadataWriteTarget = 'musicbib' | 'file' | 'both';
 
@@ -15,7 +17,7 @@ export interface UserPreferences {
     volume: number;
     shuffle: boolean;
     shuffleMode: ShuffleMode;
-    repeat: 'none' | 'all' | 'one';
+    repeat: RepeatMode;
     eqEnabled: boolean;
     eqBands: number[]; // [32Hz, 64Hz, 125Hz, 250Hz, 500Hz, 1kHz, 2kHz, 4kHz, 8kHz, 16kHz]
     crossfadeEnabled: boolean;
@@ -90,7 +92,7 @@ const DEFAULT_DATA: UserDataStore = {
         volume: 1.0,
         shuffle: false,
         shuffleMode: 'recent',
-        repeat: 'none',
+        repeat: RepeatMode.None,
         eqEnabled: false,
         eqBands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         crossfadeEnabled: false,

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { RepeatMode } from '../../types/playback';
 import { Maximize2, Minimize2, Repeat, Repeat1, Shuffle, X } from 'lucide-react';
 import { formatDuration } from '../../utils/formatters';
 import { ViewType } from '../layout/AppLayout';
@@ -335,12 +336,12 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13 17l5-5-5-5" /><path d="M6 17l5-5-5-5" /></svg>
                 </button>
                 <button
-                    onClick={() => setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none')}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center justify-center gap-1 min-w-10 ${state.repeat !== 'none' ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
+                    onClick={() => setRepeat(state.repeat === RepeatMode.None ? RepeatMode.All : state.repeat === RepeatMode.All ? RepeatMode.One : RepeatMode.None)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center justify-center gap-1 min-w-10 ${state.repeat !== RepeatMode.None ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
                     title={`Repeat: ${state.repeat}`}
-                    aria-pressed={state.repeat !== 'none'}
+                    aria-pressed={state.repeat !== RepeatMode.None}
                 >
-                    {state.repeat === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
+                    {state.repeat === RepeatMode.One ? <Repeat1 size={14} /> : <Repeat size={14} />}
                 </button>
             </div>
         </div>

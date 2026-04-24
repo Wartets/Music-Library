@@ -5,6 +5,7 @@ import { useLibrary } from '../contexts/LibraryContext';
 import { persistenceService } from '../services/persistence';
 import { dbService } from '../services/db';
 import { TrackItem } from '../types/music';
+import { RepeatMode } from '../types/playback';
 import { parseDuration } from '../utils/formatters';
 import {
     Play, ListPlus, User, Disc, Heart, Star, Pencil, Copy, Share, FolderPlus, Zap, Plus,
@@ -117,7 +118,7 @@ export const useTrackContextMenu = () => {
                 label: 'Loop Playback',
                 icon: <Repeat size={14} />,
                 onClick: () => {
-                    setRepeat('one');
+                    setRepeat(RepeatMode.One);
                     playTrack(track, [track]);
                     showToast('Repeat-one enabled for this track', 'success');
                 }

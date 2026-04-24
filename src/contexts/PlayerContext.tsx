@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
-import { PlayerState, TrackItem, QueueDisplayItem } from '../types/music';
+import { PlayerState, TrackItem } from '../types/music';
 import { audioEngine, AudioPlaybackError } from '../services/audioEngine';
 import { persistenceService } from '../services/persistence';
 import { useLibrary } from './LibraryContext';
 import { useUI } from './UIContext';
 import { rankTrackVersions } from '../utils/versionUtils';
-import { parseDuration } from '../utils/formatters';
+import { RepeatMode } from '../types/playback';
 
 interface PlayTrackOptions {
     skipHistoryPush?: boolean;
@@ -15,7 +15,6 @@ interface PlayTrackOptions {
 
 interface PlayerContextProps {
     state: PlayerState;
-    queueDisplay: QueueDisplayItem[];
     playTrack: (track: TrackItem, queue?: TrackItem[]) => void;
     togglePlay: () => void;
     playNext: () => void;
@@ -27,7 +26,7 @@ interface PlayerContextProps {
     seekForward: () => void;
     seekBackward: () => void;
     toggleShuffle: () => void;
-    setRepeat: (mode: 'none' | 'all' | 'one') => void;
+    setRepeat: (mode: RepeatMode) => void;
     reorderQueue: (startIndex: number, endIndex: number) => void;
     removeFromQueue: (index: number) => void;
     addToQueue: (track: TrackItem) => void;
@@ -74,8 +73,6 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const playTrackLogicRef = useRef<(track: TrackItem, queue?: TrackItem[], options?: PlayTrackOptions) => void>(() => { });
     const handlePlaybackFailureRef = useRef<(error: Error, failedTrack?: TrackItem | null) => void>(() => { });
 
-    // Unified queue display state - single source of truth for both QueueView and QueueDrawer
-    const [queueDisplay, setQueueDisplay] = useState<QueueDisplayItem[]>([]);
     const recoveryRef = useRef<{
         attempted: Set<string>;
         attemptedPrimary: Set<string>;
@@ -341,7 +338,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         for (let i = anchorIndex + 1; i < queue.length; i++) {
             scanOrder.push(i);
         }
-        if (cur.repeat === 'all' && queue.length > 0) {
+        if (cur.repeat === RepeatMode.All && queue.length > 0) {
             for (let i = 0; i <= Math.max(anchorIndex, 0) && i < queue.length; i++) {
                 scanOrder.push(i);
             }
@@ -409,7 +406,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         audioEngine.onEnded = () => {
             const cur = stateRef.current;
-            if (cur.repeat === 'one' && cur.currentTrack) {
+            if (cur.repeat === RepeatMode.One && cur.currentTrack) {
                 audioEngine.seek(0);
                 audioEngine.play().catch(err => {
                     handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
@@ -428,7 +425,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
                 if (nextTrackIndex < cur.queue.length) {
                     playTrackLogic(cur.queue[nextTrackIndex], cur.queue);
-                } else if (cur.repeat === 'all') {
+                } else if (cur.repeat === RepeatMode.All) {
                     playTrackLogic(cur.queue[0], cur.queue);
                 } else if (cur.autoplay) {
                     audioEngine.pause();
@@ -455,30 +452,6 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return () => window.removeEventListener('music-history-cleared', handleHistoryCleared);
     }, []);
 
-    // Compute unified queue display state
-    useEffect(() => {
-        const currentTrack = stateRef.current.currentTrack;
-        const queue = stateRef.current.queue;
-        const curIdx = currentTrack ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256) : -1;
-        const nextTracksRaw = curIdx !== -1 ? queue.slice(curIdx + 1) : queue;
-
-        let items: QueueDisplayItem[] = nextTracksRaw.map((track, i) => ({
-            ...track,
-            originalIndex: i,
-            id: track.logic.hash_sha256 + '-' + i,
-            startTimeSeconds: 0 // Will be computed below
-        }));
-
-        // Calculate start times for each track
-        let accumulatedTime = currentTrack ? getProgress() : 0;
-        items.forEach((item) => {
-            item.startTimeSeconds = accumulatedTime;
-            accumulatedTime += parseDuration(item.audio_specs?.duration) || 0;
-        });
-
-        setQueueDisplay(items);
-    }, [state.queue, state.currentTrack, getProgress]);
-
     const playTrack = useCallback((track: TrackItem, queue?: TrackItem[]) => {
         playTrackLogic(track, queue);
     }, [playTrackLogic]);
@@ -497,7 +470,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const advanceToNextTrack = useCallback((respectAutoplay: boolean) => {
         const cur = stateRef.current;
 
-        if (cur.repeat === 'one' && cur.currentTrack) {
+        if (cur.repeat === RepeatMode.One && cur.currentTrack) {
             audioEngine.seek(0);
             audioEngine.play().catch(err => {
                 handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
@@ -519,7 +492,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 return true;
             }
 
-            if (cur.repeat === 'all') {
+            if (cur.repeat === RepeatMode.All) {
                 playTrackLogic(cur.queue[0], cur.queue);
                 return true;
             }
@@ -680,7 +653,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         });
     }, [applyShuffle]);
 
-    const setRepeat = useCallback((mode: 'none' | 'all' | 'one') => {
+    const setRepeat = useCallback((mode: RepeatMode) => {
         setState(prev => ({ ...prev, repeat: mode }));
         persistenceService.updatePreferences({ repeat: mode });
     }, []);
@@ -762,7 +735,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     return (
         <PlayerContext.Provider value={{
-            state, queueDisplay, playTrack, togglePlay, playNext, playPrevious,
+            state, playTrack, togglePlay, playNext, playPrevious,
             setVolume, seek, getProgress, stop, seekForward, seekBackward,
             toggleShuffle, setRepeat, setShuffleMode,
             reorderQueue, removeFromQueue, clearQueue,

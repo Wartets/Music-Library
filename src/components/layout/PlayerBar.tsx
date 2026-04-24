@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { formatDuration } from '../../utils/formatters';
+import { RepeatMode } from '../../types/playback';
 import { ViewType } from './viewRouting';
 import { persistenceService } from '../../services/persistence';
 import { ArtworkImage } from '../shared/ArtworkImage';
@@ -36,9 +37,9 @@ const IconShuffle = React.memo(({ active }: { active: boolean }) => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${active ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
 ));
 
-const IconRepeat = React.memo(({ mode }: { mode: 'none' | 'all' | 'one' }) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={mode !== 'none' ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${mode !== 'none' ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}>
-        {mode === 'one' ? (
+const IconRepeat = React.memo(({ mode }: { mode: RepeatMode }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={mode !== RepeatMode.None ? 'white' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-all ${mode !== RepeatMode.None ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}>
+        {mode === RepeatMode.One ? (
             <>
                 <path d="M17 2l4 4-4 4" />
                 <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
@@ -163,7 +164,7 @@ export const PlayerBar: React.FC<{ onToggleContext?: () => void, onNavigate: (vi
     }, [track, getProgress, isDragging]);
 
     const handleRepeatToggle = useCallback(() => {
-        setRepeat(state.repeat === 'none' ? 'all' : state.repeat === 'all' ? 'one' : 'none');
+        setRepeat(state.repeat === RepeatMode.None ? RepeatMode.All : state.repeat === RepeatMode.All ? RepeatMode.One : RepeatMode.None);
     }, [setRepeat, state.repeat]);
 
     const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

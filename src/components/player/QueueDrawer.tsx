@@ -92,7 +92,22 @@ interface QueueDrawerProps {
 }
 
 export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => {
-    const { state, queueDisplay, playTrack, reorderQueue, removeFromQueue, clearQueue } = usePlayer();
+    const { state, playTrack, reorderQueue, removeFromQueue, clearQueue } = usePlayer();
+
+    // Compute queue display locally  (read-only, just for rendering)
+    const queueDisplay = React.useMemo(() => {
+        const currentTrack = state.currentTrack;
+        const queue = state.queue;
+        const curIdx = currentTrack ? queue.findIndex(t => t.logic.hash_sha256 === currentTrack.logic.hash_sha256) : -1;
+        const nextTracksRaw = curIdx !== -1 ? queue.slice(curIdx + 1) : queue;
+
+        return nextTracksRaw.map((track, i) => ({
+            ...track,
+            originalIndex: i,
+            id: track.logic.hash_sha256 + '-' + i,
+            startTimeSeconds: 0
+        }));
+    }, [state.currentTrack, state.queue]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
