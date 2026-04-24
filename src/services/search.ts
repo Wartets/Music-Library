@@ -1,8 +1,27 @@
 import { TrackItem } from '../types/music';
 
 /**
+ * Search Service Configuration
+ * Controls search behavior and field weighting for advanced search
+ */
+export interface SearchConfig {
+    /** Enable support for AND, OR, NOT operators */
+    advancedOperators: boolean;
+    /** Field-specific weight multipliers (0-1, where 1 is normal weight) */
+    fieldWeights?: {
+        title: number;
+        artist: number;
+        album: number;
+        genre: number;
+        year: number;
+        format: number;
+    };
+}
+
+/**
  * Search Service
  * Integrates search engine using a Web Worker to ensure the UI thread remains unblocked.
+ * Supports advanced operators (AND, OR, NOT) and field-based weighting.
  */
 export class SearchService {
     private worker: Worker | null = null;
@@ -10,8 +29,22 @@ export class SearchService {
     private currentSearchId: number = 0;
     private isReady: boolean = false;
     private onReadyCallbacks: (() => void)[] = [];
+    private config: SearchConfig = {
+        advancedOperators: true,
+        fieldWeights: {
+            title: 1.0,
+            artist: 0.9,
+            album: 0.8,
+            genre: 0.7,
+            year: 0.6,
+            format: 0.5
+        }
+    };
 
-    constructor() {
+    constructor(config?: Partial<SearchConfig>) {
+        if (config) {
+            this.config = { ...this.config, ...config };
+        }
         this.initWorker();
     }
 
@@ -46,7 +79,11 @@ export class SearchService {
     buildIndex(tracks: TrackItem[]): void {
         if (this.worker) {
             this.isReady = false;
-            this.worker.postMessage({ type: 'INIT', payload: tracks });
+            this.worker.postMessage({ 
+                type: 'INIT', 
+                payload: tracks,
+                config: this.config 
+            });
         }
     }
 
@@ -62,8 +99,14 @@ export class SearchService {
 
     /**
      * Performs an instant "As You Type" search query across the library.
+     * Supports advanced operators: AND, OR, NOT
+     * Examples:
+     *   - "jazz piano" → tracks matching both jazz AND piano
+     *   - "jazz OR classical" → tracks matching either jazz OR classical
+     *   - "jazz NOT piano" → jazz tracks excluding piano
+     *   - "artist:Miles Davis" → field-specific search
      * @param query - The user's input string
-     * @returns Promise of Array of matched tracks
+     * @returns Promise of Array of matched tracks sorted by relevance
      */
     async search(query: string): Promise<TrackItem[]> {
         if (!this.worker) {
@@ -75,8 +118,22 @@ export class SearchService {
         return new Promise((resolve) => {
             const id = ++this.currentSearchId;
             this.searchCallbacks.set(id, resolve);
-            this.worker!.postMessage({ type: 'SEARCH', payload: { query, id } });
+            this.worker!.postMessage({ 
+                type: 'SEARCH', 
+                payload: { query, id },
+                config: this.config 
+            });
         });
+    }
+
+    /**
+     * Update search configuration at runtime
+     */
+    setConfig(config: Partial<SearchConfig>): void {
+        this.config = { ...this.config, ...config };
+        if (this.worker) {
+            this.worker.postMessage({ type: 'CONFIG_UPDATE', config: this.config });
+        }
     }
 
     evaluateSmartQuery(_criteria: string): TrackItem[] {
