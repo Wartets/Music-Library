@@ -10,6 +10,8 @@ import { CollectionGridView, GridItem } from './CollectionGridView';
 import { getMutedVisualStyle, seedFromText } from '../../utils/collectionVisuals';
 import { groupTracks, sortGroupsAlphabeticallyWithUnknownLast, sortGroupsByCountWithUnknownLast } from '../../utils/grouping';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
+import type { TrackItem } from '../../types/music';
+import type { GroupedTracks } from '../../utils/grouping';
 
 interface GenresViewProps {
     onNavigate: (view: any, data: any) => void;
@@ -57,6 +59,16 @@ const getGenreSymbol = (genreName: string, accentColor: string): React.ReactNode
     return <Music size={44} style={sharedStyle} />;
 };
 
+const isUnknownGenre = (value: string): boolean => {
+    const normalized = value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    return normalized.length === 0 || normalized === '-' || normalized === 'unknown' || normalized === 'unknown genre' || normalized === 'n/a' || normalized === 'na';
+};
+
 export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, addToQueue, addToNext } = usePlayer();
@@ -66,7 +78,8 @@ export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
     const genres = useMemo(() => {
         const { groups } = groupTracks(libraryState.filteredTracks, {
             keyExtractor: (track) => track.metadata?.genre,
-            unknownLabel: 'Unknown Genre'
+            unknownLabel: 'Unknown Genre',
+            isUnknownValue: isUnknownGenre
         });
 
         if (sortBy === 'name') {
@@ -76,7 +89,7 @@ export const GenresView: React.FC<GenresViewProps> = ({ onNavigate }) => {
         return sortGroupsByCountWithUnknownLast(groups.values());
     }, [libraryState.filteredTracks, sortBy]);
 
-    const onRightClick = (e: React.MouseEvent, genreGroup: any) => {
+    const onRightClick = (e: React.MouseEvent, genreGroup: GroupedTracks<TrackItem>) => {
         e.preventDefault();
         e.stopPropagation();
         showContextMenu(e.clientX, e.clientY, createGroupContextMenu({
