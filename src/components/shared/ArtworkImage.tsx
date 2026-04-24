@@ -14,6 +14,7 @@ interface ArtworkImageProps {
 const ARTWORK_CACHE_NAME = 'music-library-artwork-v1';
 const resolvedArtworkCache = new Map<string, string>();
 const failedArtworkCandidates = new Set<string>();
+const blobCache = new Map<string, string>();
 
 const hashText = (value: string): number => {
     let hash = 0;
@@ -33,6 +34,54 @@ const createFallbackVisual = (seedText: string) => {
 };
 
 const buildSrcCandidates = (pathValue: string): string[] => dbService.getAssetCandidates(pathValue);
+
+/**
+ * Parse dimensions string (e.g., "1920 x 1080") to get width and height numbers.
+ * Returns null if parsing fails.
+ */
+const parseDimensions = (dimensions?: string): { width: number; height: number } | null => {
+    if (!dimensions) return null;
+    const match = dimensions.match(/(\d+)\s*x\s*(\d+)/i);
+    if (match) {
+        const width = parseInt(match[1], 10);
+        const height = parseInt(match[2], 10);
+        if (width > 0 && height > 0) {
+            return { width, height };
+        }
+    }
+    return null;
+};
+
+/**
+ * Build srcset from candidates for responsive images.
+ * Uses dimension hints when available for width descriptors.
+ */
+const buildSrcSet = (candidates: string[], dimensions?: string): string | undefined => {
+    if (!candidates || candidates.length === 0) return undefined;
+    
+    const dims = parseDimensions(dimensions);
+    if (dims) {
+        // Use the primary candidate with width descriptor
+        const sizeVariants = candidates.map(candidate => {
+            return `${candidate} ${dims.width}w`;
+        });
+        return sizeVariants.join(', ');
+    }
+    
+    return undefined;
+};
+
+/**
+ * Get aspect ratio CSS value from aspect_ratio field.
+ */
+const getAspectRatioCSS = (aspectRatio: ImageDetails['aspect_ratio']): string | undefined => {
+    switch (aspectRatio) {
+        case 'Square': return '1 / 1';
+        case 'Landscape': return '16 / 9';
+        case 'Portrait': return '3 / 4';
+        default: return undefined;
+    }
+};
 
 export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 'Artwork', className = 'w-full h-full', fallback, loading = 'lazy' }) => {
     const [hasError, setHasError] = React.useState(false);
@@ -60,6 +109,13 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
 
     const displaySrc = srcCandidates[candidateIndex] || null;
 
+    // Parse dimensions and aspect ratio for responsive images and layout
+    const dimensions = React.useMemo(() => parseDimensions(details?.dimensions), [details?.dimensions]);
+    const aspectRatioCSS = React.useMemo(() => 
+        getAspectRatioCSS(details?.aspect_ratio), 
+        [details?.aspect_ratio]
+    );
+
     React.useEffect(() => {
         setHasError(false);
         setCandidateIndex(0);
@@ -84,6 +140,14 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
             blobUrlRef.current = null;
         }
 
+        // Check memory cache first for fastest response
+        const memoryCached = blobCache.get(displaySrc);
+        if (memoryCached && !cancelled) {
+            setCachedSrc(memoryCached);
+            blobUrlRef.current = memoryCached;
+            return;
+        }
+
         caches.open(ARTWORK_CACHE_NAME)
             .then(cache => cache.match(displaySrc))
             .then(response => response ? response.blob() : null)
@@ -91,6 +155,7 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
                 if (!blob || cancelled) return;
                 const blobUrl = URL.createObjectURL(blob);
                 blobUrlRef.current = blobUrl;
+                blobCache.set(displaySrc, blobUrl); // Memory cache the blob URL for instant reuse
                 setCachedSrc(blobUrl);
             })
             .catch(() => {
@@ -111,10 +176,17 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
             ? alt
             : (details?.name || 'Track');
         const fallbackVisual = createFallbackVisual(fallbackSeed);
+        
+        // Use aspect ratio when available for proper fallback layout
+        const style: React.CSSProperties = { background: fallbackVisual.background };
+        if (aspectRatioCSS) {
+            style.aspectRatio = aspectRatioCSS as any;
+        }
+        
         return (
             <div
-                className={`flex items-center justify-center text-white/90 ${className}`}
-                style={{ background: fallbackVisual.background }}
+                className={`flex items-center justify-center text-white/90 overflow-hidden ${className}`}
+                style={style}
             >
                 {fallback || (
                     <span className="text-2xl font-black tracking-tight select-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]">
@@ -125,13 +197,20 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
         );
     }
 
+    // Build srcset for responsive image delivery
+    const srcSet = React.useMemo(() => buildSrcSet(srcCandidates, details?.dimensions), [srcCandidates, details?.dimensions]);
+
     return (
         <img
             src={cachedSrc || displaySrc}
+            srcSet={srcSet}
             alt={alt}
+            width={dimensions?.width}
+            height={dimensions?.height}
             className={`object-cover ${className}`}
             loading={loading}
             decoding="async"
+            style={aspectRatioCSS ? { aspectRatio: aspectRatioCSS as any } : undefined}
             onLoad={() => {
                 if (cacheKey) {
                     resolvedArtworkCache.set(cacheKey, displaySrc);
@@ -144,7 +223,9 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
                             if (match) return;
                             return fetch(displaySrc, { cache: 'force-cache' }).then(response => {
                                 if (!response.ok) return;
-                                return cache.put(displaySrc, response.clone());
+                                const clonedResponse = response.clone();
+                                blobCache.set(displaySrc, URL.createObjectURL(clonedResponse)); // Cache successful fetch
+                                return cache.put(displaySrc, response);
                             });
                         })
                         .catch(() => {
@@ -154,12 +235,14 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
             }}
             onError={() => {
                 failedArtworkCandidates.add(displaySrc);
+                blobCache.delete(displaySrc); // Remove bad cache entry
                 if (candidateIndex < srcCandidates.length - 1) {
                     setCandidateIndex(prev => prev + 1);
                     return;
                 }
                 if (cacheKey) {
                     resolvedArtworkCache.delete(cacheKey);
+                    blobCache.delete(cacheKey);
                 }
                 setHasError(true);
             }}
