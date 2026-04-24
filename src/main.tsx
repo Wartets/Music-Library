@@ -12,7 +12,7 @@ import './index.css';
 // Note: PlayerProvider must be a parent of ThemeProvider because ThemeProvider uses usePlayer()
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <ErrorBoundary>
+        <ErrorBoundary fallbackComponent={() => null}>
             <UIProvider>
                 <LibraryProvider>
                     <PlayerProvider>

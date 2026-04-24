@@ -74,7 +74,8 @@ const buildSrcSet = (candidates: string[], dimensions?: string): string | undefi
 /**
  * Get aspect ratio CSS value from aspect_ratio field.
  */
-const getAspectRatioCSS = (aspectRatio: ImageDetails['aspect_ratio']): string | undefined => {
+const getAspectRatioCSS = (aspectRatio: string | undefined): string | undefined => {
+    if (!aspectRatio) return undefined;
     switch (aspectRatio) {
         case 'Square': return '1 / 1';
         case 'Landscape': return '16 / 9';
@@ -107,14 +108,14 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
         return availableCandidates;
     }, [src, details?.path, cacheKey]);
 
-    const displaySrc = srcCandidates[candidateIndex] || null;
+     const displaySrc = srcCandidates[candidateIndex] ?? null;
 
     // Parse dimensions and aspect ratio for responsive images and layout
     const dimensions = React.useMemo(() => parseDimensions(details?.dimensions), [details?.dimensions]);
-    const aspectRatioCSS = React.useMemo(() => 
-        getAspectRatioCSS(details?.aspect_ratio), 
-        [details?.aspect_ratio]
-    );
+     const aspectRatioCSS = React.useMemo(() => 
+         getAspectRatioCSS(details?.aspect_ratio), 
+         [details?.aspect_ratio]
+     ) as string | undefined;
 
     React.useEffect(() => {
         setHasError(false);
@@ -221,12 +222,13 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
                         .then(cache => cache.match(displaySrc).then(match => ({ cache, match })))
                         .then(({ cache, match }) => {
                             if (match) return;
-                            return fetch(displaySrc, { cache: 'force-cache' }).then(response => {
-                                if (!response.ok) return;
-                                const clonedResponse = response.clone();
-                                blobCache.set(displaySrc, URL.createObjectURL(clonedResponse)); // Cache successful fetch
-                                return cache.put(displaySrc, response);
-                            });
+                                 return fetch(displaySrc, { cache: 'force-cache' }).then(response => {
+                                 if (!response.ok) return;
+                                 return response.blob().then(blob => {
+                                   blobCache.set(displaySrc, URL.createObjectURL(blob)); // Cache successful fetch
+                                   return cache.put(displaySrc, response);
+                                 });
+                             });
                         })
                         .catch(() => {
                             // Ignore cache write failures.
