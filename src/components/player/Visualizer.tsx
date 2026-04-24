@@ -1,97 +1,147 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { audioEngine } from '../../services/audioEngine';
 import { usePlayer } from '../../contexts/PlayerContext';
 
+const TARGET_FPS = 30;
+
 export const Visualizer: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const contextRef = useRef<CanvasRenderingContext2D | null>(null);
     const { state } = usePlayer();
     const rafRef = useRef<number | null>(null);
     const dataRef = useRef<Uint8Array | null>(null);
+    const frameTimeRef = useRef(0);
+    const sizeRef = useRef({ width: 0, height: 0, dpr: 1 });
+
+    const cancelFrame = useCallback(() => {
+        if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+    }, []);
+
+    const clearCanvas = useCallback(() => {
+        const context = contextRef.current;
+        const { width, height } = sizeRef.current;
+        if (!context || width === 0 || height === 0) return;
+        context.clearRect(0, 0, width, height);
+    }, []);
+
+    const resizeCanvas = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const context = contextRef.current || canvas.getContext('2d');
+        if (!context) return;
+
+        contextRef.current = context;
+
+        const width = Math.max(1, Math.floor(canvas.clientWidth));
+        const height = Math.max(1, Math.floor(canvas.clientHeight));
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.scale(dpr, dpr);
+
+        sizeRef.current = { width, height, dpr };
+        clearCanvas();
+    }, [clearCanvas]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        const context = canvas.getContext('2d');
+        if (!context) return;
 
-        let width = canvas.clientWidth;
-        let height = canvas.clientHeight;
-        canvas.width = width;
-        canvas.height = height;
+        contextRef.current = context;
+        resizeCanvas();
 
-        const computedStyle = getComputedStyle(document.documentElement);
-        const dominantVar = computedStyle.getPropertyValue('--color-dominant').trim();
-        const baseColor = dominantVar ? `rgb(${dominantVar})` : 'rgba(255, 255, 255, 0.7)';
+        const observer = new ResizeObserver(() => {
+            resizeCanvas();
+        });
+        observer.observe(canvas);
 
-        let lastFrame = 0;
-        const draw = (ts: number) => {
-            if (!state.isPlaying) {
-                rafRef.current = null;
+        return () => {
+            observer.disconnect();
+            cancelFrame();
+            clearCanvas();
+            contextRef.current = null;
+        };
+    }, [cancelFrame, clearCanvas, resizeCanvas]);
+
+    useEffect(() => {
+        if (!state.isPlaying) {
+            cancelFrame();
+            frameTimeRef.current = 0;
+            clearCanvas();
+            return;
+        }
+
+        const frameInterval = 1000 / TARGET_FPS;
+        let cancelled = false;
+
+        const draw = (timestamp: number) => {
+            if (cancelled) return;
+
+            rafRef.current = requestAnimationFrame(draw);
+
+            if (document.visibilityState !== 'visible') {
                 return;
             }
 
+            if (timestamp - frameTimeRef.current < frameInterval) {
+                return;
+            }
+            frameTimeRef.current = timestamp;
+
+            const context = contextRef.current;
             const analyser = audioEngine.getAnalyser();
-            if (!analyser) {
-                rafRef.current = requestAnimationFrame(draw);
+            const { width, height } = sizeRef.current;
+            if (!context || !analyser || width === 0 || height === 0) {
                 return;
             }
 
-            if (ts - lastFrame < 33) {
-                rafRef.current = requestAnimationFrame(draw);
-                return;
-            }
-            lastFrame = ts;
-
-            // Only clear and draw if context is active
-            ctx.clearRect(0, 0, width, height);
+            context.clearRect(0, 0, width, height);
 
             const bufferLength = analyser.frequencyBinCount;
             if (!dataRef.current || dataRef.current.length !== bufferLength) {
                 dataRef.current = new Uint8Array(bufferLength);
             }
+
             analyser.getByteFrequencyData(dataRef.current as any);
 
+            const fillColor = getComputedStyle(document.documentElement).getPropertyValue('--color-dominant').trim() || 'rgba(255, 255, 255, 0.7)';
             const maxBars = Math.min(64, bufferLength);
             const step = Math.max(1, Math.floor(bufferLength / maxBars));
             const barWidth = width / maxBars;
             let x = 0;
 
-            ctx.fillStyle = baseColor;
+            context.fillStyle = fillColor;
 
-            for (let i = 0; i < bufferLength; i += step) {
-                const val = dataRef.current[i];
-                const barHeight = (val / 255) * height;
+            for (let index = 0; index < bufferLength; index += step) {
+                const value = dataRef.current[index];
+                const barHeight = (value / 255) * height;
 
-                ctx.globalAlpha = 0.4 + (val / 255) * 0.4;
-                ctx.fillRect(x, height - barHeight, Math.max(1, barWidth - 1), barHeight);
-
+                context.globalAlpha = 0.4 + (value / 255) * 0.4;
+                context.fillRect(x, height - barHeight, Math.max(1, barWidth - 1), barHeight);
                 x += barWidth;
             }
 
-            rafRef.current = requestAnimationFrame(draw);
+            context.globalAlpha = 1;
         };
 
-        if (state.isPlaying) {
-            rafRef.current = requestAnimationFrame(draw);
-        }
-
-        const handleResize = () => {
-            width = canvas.clientWidth;
-            height = canvas.clientHeight;
-            canvas.width = width;
-            canvas.height = height;
-        };
-
-        window.addEventListener('resize', handleResize);
+        cancelFrame();
+        rafRef.current = requestAnimationFrame(draw);
 
         return () => {
-            window.removeEventListener('resize', handleResize);
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current);
-            }
+            cancelled = true;
+            cancelFrame();
         };
-    }, [state.isPlaying]);
+    }, [cancelFrame, clearCanvas, state.isPlaying]);
 
     return (
         <canvas

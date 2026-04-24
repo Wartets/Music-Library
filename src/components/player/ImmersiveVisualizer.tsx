@@ -10,4 +10,4 @@ interface ImmersiveVisualizerProps {
  * Placeholder kept intentionally for future immersive background experiments.
  * Currently disabled by design.
  */
-export const ImmersiveVisualizer: React.FC<ImmersiveVisualizerProps> = () => null;
+export const ImmersiveVisualizer: React.FC<ImmersiveVisualizerProps> = React.memo(() => null);
