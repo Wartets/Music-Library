@@ -397,52 +397,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         handlePlaybackFailureRef.current = handlePlaybackFailure;
     }, [handlePlaybackFailure]);
 
-    useEffect(() => {
-        // Tie to audioEngine events
-        audioEngine.onTimeUpdate = (currentTime) => {
-            const safeTime = Number(currentTime);
-            progressRef.current = Number.isFinite(safeTime) ? Math.max(0, safeTime) : 0;
-        };
 
-        audioEngine.onEnded = () => {
-            const cur = stateRef.current;
-            if (cur.repeat === RepeatMode.One && cur.currentTrack) {
-                audioEngine.seek(0);
-                audioEngine.play().catch(err => {
-                    handlePlaybackFailureRef.current(err as Error, cur.currentTrack);
-                });
-                return;
-            }
-
-            if (!cur.autoplay) {
-                audioEngine.pause();
-                setState(prev => ({ ...prev, isPlaying: false }));
-                return;
-            }
-
-            if (cur.queue.length > 0 && cur.currentTrack) {
-                const nextTrackIndex = cur.queue.findIndex(t => t.logic.hash_sha256 === cur.currentTrack?.logic.hash_sha256) + 1;
-
-                if (nextTrackIndex < cur.queue.length) {
-                    playTrackLogic(cur.queue[nextTrackIndex], cur.queue);
-                } else if (cur.repeat === RepeatMode.All) {
-                    playTrackLogic(cur.queue[0], cur.queue);
-                } else if (cur.autoplay) {
-                    audioEngine.pause();
-                }
-            }
-        };
-
-        audioEngine.onPlay = () => {
-            resetRecoveryState();
-            setState(prev => ({ ...prev, isPlaying: true }));
-        };
-        audioEngine.onPause = () => setState(prev => ({ ...prev, isPlaying: false }));
-
-        audioEngine.onError = (error) => {
-            handlePlaybackFailureRef.current(error, stateRef.current.currentTrack);
-        };
-    }, [playTrackLogic, resetRecoveryState]);
 
     useEffect(() => {
         const handleHistoryCleared = () => {
