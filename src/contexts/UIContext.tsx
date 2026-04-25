@@ -18,7 +18,63 @@ interface ToastItem {
     title?: string;
     subtle?: boolean;
     dedupeKey?: string;
+    durationMs: number;
 }
+
+interface ToastState {
+    active: ToastItem[];
+    queue: ToastItem[];
+}
+
+const MAX_VISIBLE_TOASTS = 2;
+const MAX_QUEUED_TOASTS = 24;
+
+const queueToast = (state: ToastState, toast: ToastItem): ToastState => {
+    const duplicate = [...state.active, ...state.queue].some(
+        existing => existing.dedupeKey === toast.dedupeKey && existing.message === toast.message
+    );
+
+    if (duplicate) {
+        return state;
+    }
+
+    if (state.active.length < MAX_VISIBLE_TOASTS) {
+        return {
+            ...state,
+            active: [...state.active, toast],
+        };
+    }
+
+    const nextQueue = [...state.queue, toast];
+    return {
+        ...state,
+        queue: nextQueue.slice(-MAX_QUEUED_TOASTS),
+    };
+};
+
+const removeToastFromState = (state: ToastState, id: string): ToastState => {
+    const activeWithout = state.active.filter(toast => toast.id !== id);
+
+    if (activeWithout.length !== state.active.length) {
+        if (state.queue.length > 0) {
+            const [nextToast, ...remainingQueue] = state.queue;
+            return {
+                active: [...activeWithout, nextToast],
+                queue: remainingQueue,
+            };
+        }
+
+        return {
+            ...state,
+            active: activeWithout,
+        };
+    }
+
+    return {
+        ...state,
+        queue: state.queue.filter(toast => toast.id !== id),
+    };
+};
 
 interface UIContextProps {
     showContextMenu: (x: number, y: number, items: ContextMenuItem[]) => void;
@@ -31,7 +87,7 @@ const UIContext = createContext<UIContextProps | undefined>(undefined);
 
 export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, items: ContextMenuItem[] } | null>(null);
-    const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const [toastState, setToastState] = useState<ToastState>({ active: [], queue: [] });
     const timersRef = useRef<Record<string, number>>({});
 
     const showContextMenu = useCallback((x: number, y: number, items: ContextMenuItem[]) => {
@@ -43,11 +99,12 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }, []);
 
     const removeToast = useCallback((id: string) => {
-        setToasts(prev => prev.filter(toast => toast.id !== id));
         if (timersRef.current[id]) {
             clearTimeout(timersRef.current[id]);
             delete timersRef.current[id];
         }
+
+        setToastState(prev => removeToastFromState(prev, id));
     }, []);
 
     const showToast = useCallback((message: string, type: ToastType = 'info', options: ToastOptions = {}) => {
@@ -55,26 +112,33 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         const dedupeKey = options.dedupeKey || `${type}:${message}`;
         const durationMs = options.durationMs ?? (options.subtle ? 1800 : (type === 'error' ? 4200 : 2800));
 
-        setToasts(prev => {
-            const duplicate = prev.find(toast => toast.dedupeKey === dedupeKey && toast.message === message);
-            if (duplicate) {
-                return prev;
-            }
+        const toast: ToastItem = {
+            id,
+            message,
+            type,
+            title: options.title,
+            subtle: options.subtle,
+            dedupeKey,
+            durationMs,
+        };
 
-            const next = [...prev, {
-                id,
-                message,
-                type,
-                title: options.title,
-                subtle: options.subtle,
-                dedupeKey
-            }];
+        setToastState(prev => queueToast(prev, toast));
+    }, []);
 
-            return next.slice(-4);
+    useEffect(() => {
+        toastState.active.forEach(toast => {
+            if (timersRef.current[toast.id]) return;
+            timersRef.current[toast.id] = window.setTimeout(() => removeToast(toast.id), toast.durationMs);
         });
 
-        timersRef.current[id] = window.setTimeout(() => removeToast(id), durationMs);
-    }, [removeToast]);
+        const activeIds = new Set(toastState.active.map(toast => toast.id));
+        Object.keys(timersRef.current).forEach(id => {
+            if (!activeIds.has(id)) {
+                clearTimeout(timersRef.current[id]);
+                delete timersRef.current[id];
+            }
+        });
+    }, [toastState.active, removeToast]);
 
     useEffect(() => {
         return () => {
@@ -112,9 +176,9 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
         <UIContext.Provider value={contextValue}>
             {children}
-            {toasts.length > 0 && (
-                <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+6.25rem)] md:bottom-24 z-[200] flex flex-col items-center gap-2 pointer-events-none w-[min(92vw,560px)]">
-                    {toasts.map(toast => {
+            {toastState.active.length > 0 && (
+                <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+6.25rem)] md:bottom-24 z-[120000] flex flex-col items-center gap-2 pointer-events-none w-[min(92vw,560px)]">
+                    {toastState.active.map(toast => {
                         const visuals = toastVisuals[toast.type];
                         const subtleClass = toast.subtle ? 'px-3 py-1.5 rounded-full text-[11px] shadow-lg' : 'px-4 py-2.5 rounded-xl text-sm shadow-2xl';
                         return (
@@ -148,6 +212,11 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                             </div>
                         );
                     })}
+                    {toastState.queue.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-widest text-white/45 bg-black/30 border border-white/10 rounded-full pointer-events-none">
+                            +{toastState.queue.length} queued
+                        </div>
+                    )}
                 </div>
             )}
         </UIContext.Provider>

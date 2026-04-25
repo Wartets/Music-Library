@@ -198,7 +198,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         <>
             <div
                 ref={menuRef}
-                className="fixed z-[100] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
+                className="fixed z-[110000] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
                 style={{
                     left: menuPosition.x,
                     top: menuPosition.y,
@@ -246,7 +246,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
             {activeSubMenu && (
                 <div
                     ref={subMenuRef}
-                    className="fixed z-[101] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
+                    className="fixed z-[110001] w-56 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 overflow-y-auto custom-scrollbar"
                     style={{
                         left: subMenuPosition.x,
                         top: subMenuPosition.y,
