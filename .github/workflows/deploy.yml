@@ -19,30 +19,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Configure Git for long paths
+        run: |
+          git config --global core.longpaths true
+          git config --global core.protectNTFS false
+          git config --global core.protectHFS false
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           path: music-library-temp
-
-      - name: Remove problematic directory
-        run: |
-          cd music-library-temp
-          # Remove the problematic subdirectory that causes checkout to fail
-          git -c core.protectNTFS=false -c core.protectHFS=false ls-files -z | grep -z "Album 4 (2021-2022-2023)/Album 4.1/s" | head -1 | xargs -0 -I{} git rm -r --cached {} 2>/dev/null || true
-        continue-on-error: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Configure Git for path handling
-        run: |
-          cd music-library-temp
-          git config core.protectNTFS false
-          git config core.protectHFS false
-          git config core.longpaths true
 
       - name: Restore working tree
         run: |
