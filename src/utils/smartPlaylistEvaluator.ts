@@ -1,12 +1,17 @@
 import { TrackItem } from '../types/music';
+import { parseDuration } from './formatters';
 
-export type Operator = 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan';
+export type Operator = 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between';
 export type LogicCondition = 'AND' | 'OR';
+export interface RuleRangeValue {
+    min: string | number;
+    max: string | number;
+}
 
 export interface SmartRule {
     field: string; // e.g., 'metadata.year', 'audio_specs.is_lossless'
     operator: Operator;
-    value: string | number | boolean;
+    value: string | number | boolean | RuleRangeValue;
 }
 
 export interface RuleGroup {
@@ -31,6 +36,53 @@ const getFieldValue = (track: TrackItem, path: string): any => {
     return value;
 };
 
+const isRuleRangeValue = (value: SmartRule['value']): value is RuleRangeValue => {
+    return typeof value === 'object'
+        && value !== null
+        && 'min' in value
+        && 'max' in value;
+};
+
+const parseNumericToken = (value: unknown): number => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'boolean') return value ? 1 : 0;
+    if (typeof value !== 'string') return Number.NaN;
+
+    const normalized = value.trim();
+    if (!normalized) return Number.NaN;
+
+    if (/^\d+(?:\.\d+)?$/.test(normalized)) {
+        return Number(normalized);
+    }
+
+    const extracted = normalized.replace(/[^\d.\-]/g, '');
+    return extracted ? Number(extracted) : Number.NaN;
+};
+
+const toComparableNumber = (field: string, value: unknown): number => {
+    if (field === 'audio_specs.duration') {
+        if (typeof value === 'number') return value;
+        return parseDuration(String(value ?? ''));
+    }
+
+    return parseNumericToken(value);
+};
+
+const parseRangeValue = (value: SmartRule['value']): RuleRangeValue | null => {
+    if (isRuleRangeValue(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const [minRaw, maxRaw] = value.split('..').map(part => part.trim());
+        if (minRaw && maxRaw) {
+            return { min: minRaw, max: maxRaw };
+        }
+    }
+
+    return null;
+};
+
 const evaluateRule = (track: TrackItem, rule: SmartRule): boolean => {
     const fieldValue = getFieldValue(track, rule.field);
 
@@ -48,13 +100,38 @@ const evaluateRule = (track: TrackItem, rule: SmartRule): boolean => {
         rv = rv === 'true';
     }
 
+    if (rule.operator === 'between') {
+        const range = parseRangeValue(rule.value);
+        if (!range) return false;
+
+        const fieldNumber = toComparableNumber(rule.field, fieldValue);
+        const min = toComparableNumber(rule.field, range.min);
+        const max = toComparableNumber(rule.field, range.max);
+
+        if (!Number.isFinite(fieldNumber) || !Number.isFinite(min) || !Number.isFinite(max)) {
+            return false;
+        }
+
+        const low = Math.min(min, max);
+        const high = Math.max(min, max);
+        return fieldNumber >= low && fieldNumber <= high;
+    }
+
     switch (rule.operator) {
         case 'equals': return fw == rv;
         case 'contains': return typeof fw === 'string' && fw.includes(String(rv));
         case 'startsWith': return typeof fw === 'string' && fw.startsWith(String(rv));
         case 'endsWith': return typeof fw === 'string' && fw.endsWith(String(rv));
-        case 'greaterThan': return Number(fw) > Number(rv);
-        case 'lessThan': return Number(fw) < Number(rv);
+        case 'greaterThan': {
+            const left = toComparableNumber(rule.field, fw);
+            const right = toComparableNumber(rule.field, rv);
+            return Number.isFinite(left) && Number.isFinite(right) ? left > right : false;
+        }
+        case 'lessThan': {
+            const left = toComparableNumber(rule.field, fw);
+            const right = toComparableNumber(rule.field, rv);
+            return Number.isFinite(left) && Number.isFinite(right) ? left < right : false;
+        }
         default: return false;
     }
 };
