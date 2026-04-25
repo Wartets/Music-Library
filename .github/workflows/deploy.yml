@@ -1,17 +1,35 @@
-      - name: Configure Git to handle long paths
-        run: |
-          git config --global core.protectNTFS false
-          git config --global core.protectHFS false
-        shell: bash
+name: Deploy GitHub Pages
 
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: false
-          fetch-depth: 1
-        env:
-          GIT_CONFIG_GLOBAL_CORE_PROTECTNTFS: false
-          GIT_CONFIG_GLOBAL_CORE_PROTECTHFS: false
+          path: music-library-temp
+
+      - name: Remove problematic directory
+        run: |
+          cd music-library-temp
+          # Remove the problematic subdirectory that causes checkout to fail
+          git -c core.protectNTFS=false -c core.protectHFS=false ls-files -z | grep -z "Album 4 (2021-2022-2023)/Album 4.1/s" | head -1 | xargs -0 -I{} git rm -r --cached {} 2>/dev/null || true
+        continue-on-error: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -19,5 +37,57 @@
           node-version: 24
           cache: npm
 
+      - name: Configure Git for path handling
+        run: |
+          cd music-library-temp
+          git config core.protectNTFS false
+          git config core.protectHFS false
+          git config core.longpaths true
+
+      - name: Restore working tree
+        run: |
+          cd music-library-temp
+          git reset --hard HEAD 2>/dev/null || true
+
+      - name: Move to main directory
+        run: |
+          mv music-library-temp/* . 2>/dev/null || true
+          mv music-library-temp/.* . 2>/dev/null || true
+          rmdir music-library-temp 2>/dev/null || true
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify musicBib.json in dist
+        run: test -f dist/musicBib.json
+
+      - name: SPA fallback
+        run: cp dist/index.html dist/404.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
