@@ -21,6 +21,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: false
+          fetch-depth: 1
+
+      - name: Configure Git
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+
+      - name: Temporarily remove problematic assets for build
+        run: |
+          mv assets assets.full || true
+          mkdir -p assets
+          # Create minimal structure needed for build
+          find assets.full -maxdepth 2 -type d | head -50 | while read d; do
+            rel="${d#assets.full/}"
+            if [ "$rel" = "assets.full" ]; then continue; fi
+            mkdir -p "assets/$rel"
+          done
+          # Copy only files that don't have path issues
+          find assets.full -maxdepth 3 -type f -name "*.jpg" -o -name "*.m4a" -o -name "*.mp3" -o -name "*.wav" -o -name "*.JPEG" | head -100 | while read f; do
+            rel="${f#assets.full/}"
+            mkdir -p "assets/$(dirname "$rel")"
+            cp "$f" "assets/$rel" 2>/dev/null || true
+          done
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
