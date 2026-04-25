@@ -11,10 +11,9 @@ interface ArtworkImageProps {
     loading?: 'lazy' | 'eager';
 }
 
-const ARTWORK_CACHE_NAME = 'music-library-artwork-v1';
 const resolvedArtworkCache = new Map<string, string>();
 const failedArtworkCandidates = new Set<string>();
-const blobCache = new Map<string, string>();
+const ABSOLUTE_OR_EMBEDDED_SRC_REGEX = /^(?:[a-z][a-z0-9+.-]*:\/\/|data:|blob:)/i;
 
 const hashText = (value: string): number => {
     let hash = 0;
@@ -35,6 +34,23 @@ const createFallbackVisual = (seedText: string) => {
 
 const buildSrcCandidates = (pathValue: string): string[] => dbService.getAssetCandidates(pathValue);
 
+const buildInputCandidates = (rawSrc?: string, detailsPath?: string): string[] => {
+    if (rawSrc) {
+        const normalizedSrc = rawSrc.trim();
+        if (!normalizedSrc) return [];
+        if (ABSOLUTE_OR_EMBEDDED_SRC_REGEX.test(normalizedSrc)) {
+            return [normalizedSrc];
+        }
+        return buildSrcCandidates(normalizedSrc);
+    }
+
+    if (detailsPath) {
+        return buildSrcCandidates(detailsPath);
+    }
+
+    return [];
+};
+
 /**
  * Parse dimensions string (e.g., "1920 x 1080") to get width and height numbers.
  * Returns null if parsing fails.
@@ -53,25 +69,6 @@ const parseDimensions = (dimensions?: string): { width: number; height: number }
 };
 
 /**
- * Build srcset from candidates for responsive images.
- * Uses dimension hints when available for width descriptors.
- */
-const buildSrcSet = (candidates: string[], dimensions?: string): string | undefined => {
-    if (!candidates || candidates.length === 0) return undefined;
-    
-    const dims = parseDimensions(dimensions);
-    if (dims) {
-        // Use the primary candidate with width descriptor
-        const sizeVariants = candidates.map(candidate => {
-            return `${candidate} ${dims.width}w`;
-        });
-        return sizeVariants.join(', ');
-    }
-    
-    return undefined;
-};
-
-/**
  * Get aspect ratio CSS value from aspect_ratio field.
  */
 const getAspectRatioCSS = (aspectRatio: string | undefined): string | undefined => {
@@ -87,16 +84,10 @@ const getAspectRatioCSS = (aspectRatio: string | undefined): string | undefined 
 export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 'Artwork', className = 'w-full h-full', fallback, loading = 'lazy' }) => {
     const [hasError, setHasError] = React.useState(false);
     const [candidateIndex, setCandidateIndex] = React.useState(0);
-    const [cachedSrc, setCachedSrc] = React.useState<string | null>(null);
-    const blobUrlRef = React.useRef<string | null>(null);
     const cacheKey = src || details?.path || '';
 
     const srcCandidates = React.useMemo(() => {
-        const rawCandidates = src
-            ? [src]
-            : details?.path
-                ? buildSrcCandidates(details.path)
-                : [];
+        const rawCandidates = buildInputCandidates(src, details?.path);
 
         const availableCandidates = rawCandidates.filter(candidate => !failedArtworkCandidates.has(candidate));
         const cachedCandidate = cacheKey ? resolvedArtworkCache.get(cacheKey) : undefined;
@@ -120,61 +111,8 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
     React.useEffect(() => {
         setHasError(false);
         setCandidateIndex(0);
-        setCachedSrc(null);
     }, [cacheKey]);
 
-    React.useEffect(() => {
-        let cancelled = false;
-
-        if (!displaySrc || typeof window === 'undefined' || !('caches' in window)) {
-            return () => {
-                cancelled = true;
-                if (blobUrlRef.current) {
-                    URL.revokeObjectURL(blobUrlRef.current);
-                    blobUrlRef.current = null;
-                }
-            };
-        }
-
-        if (blobUrlRef.current) {
-            URL.revokeObjectURL(blobUrlRef.current);
-            blobUrlRef.current = null;
-        }
-
-        // Check memory cache first for fastest response
-        const memoryCached = blobCache.get(displaySrc);
-        if (memoryCached && !cancelled) {
-            setCachedSrc(memoryCached);
-            blobUrlRef.current = memoryCached;
-            return;
-        }
-
-        caches.open(ARTWORK_CACHE_NAME)
-            .then(cache => cache.match(displaySrc))
-            .then(response => response ? response.blob() : null)
-            .then(blob => {
-                if (!blob || cancelled) return;
-                const blobUrl = URL.createObjectURL(blob);
-                blobUrlRef.current = blobUrl;
-                blobCache.set(displaySrc, blobUrl); // Memory cache the blob URL for instant reuse
-                setCachedSrc(blobUrl);
-            })
-            .catch(() => {
-                // Ignore cache read failures and continue with network source.
-            });
-
-        return () => {
-            cancelled = true;
-            if (blobUrlRef.current) {
-                URL.revokeObjectURL(blobUrlRef.current);
-                blobUrlRef.current = null;
-            }
-        };
-    }, [displaySrc]);
-
-    // Build srcset for responsive image delivery.
-    // Keep this hook before early returns to preserve hook order across renders.
-    const srcSet = React.useMemo(() => buildSrcSet(srcCandidates, details?.dimensions), [srcCandidates, details?.dimensions]);
 
     if (!displaySrc || hasError) {
         const fallbackSeed = (alt && alt !== 'Artwork')
@@ -204,8 +142,7 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
 
     return (
         <img
-            src={cachedSrc || displaySrc}
-            srcSet={srcSet}
+            src={displaySrc}
             alt={alt}
             width={dimensions?.width}
             height={dimensions?.height}
@@ -217,35 +154,15 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
                 if (cacheKey) {
                     resolvedArtworkCache.set(cacheKey, displaySrc);
                 }
-
-                if (displaySrc && typeof window !== 'undefined' && 'caches' in window) {
-                    caches.open(ARTWORK_CACHE_NAME)
-                        .then(cache => cache.match(displaySrc).then(match => ({ cache, match })))
-                        .then(({ cache, match }) => {
-                            if (match) return;
-                                 return fetch(displaySrc, { cache: 'force-cache' }).then(response => {
-                                 if (!response.ok) return;
-                                 return response.blob().then(blob => {
-                                   blobCache.set(displaySrc, URL.createObjectURL(blob)); // Cache successful fetch
-                                   return cache.put(displaySrc, response);
-                                 });
-                             });
-                        })
-                        .catch(() => {
-                            // Ignore cache write failures.
-                        });
-                }
             }}
             onError={() => {
                 failedArtworkCandidates.add(displaySrc);
-                blobCache.delete(displaySrc); // Remove bad cache entry
                 if (candidateIndex < srcCandidates.length - 1) {
                     setCandidateIndex(prev => prev + 1);
                     return;
                 }
                 if (cacheKey) {
                     resolvedArtworkCache.delete(cacheKey);
-                    blobCache.delete(cacheKey);
                 }
                 setHasError(true);
             }}

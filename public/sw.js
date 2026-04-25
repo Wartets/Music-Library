@@ -1,6 +1,6 @@
-const STATIC_CACHE = 'music-library-static-v2';
-const ARTWORK_CACHE = 'music-library-artwork-v1';
-const DATA_CACHE = 'music-library-data-v1';
+const STATIC_CACHE = 'music-library-static-v3';
+const ARTWORK_CACHE = 'music-library-artwork-v3';
+const DATA_CACHE = 'music-library-data-v2';
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/vite.svg', '/musicBib.json'];
 
 self.addEventListener('install', (event) => {
@@ -37,21 +37,18 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.open(DATA_CACHE).then(async (cache) => {
         const cached = await cache.match(request);
-        const networkPromise = fetch(request)
-          .then((response) => {
-            if (response.ok) cache.put(request, response.clone());
-            return response;
-          })
-          .catch(() => null);
-
-        if (cached) {
-          networkPromise.catch(() => {});
-          return cached;
+        try {
+          const network = await fetch(request);
+          if (network.ok) {
+            cache.put(request, network.clone());
+          }
+          return network;
+        } catch {
+          if (cached) {
+            return cached;
+          }
+          return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
-
-        const network = await networkPromise;
-        if (network) return network;
-        return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
       })
     );
     return;

@@ -7,6 +7,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { audioEngine } from '../../services/audioEngine';
 import { persistenceService } from '../../services/persistence';
+import { getArtistsDisplayName } from '../../utils/artistUtils';
 
 interface NavItem {
     id: ViewType;
@@ -360,7 +361,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-white text-xs font-bold truncate">{track.metadata?.title || track.logic.track_name}</div>
-                                                    <div className="text-gray-500 text-[10px] truncate">{track.metadata?.artists?.[0] || 'Unknown Artist'}</div>
+                                                    <div className="text-gray-500 text-[10px] truncate">{getArtistsDisplayName(track.metadata?.artists)}</div>
                                                 </div>
                                             </button>
                                         ))}

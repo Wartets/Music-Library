@@ -1,5 +1,6 @@
 import { MusicDatabase, TrackItem } from '../types/music';
 import { resolveAssetCandidates, resolvePreferredAssetUrl, resolveRepositoryRelativePath } from './assetResolver';
+import { normalizeArtists } from '../utils/artistUtils';
 
 /**
  * Database Service
@@ -38,7 +39,7 @@ export class DatabaseService {
 
             for (const candidate of manifestCandidates) {
                 try {
-                    const candidateResponse = await fetch(candidate);
+                    const candidateResponse = await fetch(candidate, { cache: 'no-store' });
                     if (candidateResponse.ok) {
                         response = candidateResponse;
                         break;
@@ -49,7 +50,7 @@ export class DatabaseService {
             }
 
             if (!response) {
-                throw new Error('Failed to load musicBib.json from GitHub or local fallback.');
+                throw new Error('Failed to load musicBib.json from configured sources.');
             }
 
             const data: MusicDatabase = await response.json();
@@ -60,11 +61,7 @@ export class DatabaseService {
                     if (!track.metadata) {
                         track.metadata = {} as any;
                     }
-                    if (typeof track.metadata.artists === 'string') {
-                        track.metadata.artists = [track.metadata.artists];
-                    } else if (!Array.isArray(track.metadata.artists)) {
-                        track.metadata.artists = [];
-                    }
+                    track.metadata.artists = normalizeArtists(track.metadata.artists);
 
                     // Ensure audio_specs exists and populate codec
                     if (!track.audio_specs) {

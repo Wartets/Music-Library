@@ -6,6 +6,7 @@ import { ArtworkImage } from '../shared/ArtworkImage';
 import { TrackItem } from '../../types/music';
 import { getBestArtwork } from '../../utils/artworkResolver';
 import { formatDuration } from '../../utils/formatters';
+import { getArtistsDisplayName } from '../../utils/artistUtils';
 
 export interface QueueDisplayItem extends Omit<TrackItem, 'id'> {
     originalIndex: number;
@@ -240,7 +241,7 @@ export const QueueTrackItem: React.FC<QueueTrackItemProps> = React.memo(({
                                 {trackTitle(track)}
                             </div>
                             <div style={{ fontSize: '0.8em', opacity: 0.7 }}>
-                                {track.metadata?.artists?.[0] || 'Unknown Artist'}
+                                {getArtistsDisplayName(track.metadata?.artists)}
                             </div>
                         </div>
                     </div>

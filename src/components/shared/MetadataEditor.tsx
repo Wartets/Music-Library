@@ -5,6 +5,7 @@ import { MetadataWriteTarget, persistenceService } from '../../services/persiste
 import { Heart, Star, Disc, Hash, Type, Save, X, Image as ImageIcon, Trash2, Edit2, Globe, Tag, Calendar, Mic, Link, Users, Building, ShieldCheck, Bookmark, FileText, Activity } from 'lucide-react';
 import { TrackItem, TrackMetadata } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
+import { normalizeArtists } from '../../utils/artistUtils';
 
 interface MetadataEditorSnapshot {
     title: string;
@@ -455,7 +456,7 @@ export const MetadataEditor: React.FC = () => {
 
         const update: Partial<TrackMetadata> = {};
         if (!mixedFields.has('title')) update.title = title.trim();
-        if (!mixedFields.has('artist')) update.artists = artist ? artist.split(',').map(a => a.trim()) : undefined;
+        if (!mixedFields.has('artist')) update.artists = normalizeArtists(artist);
         if (!mixedFields.has('album')) update.album = album.trim();
         if (!mixedFields.has('albumArtist')) update.album_artist = albumArtist.trim();
         if (!mixedFields.has('genre')) update.genre = genre ? genre.trim() : null;

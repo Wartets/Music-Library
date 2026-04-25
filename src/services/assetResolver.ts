@@ -48,15 +48,22 @@ const normalizeRepositoryRelativePath = (inputPath: string): string => {
     // Strip Windows drive letter or leading slashes
     normalized = normalized.replace(/^[A-Za-z]:\//, '').replace(/^\/+/, '');
 
-    // Strip 'assets/' prefix if present — it's not part of the collection anchor
-    if (normalized.toLowerCase().startsWith('assets/')) {
-        normalized = normalized.slice(6); // remove 'assets/'
+    // Keep known repository-relative roots as-is.
+    if (/^(assets|save)\//i.test(normalized) || /^musicBib\.json$/i.test(normalized)) {
+        return normalized.replace(/^\/+/, '');
     }
 
-    // Find collection anchor (Album XX..., Single, save) — everything after
-    const collectionAnchor = normalized.match(/(Album\s+\d[^/]*|Single|save)\/.*$/i);
+    // If path contains an assets/save anchor deeper in an absolute path, keep from that anchor.
+    const rootedAnchor = normalized.match(/(?:^|\/)(assets|save)\/.*$/i);
+    if (rootedAnchor) {
+        normalized = rootedAnchor[0].replace(/^\/+/, '');
+        return normalized;
+    }
+
+    // Legacy fallback: detect collection anchor and explicitly root it under assets/.
+    const collectionAnchor = normalized.match(/(Album\s+\d[^/]*|Single)\/.*$/i);
     if (collectionAnchor) {
-        normalized = collectionAnchor[0];
+        normalized = `assets/${collectionAnchor[0]}`;
     }
 
     return normalized.replace(/^\/+/, '');

@@ -4,6 +4,7 @@ import { TrackItem } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
 import { HighlightText } from './HighlightText';
 import { getBestArtwork } from '../../utils/artworkResolver';
+import { getArtistsDisplayName } from '../../utils/artistUtils';
 
 interface TrackCardProps {
     track: TrackItem;
@@ -25,7 +26,7 @@ export const TrackCard: React.FC<TrackCardProps> = ({
     className,
 }) => {
     const title = track.metadata?.title || track.logic.track_name;
-    const artist = track.metadata?.artists?.[0] || 'Unknown Artist';
+    const artist = getArtistsDisplayName(track.metadata?.artists);
 
     return (
         <div

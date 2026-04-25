@@ -7,6 +7,7 @@ import { dbService } from '../services/db';
 import { TrackItem } from '../types/music';
 import { RepeatMode } from '../types/playback';
 import { parseDuration } from '../utils/formatters';
+import { getArtistsDisplayName } from '../utils/artistUtils';
 import {
     Play, ListPlus, User, Disc, Heart, Star, Pencil, Copy, Share, FolderPlus, Zap, Plus,
     Download, Eye, Repeat, FastForward, Info, RefreshCw, Tag, SlidersHorizontal, Trash2, EyeOff, ListMinus
@@ -55,7 +56,7 @@ export const useItemContextMenu = <T = TrackItem>(options?: UseItemContextMenuOp
         let m3u = '#EXTM3U\n';
         tracks.forEach((t) => {
             const secs = parseDuration(t.audio_specs?.duration || '0:00');
-            m3u += `#EXTINF:${Math.round(secs)},${t.metadata?.artists?.[0] || 'Unknown'} - ${t.metadata?.title || t.logic.track_name}\n`;
+            m3u += `#EXTINF:${Math.round(secs)},${getArtistsDisplayName(t.metadata?.artists, 'Unknown')} - ${t.metadata?.title || t.logic.track_name}\n`;
             m3u += `${t.file?.path || ''}\n`;
         });
         const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
