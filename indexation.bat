@@ -27,13 +27,10 @@ $audioExt = @('.mp3','.wav','.flac','.m4a','.aif','.aiff','.ogg','.wma')
 $losslessExt = @('.wav','.flac','.aif','.aiff')
 $imgExt = @('.jpg','.jpeg','.png','.bmp','.tiff','.webp')
 
-# Owner information
-$ownerInfo = [ordered]@{
-    first_name = "Colin"
-    last_name = "Bossu Réaubourg"
-    nickname = "Wartets"
-    full_name = "Colin Bossu Réaubourg"
-}
+# Cache for shell metadata columns to avoid hardcoded indexes.
+$global:metadataColumnMap = $null
+$global:ffprobeTagCache = @{}
+$global:ffprobeAvailable = [bool](Get-Command ffprobe -ErrorAction SilentlyContinue)
 
 # Dictionary to cache image analysis (avoid recalculating the same image 50 times)
 $global:imageCache = @{}
@@ -45,6 +42,184 @@ function Get-Rel($p, $b) {
     $rel = $path.Replace($b, "").TrimStart("\")
     if (!$rel) { return "." }
     return $rel
+}
+
+# Normalize shell column names for robust matching across locales (FR/EN/etc).
+function Normalize-DetailKey($value) {
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return ""
+    }
+
+    $formD = $value.Normalize([Text.NormalizationForm]::FormD)
+    $builder = New-Object System.Text.StringBuilder
+    foreach ($char in $formD.ToCharArray()) {
+        $category = [Globalization.CharUnicodeInfo]::GetUnicodeCategory($char)
+        if ($category -ne [Globalization.UnicodeCategory]::NonSpacingMark) {
+            [void]$builder.Append($char)
+        }
+    }
+
+    $normalized = $builder.ToString().ToLowerInvariant()
+    $normalized = $normalized -replace '[^a-z0-9]+', ' '
+    $normalized = ($normalized -replace '\s+', ' ').Trim()
+    return $normalized
+}
+
+function Get-MetadataColumnMap($folderObject) {
+    $map = @{}
+
+    for ($i = 0; $i -le 400; $i++) {
+        $columnName = $folderObject.GetDetailsOf($null, $i)
+        if ([string]::IsNullOrWhiteSpace($columnName)) {
+            continue
+        }
+
+        $key = Normalize-DetailKey $columnName
+        if ($key -and -not $map.ContainsKey($key)) {
+            $map[$key] = $i
+        }
+    }
+
+    return $map
+}
+
+function Get-DetailValue {
+    param(
+        $FolderObject,
+        $Item,
+        $ColumnMap,
+        [string[]]$ColumnCandidates,
+        [int[]]$FallbackIndices = @()
+    )
+
+    foreach ($candidate in $ColumnCandidates) {
+        $key = Normalize-DetailKey $candidate
+        if ($key -and $ColumnMap.ContainsKey($key)) {
+            $index = [int]$ColumnMap[$key]
+            $value = [string]$FolderObject.GetDetailsOf($Item, $index)
+            if (-not [string]::IsNullOrWhiteSpace($value)) {
+                return $value.Trim()
+            }
+        }
+    }
+
+    foreach ($index in $FallbackIndices) {
+        $value = [string]$FolderObject.GetDetailsOf($Item, $index)
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            return $value.Trim()
+        }
+    }
+
+    return ""
+}
+
+function Get-UniqueNormalizedValues {
+    param([string[]]$Values)
+
+    $seen = @{}
+    $result = @()
+
+    foreach ($value in $Values) {
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        $trimmed = $value.Trim()
+        $key = $trimmed.ToLowerInvariant()
+        if (-not $seen.ContainsKey($key)) {
+            $seen[$key] = $true
+            $result += $trimmed
+        }
+    }
+
+    return $result
+}
+
+function Get-FFprobeTags {
+    param([string]$FilePath)
+
+    if ($global:ffprobeTagCache.ContainsKey($FilePath)) {
+        return $global:ffprobeTagCache[$FilePath]
+    }
+
+    $tagsMap = @{}
+
+    if (-not $global:ffprobeAvailable) {
+        $global:ffprobeTagCache[$FilePath] = $tagsMap
+        return $tagsMap
+    }
+
+    try {
+        $json = & ffprobe -v quiet -print_format json -show_format -show_streams -- "$FilePath" 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($json)) {
+            $probe = $json | ConvertFrom-Json
+
+            if ($probe.format -and $probe.format.tags) {
+                foreach ($property in $probe.format.tags.PSObject.Properties) {
+                    $key = Normalize-DetailKey $property.Name
+                    $value = [string]$property.Value
+                    if ($key -and -not [string]::IsNullOrWhiteSpace($value) -and -not $tagsMap.ContainsKey($key)) {
+                        $tagsMap[$key] = $value.Trim()
+                    }
+                }
+            }
+
+            if ($probe.streams) {
+                foreach ($stream in $probe.streams) {
+                    if (-not $stream.tags) { continue }
+                    foreach ($property in $stream.tags.PSObject.Properties) {
+                        $key = Normalize-DetailKey $property.Name
+                        $value = [string]$property.Value
+                        if ($key -and -not [string]::IsNullOrWhiteSpace($value) -and -not $tagsMap.ContainsKey($key)) {
+                            $tagsMap[$key] = $value.Trim()
+                        }
+                    }
+                }
+            }
+        }
+    } catch {
+        # Keep empty tag map if ffprobe fails for this file.
+    }
+
+    $global:ffprobeTagCache[$FilePath] = $tagsMap
+    return $tagsMap
+}
+
+function Get-TagValue {
+    param(
+        $TagMap,
+        [string[]]$TagCandidates
+    )
+
+    foreach ($candidate in $TagCandidates) {
+        $key = Normalize-DetailKey $candidate
+        if ($key -and $TagMap.ContainsKey($key)) {
+            $value = [string]$TagMap[$key]
+            if (-not [string]::IsNullOrWhiteSpace($value)) {
+                return $value.Trim()
+            }
+        }
+    }
+
+    return ""
+}
+
+# Normalize artist metadata into a stable string array.
+function Get-NormalizedArtists($rawValue) {
+    $rawText = [string]$rawValue
+    if ([string]::IsNullOrWhiteSpace($rawText)) {
+        return @()
+    }
+
+    $tokens = $rawText -split '\s*(?:;|\||/|,|\bfeat\.?\b|\bfeaturing\b|\bft\.?\b)\s*'
+    $artists = @(
+        $tokens |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Select-Object -Unique
+    )
+
+    return $artists
 }
 
 # Function to deeply analyze an image (Color, Ratio, Dimensions)
@@ -152,25 +327,126 @@ for ($i = 0; $i -lt $total; $i++) {
 
     # Track artworks (in the same folder)
     $trackArtworksRaw = Get-ChildItem -Path $f.DirectoryName -File | Where-Object { $imgExt -contains $_.Extension.ToLower() }
-    $trackArtworksRaw | Sort-Object { if ($_.BaseName -ieq "artwork") { 0 } else { 1 } } | ForEach-Object {
+    $trackArtworksRaw | Sort-Object {
+        if ($_.BaseName -ieq "artwork") { 0 }
+        elseif ($_.BaseName -ieq "folder") { 1 }
+        elseif ($_.BaseName -ieq "albumartsmall") { 2 }
+        else { 3 }
+    } | ForEach-Object {
         $trackArtworks += Get-ImageDetails $_.FullName
     }
 
-    # Album artworks (in parent folder)
-    if ($album -ne $null -and $f.Directory.Parent -and $f.Directory.Parent.FullName -ne $root) {
+    # Folder / album artworks (in parent folder).
+    # This covers album folders, but also single-track folders whose parent is assets\Single.
+    if ($f.Directory.Parent -and $f.Directory.Parent.FullName -ne $root) {
         $albumArtworksRaw = Get-ChildItem -Path $f.Directory.Parent.FullName -File | Where-Object { $imgExt -contains $_.Extension.ToLower() }
-        $albumArtworksRaw | Sort-Object { if ($_.BaseName -ieq "artwork") { 0 } else { 1 } } | ForEach-Object {
+        $albumArtworksRaw | Sort-Object {
+            if ($_.BaseName -ieq "artwork") { 0 }
+            elseif ($_.BaseName -ieq "folder") { 1 }
+            elseif ($_.BaseName -ieq "albumartsmall") { 2 }
+            else { 3 }
+        } | ForEach-Object {
             $albumArtworks += Get-ImageDetails $_.FullName
         }
     }
 
     # 4. METADATA EXTRACTION
-    $rawArt = $fObj.GetDetailsOf($item, 13)
-    $artists = if ($rawArt) { $rawArt.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ } } else { @() }
-    
-    $metaTitle = $fObj.GetDetailsOf($item, 21)
-    $metaAlbum = $fObj.GetDetailsOf($item, 14)
-    $metaComposer = $fObj.GetDetailsOf($item, 223)
+    if (-not $global:metadataColumnMap) {
+        $global:metadataColumnMap = Get-MetadataColumnMap $fObj
+    }
+
+    $ffTags = Get-FFprobeTags -FilePath $f.FullName
+
+    $rawArt = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @(
+        'Contributing artists', 'Artist', 'Artists', 'Participating artists', 'Album artists',
+        'Artiste', 'Artistes', 'Artistes participants', 'Interpretes'
+    ) -FallbackIndices @(13)
+    $ffArtist = Get-TagValue -TagMap $ffTags -TagCandidates @('artist', 'artists', 'performer', 'album_artist')
+    $artists = Get-UniqueNormalizedValues @(
+        (Get-NormalizedArtists $ffArtist)
+        (Get-NormalizedArtists $rawArt)
+    )
+
+    $metaTitleShell = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Title', 'Titre') -FallbackIndices @(21)
+    $metaTitleFf = Get-TagValue -TagMap $ffTags -TagCandidates @('title')
+    $metaTitle = if ($metaTitleShell) { $metaTitleShell } elseif ($metaTitleFf) { $metaTitleFf } else { $f.BaseName }
+
+    $metaAlbumShell = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Album') -FallbackIndices @(14)
+    $metaAlbumFf = Get-TagValue -TagMap $ffTags -TagCandidates @('album')
+    $metaAlbum = if ($metaAlbumShell) { $metaAlbumShell } elseif ($metaAlbumFf) { $metaAlbumFf } else { $album }
+
+    $metaAlbumArtist = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Album artist', 'Album artists', 'Artiste de l album')
+    $metaAlbumArtistFf = Get-TagValue -TagMap $ffTags -TagCandidates @('album_artist', 'albumartist')
+    if (-not $metaAlbumArtist) {
+        $metaAlbumArtist = $metaAlbumArtistFf
+    }
+
+    $metaComposerShell = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Composer', 'Compositeur') -FallbackIndices @(223, 243)
+    $metaComposerFf = Get-TagValue -TagMap $ffTags -TagCandidates @('composer')
+    $metaComposer = if ($metaComposerShell) { $metaComposerShell } elseif ($metaComposerFf) { $metaComposerFf } else { "" }
+
+    $metaGenreShell = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Genre') -FallbackIndices @(16)
+    $metaGenreFf = Get-TagValue -TagMap $ffTags -TagCandidates @('genre')
+    $metaGenre = if ($metaGenreShell) { $metaGenreShell } elseif ($metaGenreFf) { $metaGenreFf } else { "" }
+
+    $metaYearShell = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Year', 'Annee', 'Date') -FallbackIndices @(15)
+    $metaYearFf = Get-TagValue -TagMap $ffTags -TagCandidates @('date', 'year')
+    $metaYear = if ($metaYearShell) { $metaYearShell } elseif ($metaYearFf) { $metaYearFf } else { "" }
+
+    $metaTrackNumberShell = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Track number', 'Numero de piste', '#') -FallbackIndices @(26)
+    $metaTrackNumberFf = Get-TagValue -TagMap $ffTags -TagCandidates @('track', 'tracknumber')
+    $metaTrackNumber = if ($metaTrackNumberShell) { $metaTrackNumberShell } elseif ($metaTrackNumberFf) { $metaTrackNumberFf } else { "" }
+
+    $metaTotalTracks = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Track count', 'Total tracks', 'Nombre total de pistes')
+    if (-not $metaTotalTracks) {
+        $metaTotalTracks = Get-TagValue -TagMap $ffTags -TagCandidates @('tracktotal', 'totaltracks')
+    }
+
+    $metaDiscNumber = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Disc number', 'Numero de disque')
+    if (-not $metaDiscNumber) {
+        $metaDiscNumber = Get-TagValue -TagMap $ffTags -TagCandidates @('disc', 'discnumber')
+    }
+
+    $metaTotalDiscs = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Total discs', 'Nombre total de disques')
+    if (-not $metaTotalDiscs) {
+        $metaTotalDiscs = Get-TagValue -TagMap $ffTags -TagCandidates @('disctotal', 'totaldiscs')
+    }
+
+    $metaLyrics = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Lyrics', 'Paroles')
+    if (-not $metaLyrics) {
+        $metaLyrics = Get-TagValue -TagMap $ffTags -TagCandidates @('lyrics', 'unsyncedlyrics')
+    }
+
+    $metaBpm = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Beats-per-minute', 'Beats per minute', 'BPM') -FallbackIndices @(312)
+    if (-not $metaBpm) {
+        $metaBpm = Get-TagValue -TagMap $ffTags -TagCandidates @('bpm', 'tbpm')
+    }
+
+    $metaComment = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Comments', 'Comment', 'Commentaires') -FallbackIndices @(24)
+    if (-not $metaComment) {
+        $metaComment = Get-TagValue -TagMap $ffTags -TagCandidates @('comment', 'description')
+    }
+
+    $metaDescription = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Description') -FallbackIndices @(219)
+    if (-not $metaDescription) {
+        $metaDescription = Get-TagValue -TagMap $ffTags -TagCandidates @('description')
+    }
+
+    if (-not $metaAlbumArtist) {
+        $metaAlbumArtist = if ($rawArt) { $rawArt } else { $ffArtist }
+    }
+
+    if ($artists.Count -eq 0 -and $metaAlbumArtist) {
+        $artists = Get-NormalizedArtists $metaAlbumArtist
+    }
+
+    # Include composer in artists when artist metadata is split across tags (common in some m4a exports).
+    if ($metaComposer) {
+        $artists = Get-UniqueNormalizedValues @(
+            $artists
+            (Get-NormalizedArtists $metaComposer)
+        )
+    }
     
     # Unix time (Epoch) format for future application
     $epochCreated = [int][double]::Parse((Get-Date $f.CreationTime -UFormat %s))
@@ -204,24 +480,30 @@ for ($i = 0; $i -lt $total; $i++) {
             epoch_modified = $epochModified
         }
         metadata = [ordered]@{
-            title = if ($metaTitle) { $metaTitle } else { $f.BaseName }
-            artists = $artists
-            album_artist = $fObj.GetDetailsOf($item, 13)
+            title = $metaTitle
+            file_title = $f.BaseName
+            file_name = $f.Name
+            artists = @($artists)
+            album_artist = $metaAlbumArtist
             composer = $metaComposer
-            album = if ($metaAlbum) { $metaAlbum } else { $album }
-            genre = $fObj.GetDetailsOf($item, 16)
-            year = $fObj.GetDetailsOf($item, 15)
-            track_number = $fObj.GetDetailsOf($item, 26)
-            bpm = $fObj.GetDetailsOf($item, 312)
-            comment = $fObj.GetDetailsOf($item, 24)
-            description = $fObj.GetDetailsOf($item, 219)
+            album = $metaAlbum
+            genre = $metaGenre
+            year = $metaYear
+            track_number = $metaTrackNumber
+            total_tracks = $metaTotalTracks
+            disc_number = $metaDiscNumber
+            total_discs = $metaTotalDiscs
+            bpm = $metaBpm
+            lyrics = $metaLyrics
+            comment = $metaComment
+            description = $metaDescription
         }
         audio_specs = [ordered]@{
             is_lossless = ($losslessExt -contains $f.Extension.ToLower())
-            duration = $fObj.GetDetailsOf($item, 27)
-            bitrate = $fObj.GetDetailsOf($item, 28)
-            sample_rate = $fObj.GetDetailsOf($item, 316)
-            channels = $fObj.GetDetailsOf($item, 311)
+            duration = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Length', 'Duration', 'Duree') -FallbackIndices @(27)
+            bitrate = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Bit rate', 'Bitrate', 'Debit binaire') -FallbackIndices @(28)
+            sample_rate = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Sample rate', 'Frequence d echantillonnage') -FallbackIndices @(316)
+            channels = Get-DetailValue -FolderObject $fObj -Item $item -ColumnMap $global:metadataColumnMap -ColumnCandidates @('Channels', 'Canaux') -FallbackIndices @(311)
         }
         artworks = [ordered]@{
             track_artwork = $trackArtworks
@@ -235,7 +517,6 @@ $timer.Stop()
 # Creation of the root global object
 $finalData = [ordered]@{
     info = [ordered]@{
-        owner = $ownerInfo
         date = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         total_tracks_versions = $total
         execution_time_ms = $timer.ElapsedMilliseconds
