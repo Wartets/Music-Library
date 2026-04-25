@@ -49,7 +49,7 @@ export const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ playlist, onSave
                         <h2 className="text-2xl font-black text-white tracking-tight">Edit Collection</h2>
                         <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Refine your curated masterpiece</p>
                     </div>
-                    <button onClick={onCancel} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all">
+                    <button onClick={onCancel} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all" aria-label="Close playlist editor">
                         <X size={24} />
                     </button>
                 </div>
@@ -74,6 +74,7 @@ export const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ playlist, onSave
                                             if (url !== null) setCustomImage(url);
                                         }}
                                         className="bg-white/10 hover:bg-white/20 p-2 rounded-lg text-white text-xs font-bold uppercase"
+                                        aria-label="Edit cover image URL"
                                     >
                                         Edit
                                     </button>

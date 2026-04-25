@@ -617,6 +617,7 @@ export const MetadataEditor: React.FC = () => {
                             disabled={!canUndo}
                             className="px-3 min-h-11 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-gray-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
                             title="Undo (Ctrl/Cmd+Z)"
+                            aria-label="Undo last metadata change"
                         >
                             Undo
                         </button>
@@ -625,10 +626,11 @@ export const MetadataEditor: React.FC = () => {
                             disabled={!canRedo}
                             className="px-3 min-h-11 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-gray-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform"
                             title="Redo (Ctrl/Cmd+Shift+Z / Ctrl+Y)"
+                            aria-label="Redo last metadata change"
                         >
                             Redo
                         </button>
-                        <button onClick={() => setEditingTracks(null)} className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all active:scale-95">
+                        <button onClick={() => setEditingTracks(null)} className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all active:scale-95" aria-label="Close metadata editor">
                             <X size={24} />
                         </button>
                     </div>
@@ -678,6 +680,7 @@ export const MetadataEditor: React.FC = () => {
                                         onClick={openArtworkUrlDialog}
                                         className="p-2 min-h-11 min-w-11 flex items-center justify-center bg-dominant text-black rounded-lg hover:scale-110 active:scale-95 transition-transform"
                                         title="Edit Artwork URL"
+                                        aria-label="Edit artwork URL"
                                     >
                                         <Edit2 size={18} />
                                     </button>
@@ -685,6 +688,7 @@ export const MetadataEditor: React.FC = () => {
                                         onClick={() => handleInputChange('artworkUrl', '', setArtworkUrl)}
                                         className="p-2 min-h-11 min-w-11 flex items-center justify-center bg-red-500 text-white rounded-lg hover:scale-110 active:scale-95 transition-transform"
                                         title="Remove Artwork Overrides"
+                                        aria-label="Remove artwork override"
                                     >
                                         <Trash2 size={18} />
                                     </button>
@@ -704,6 +708,7 @@ export const MetadataEditor: React.FC = () => {
                                         key={s}
                                         onClick={() => handleRatingChange(s === (rating as number) ? 0 : s)}
                                         className={`group relative transition-all ${rating === 'mixed' ? 'text-yellow-500/20' : (s <= (rating as number) ? 'text-yellow-400 scale-110' : 'text-gray-700 hover:text-yellow-400/50')}`}
+                                        aria-label={rating === 'mixed' ? `Mixed rating, set rating ${s} stars` : `Set rating to ${s} star${s > 1 ? 's' : ''}`}
                                     >
                                         <Star size={20} fill={(rating !== 'mixed' && s <= (rating as number)) ? 'currentColor' : 'none'} strokeWidth={2.5} />
                                         {rating === 'mixed' && s === 1 && (

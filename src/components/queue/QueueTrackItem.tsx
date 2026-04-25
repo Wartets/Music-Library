@@ -108,6 +108,7 @@ export const QueueTrackItem: React.FC<QueueTrackItemProps> = React.memo(({
                         onClick={() => onRemove(originalIndex)}
                         className="p-2 min-w-10 min-h-10 text-gray-500 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg active:scale-95"
                         title="Remove from queue"
+                        aria-label="Remove from queue"
                     >
                         <Trash2 size={16} />
                     </button>

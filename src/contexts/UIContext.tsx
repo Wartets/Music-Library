@@ -139,6 +139,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                                             onClick={() => removeToast(toast.id)}
                                             className="ml-1 text-white/50 hover:text-white transition-colors"
                                             title="Dismiss"
+                                            aria-label="Dismiss toast"
                                         >
                                             <X size={14} />
                                         </button>

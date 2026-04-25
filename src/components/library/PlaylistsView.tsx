@@ -391,6 +391,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
                                                 <button
                                                     onClick={() => setEditingPlaylist(selectedPlaylist as Playlist)}
                                                     className="bg-white/20 hover:bg-white/30 p-3 rounded-full text-white backdrop-blur-md transition-transform hover:scale-110"
+                                                    aria-label="Edit playlist details"
                                                 >
                                                     <Edit3 size={24} />
                                                 </button>

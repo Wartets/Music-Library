@@ -357,10 +357,10 @@ export const QueueView: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={handleExport} title="Export Queue" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center active:scale-95">
+                        <button onClick={handleExport} title="Export Queue" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center active:scale-95" aria-label="Export queue">
                             <Download size={18} />
                         </button>
-                        <button onClick={handleSaveAsPlaylist} title="Save as Playlist" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center active:scale-95">
+                        <button onClick={handleSaveAsPlaylist} title="Save as Playlist" className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 text-gray-400 hover:text-white h-10 w-10 flex items-center justify-center active:scale-95" aria-label="Save queue as playlist">
                             <Save size={18} />
                         </button>
                         <button onClick={clearQueue} className="flex items-center justify-center gap-2 px-3 md:px-5 py-2 hover:bg-red-500/20 rounded-xl text-xs md:text-sm font-bold transition-all border border-transparent hover:border-red-500/20 text-red-500 ml-1 md:ml-2 h-10 active:scale-95">
@@ -403,6 +403,7 @@ export const QueueView: React.FC = () => {
                                 onClick={() => setSortBy('index')}
                                 className={`h-full px-3.5 flex items-center justify-center ${sortBy === 'index' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
                                 title="Default Sort"
+                                aria-label="Sort queue by default order"
                             >
                                 <Zap size={16} />
                             </button>
@@ -410,6 +411,7 @@ export const QueueView: React.FC = () => {
                                 onClick={() => setSortBy('name')}
                                 className={`h-full px-3.5 border-l border-white/5 flex items-center justify-center ${sortBy === 'name' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
                                 title="Sort by Name"
+                                aria-label="Sort queue by track name"
                             >
                                 <Filter size={16} />
                             </button>
@@ -417,6 +419,7 @@ export const QueueView: React.FC = () => {
                                 onClick={() => setSortBy('duration')}
                                 className={`h-full px-3.5 border-l border-white/5 flex items-center justify-center ${sortBy === 'duration' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
                                 title="Sort by Duration"
+                                aria-label="Sort queue by duration"
                             >
                                 <Clock size={16} />
                             </button>

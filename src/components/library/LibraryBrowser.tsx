@@ -518,6 +518,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                         onClick={() => setShowColumnConfig(!showColumnConfig)}
                         className="flex items-center justify-center p-1 text-white/20 hover:text-white/60 transition-colors rounded hover:bg-white/5"
                         title="Configure columns"
+                        aria-label="Configure visible columns"
                     >
                         <SlidersHorizontal size={12} />
                     </button>
@@ -553,6 +554,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                                     disabled={idx === 0}
                                                     className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20 transition-colors"
                                                     title="Move Up"
+                                                    aria-label={`Move ${col.label || col.id} column up`}
                                                 >
                                                     <ChevronUp size={14} />
                                                 </button>
@@ -561,6 +563,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
                                                     disabled={idx === libraryState.columnConfig.length - 1}
                                                     className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20 transition-colors"
                                                     title="Move Down"
+                                                    aria-label={`Move ${col.label || col.id} column down`}
                                                 >
                                                     <ChevronDown size={14} />
                                                 </button>

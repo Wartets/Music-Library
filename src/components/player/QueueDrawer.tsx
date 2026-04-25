@@ -84,6 +84,7 @@ export const QueueDrawer: React.FC<QueueDrawerProps> = ({ isOpen, onClose }) => 
                     <button
                         onClick={onClose}
                         style={{ background: 'none', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                        aria-label="Close queue drawer"
                     >
                         ✕
                     </button>
