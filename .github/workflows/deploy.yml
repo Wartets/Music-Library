@@ -40,6 +40,8 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_MEDIA_BASE_URL: https://pub-8098e280aaf7439d92f35a1eb8ed94fb.r2.dev
         run: npm run build
 
       - name: Verify musicBib.json in dist

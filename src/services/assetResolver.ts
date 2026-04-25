@@ -1,8 +1,3 @@
-const GITHUB_OWNER = 'Wartets';
-const GITHUB_REPOSITORY = 'Music-Library';
-const GITHUB_BRANCH = 'main';
-
-const GITHUB_RAW_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/${GITHUB_BRANCH}`;
 const ABSOLUTE_URL_REGEX = /^[a-z][a-z0-9+.-]*:\/\//i;
 const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '') || '/';
 const MEDIA_BASE_URL = (import.meta.env.VITE_MEDIA_BASE_URL || '').replace(/\/+$/, '');
@@ -89,8 +84,6 @@ export const resolveAssetCandidates = (assetPath: string, includeLocalFallback: 
             candidates.push(`/${encodedPath}`);
         }
     }
-
-    candidates.push(`${GITHUB_RAW_BASE_URL}/${encodedPath}`);
 
     return Array.from(new Set(candidates));
 };
