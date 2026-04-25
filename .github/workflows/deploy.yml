@@ -19,27 +19,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure Git for long paths
-        run: |
-          git config --global core.longpaths true
-          git config --global core.protectNTFS false
-          git config --global core.protectHFS false
-
-      - name: Checkout
+      - name: Checkout (sparse – skip assets/)
         uses: actions/checkout@v4
         with:
-          path: music-library-temp
-
-      - name: Restore working tree
-        run: |
-          cd music-library-temp
-          git reset --hard HEAD 2>/dev/null || true
-
-      - name: Move to main directory
-        run: |
-          mv music-library-temp/* . 2>/dev/null || true
-          mv music-library-temp/.* . 2>/dev/null || true
-          rmdir music-library-temp 2>/dev/null || true
+          sparse-checkout: |
+            /*
+            !assets/
+          sparse-checkout-cone-mode: false
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
