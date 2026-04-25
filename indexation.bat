@@ -2,7 +2,7 @@
 @echo off
 title Music Indexer
 color 0B
-echo Initialisation de l'indexation avec analyse profonde...
+echo Initializing indexing...
 setlocal
 cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; iex (Get-Content '%~f0' -Raw -Encoding UTF8)"
@@ -15,19 +15,19 @@ $root = Get-Location | Select-Object -ExpandProperty Path
 $output = Join-Path $root "musicBib.json"
 $shell = New-Object -ComObject Shell.Application
 
-# Define assets folder - all music files are under assets/
+# Define assets folder
 $assetsFolder = "assets"
 $assetsPath = Join-Path $root $assetsFolder
 
-# Chargement de la librairie d'images pour analyser la couleur et le ratio
+# Loading image library to analyze color and ratio
 Add-Type -AssemblyName System.Drawing
 
-# Extensions supportees
+# Supported extensions
 $audioExt = @('.mp3','.wav','.flac','.m4a','.aif','.aiff','.ogg','.wma')
 $losslessExt = @('.wav','.flac','.aif','.aiff')
 $imgExt = @('.jpg','.jpeg','.png','.bmp','.tiff','.webp')
 
-# Informations du proprietaire
+# Owner information
 $ownerInfo = [ordered]@{
     first_name = "Colin"
     last_name = "Bossu Réaubourg"
@@ -35,10 +35,10 @@ $ownerInfo = [ordered]@{
     full_name = "Colin Bossu Réaubourg"
 }
 
-# Dictionnaire pour mettre en cache l'analyse des images (evite de recalculer la meme image 50 fois)
+# Dictionary to cache image analysis (avoid recalculating the same image 50 times)
 $global:imageCache = @{}
 
-# Fonction pour obtenir un chemin relatif propre
+# Function to get a clean relative path
 function Get-Rel($p, $b) {
     if (!$p) { return "" }
     $path = $p.ToString()
@@ -47,7 +47,7 @@ function Get-Rel($p, $b) {
     return $rel
 }
 
-# Fonction pour analyser profondement une image (Couleur, Ratio, Dimensions)
+# Function to deeply analyze an image (Color, Ratio, Dimensions)
 function Get-ImageDetails($imgPath) {
     if ($global:imageCache.ContainsKey($imgPath)) {
         return $global:imageCache[$imgPath]
@@ -61,21 +61,21 @@ function Get-ImageDetails($imgPath) {
         $width = $bmp.Width
         $height = $bmp.Height
         
-        # Determine l'aspect ratio
+        # Determine aspect ratio
         if ($width -eq $height) { $ratio = "Square" }
         elseif ($width -gt $height) { $ratio = "Landscape" }
         else { $ratio = "Portrait" }
         
-        # Determine la couleur dominante (en reduisant l'image a 1x1 pixel)
+        # Determine dominant color (by reducing image to 1x1 pixel)
         $1x1 = New-Object System.Drawing.Bitmap($bmp, 1, 1)
         $color = $1x1.GetPixel(0, 0)
         $hexColor = "#{0:X2}{1:X2}{2:X2}" -f $color.R, $color.G, $color.B
         
-        # Liberation de la memoire
+        # Free memory
         $1x1.Dispose()
         $bmp.Dispose()
     } catch {
-        Write-Warning "Impossible de lire les donnees de l'image : $imgPath"
+        Write-Warning "Unable to read image data: $imgPath"
     }
 
     $result = [ordered]@{
@@ -92,7 +92,7 @@ function Get-ImageDetails($imgPath) {
     return $result
 }
 
-# fichiers audio
+# audio files
 $files = Get-ChildItem -Path $assetsPath -Recurse -File | Where-Object { $audioExt -contains $_.Extension.ToLower() }
 $total = $files.Count
 $results = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -101,12 +101,12 @@ $timer = [System.Diagnostics.Stopwatch]::StartNew()
 for ($i = 0; $i -lt $total; $i++) {
     $f = $files[$i]
     $pct = (($i + 1) / $total) * 100
-    Write-Progress -Activity "Creation de la base de donnees musicale" -Status "Analyse [$($i+1)/$total] : $($f.Name)" -PercentComplete $pct
+    Write-Progress -Activity "Creating music database" -Status "Analyzing [$($i+1)/$total] : $($f.Name)" -PercentComplete $pct
 
     $fObj = $shell.NameSpace($f.DirectoryName)
     $item = $fObj.ParseName($f.Name)
     
-    # -- 1. ANALYSE DE LA HIeRARCHIE --
+    # 1. HIERARCHY ANALYSIS
     $relDir = Get-Rel $f.DirectoryName $root
     $parts = $relDir -split '\\'
     
@@ -139,24 +139,24 @@ for ($i = 0; $i -lt $total; $i++) {
         }
     }
 
-    # -- 2. CALCULS AVANCeS (COMPTEUR, HASH) --
-    # Compte le nombre de versions dans ce dossier specifique
+    # 2. ADVANCED CALCULATIONS (COUNTER, HASH)
+    # Count the number of versions in this specific folder
     $trackVersionsCount = (Get-ChildItem -Path $f.DirectoryName -File | Where-Object { $audioExt -contains $_.Extension.ToLower() }).Count
     
-    # Empreinte unique du fichier (SHA256)
+    # Unique file fingerprint (SHA256)
     $fileHash = (Get-FileHash -Path $f.FullName -Algorithm SHA256).Hash
 
-    # -- 3. GESTION DES ARTWORKS (AVEC COULEUR ET RATIO) --
+    # 3. ARTWORK MANAGEMENT (WITH COLOR AND RATIO)
     $trackArtworks = @()
     $albumArtworks = @()
 
-    # Artworks du morceau (dans le dossier même)
+    # Track artworks (in the same folder)
     $trackArtworksRaw = Get-ChildItem -Path $f.DirectoryName -File | Where-Object { $imgExt -contains $_.Extension.ToLower() }
     $trackArtworksRaw | Sort-Object { if ($_.BaseName -ieq "artwork") { 0 } else { 1 } } | ForEach-Object {
         $trackArtworks += Get-ImageDetails $_.FullName
     }
 
-    # Artworks de l'album (dossier parent)
+    # Album artworks (in parent folder)
     if ($album -ne $null -and $f.Directory.Parent -and $f.Directory.Parent.FullName -ne $root) {
         $albumArtworksRaw = Get-ChildItem -Path $f.Directory.Parent.FullName -File | Where-Object { $imgExt -contains $_.Extension.ToLower() }
         $albumArtworksRaw | Sort-Object { if ($_.BaseName -ieq "artwork") { 0 } else { 1 } } | ForEach-Object {
@@ -164,21 +164,19 @@ for ($i = 0; $i -lt $total; $i++) {
         }
     }
 
-    # -- 4. EXTRACTION DES MeTADONNeES AVEC VALEURS PAR DeFAUT --
+    # 4. METADATA EXTRACTION
     $rawArt = $fObj.GetDetailsOf($item, 13)
-    $artists = if ($rawArt) { $rawArt.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ } } else { @($ownerInfo.full_name) }
+    $artists = if ($rawArt) { $rawArt.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ } } else { @() }
     
     $metaTitle = $fObj.GetDetailsOf($item, 21)
     $metaAlbum = $fObj.GetDetailsOf($item, 14)
     $metaComposer = $fObj.GetDetailsOf($item, 223)
     
-    if (!$metaComposer) { $metaComposer = $ownerInfo.full_name }
-
-    # Format de temps Unix (Epoch) pour la future application
+    # Unix time (Epoch) format for future application
     $epochCreated = [int][double]::Parse((Get-Date $f.CreationTime -UFormat %s))
     $epochModified = [int][double]::Parse((Get-Date $f.LastWriteTime -UFormat %s))
 
-    # -- 5. CONSTRUCTION DE L'OBJET FINAL --
+    # 5. BUILDING THE FINAL OBJECT
     $results.Add([ordered]@{
         id = $i + 1
         logic = [ordered]@{
@@ -208,7 +206,7 @@ for ($i = 0; $i -lt $total; $i++) {
         metadata = [ordered]@{
             title = if ($metaTitle) { $metaTitle } else { $f.BaseName }
             artists = $artists
-            album_artist = if ($fObj.GetDetailsOf($item, 13)) { $fObj.GetDetailsOf($item, 13) } else { $ownerInfo.full_name }
+            album_artist = $fObj.GetDetailsOf($item, 13)
             composer = $metaComposer
             album = if ($metaAlbum) { $metaAlbum } else { $album }
             genre = $fObj.GetDetailsOf($item, 16)
@@ -234,7 +232,7 @@ for ($i = 0; $i -lt $total; $i++) {
 
 $timer.Stop()
 
-# Creation de l'objet global racine
+# Creation of the root global object
 $finalData = [ordered]@{
     info = [ordered]@{
         owner = $ownerInfo
@@ -245,11 +243,11 @@ $finalData = [ordered]@{
     items = $results
 }
 
-# Conversion en JSON brut (qui genere 4 espaces d'indentation par defaut)
+# Convert to raw JSON (generates 4 spaces indentation by default)
 $rawJsonLines = ($finalData | ConvertTo-Json -Depth 20) -split "`r?`n"
 
-# -- OPTIMISATION DE L'INDENTATION A 1 ESPACE (ALGORITHME) --
-Write-Host "`nOptimisation du formatage JSON (Indentation sticte a 1 espace)..." -ForegroundColor Cyan
+# JSON INDENTATION OPTIMIZATION TO 1 SPACE (ALGORITHM)
+Write-Host "`nOptimizing JSON formatting (Strict 1 space indentation)..." -ForegroundColor Cyan
 $optimizedJson = foreach ($line in $rawJsonLines) {
     if ($line -match '^(\s+)(.*)$') {
         # Recupere le nombre d'espaces actuels, le divise par 4 (standard PowerShell), ou met 1
@@ -264,8 +262,8 @@ $optimizedJson = foreach ($line in $rawJsonLines) {
     }
 }
 
-# Sauvegarde finale en UTF-8 propre
+# Final save in clean UTF-8
 [System.IO.File]::WriteAllLines($output, $optimizedJson, (New-Object System.Text.UTF8Encoding($false)))
 
-Write-Host "`n[SUCCES] Base de donnees $output generee avec succes !" -ForegroundColor Green
-Write-Host "$total versions indexees en $($timer.Elapsed.TotalSeconds) secondes." -ForegroundColor Green
+Write-Host "`n[SUCCESS] Database $output generated successfully!" -ForegroundColor Green
+Write-Host "$total versions indexed in $($timer.Elapsed.TotalSeconds) seconds." -ForegroundColor Green
