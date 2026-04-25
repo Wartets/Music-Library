@@ -28,3 +28,15 @@ export const getBestArtwork = (track?: ArtworkTrackLike | null): ImageDetails | 
 
     return undefined;
 };
+
+export const getCollectionArtwork = (tracks?: TrackItem[] | null): ImageDetails | undefined => {
+    if (!tracks || tracks.length === 0) return undefined;
+    for (const track of tracks) {
+        const artwork = getBestArtwork(track);
+        if (artwork) {
+            return artwork;
+        }
+    }
+
+    return undefined;
+};

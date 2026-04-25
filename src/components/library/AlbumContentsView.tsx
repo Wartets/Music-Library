@@ -5,6 +5,7 @@ import { LibraryBrowser } from './LibraryBrowser';
 import { getTrackCollectionKey, getTrackCollectionLabel } from '../../utils/collectionLabels';
 import { EmptyState } from '../shared/EmptyState';
 import { Folder } from 'lucide-react';
+import { getCollectionArtwork } from '../../utils/artworkResolver';
 
 
 interface AlbumContentsViewProps {
@@ -17,7 +18,12 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
 
     const album = useMemo(() => {
         if (typeof initialAlbum === 'object' && initialAlbum !== null && 'tracks' in initialAlbum) {
-            return initialAlbum as AlbumGroup;
+            const collectionArtwork = initialAlbum.name.toLowerCase() === 'single' ? undefined : getCollectionArtwork(initialAlbum.tracks);
+            return {
+                ...initialAlbum,
+                artworkPath: collectionArtwork?.path,
+                dominantColor: collectionArtwork?.dominant_color || initialAlbum.dominantColor || '#1a1a1a'
+            } as AlbumGroup;
         }
 
         const albumName = typeof initialAlbum === 'string' ? initialAlbum : (initialAlbum as any)?.name;
@@ -28,12 +34,14 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
         });
         if (tracks.length === 0) return null;
 
+        const collectionArtwork = albumName.toLowerCase() === 'single' ? undefined : getCollectionArtwork(tracks);
+
         return {
             name: albumName,
             artist: tracks[0].metadata?.album_artist || tracks[0].metadata?.artists?.[0] || 'Unknown Artist',
             tracks: tracks,
-            artworkPath: tracks[0].artworks?.album_artwork?.[0]?.path || tracks[0].artworks?.track_artwork?.[0]?.path,
-            dominantColor: tracks[0].artworks?.album_artwork?.[0]?.dominant_color || tracks[0].artworks?.track_artwork?.[0]?.dominant_color || '#1a1a1a'
+            artworkPath: collectionArtwork?.path,
+            dominantColor: collectionArtwork?.dominant_color || '#1a1a1a'
         } as AlbumGroup;
     }, [initialAlbum, libraryState.tracks]);
 

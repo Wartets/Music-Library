@@ -5,6 +5,7 @@ import { useItemContextMenu } from '../../hooks/useItemContextMenu';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { Search, Clock, Disc3, Mic2, Hash } from 'lucide-react';
 import { ViewType } from '../layout/AppLayout';
+import { getCollectionArtwork } from '../../utils/artworkResolver';
 
 interface SearchResultsViewProps {
     query?: string;
@@ -31,8 +32,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({ query, sou
             if (!albumGroups.has(albumName)) {
                 albumGroups.set(albumName, {
                     name: albumName,
-                    tracks: [],
-                    artwork: track.artworks?.album_artwork?.[0] || track.artworks?.track_artwork?.[0]
+                    tracks: []
                 });
             }
             albumGroups.get(albumName)!.tracks.push(track);
@@ -44,7 +44,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({ query, sou
         });
 
         return {
-            albums: [...albumGroups.values()].sort((a, b) => b.tracks.length - a.tracks.length).slice(0, 12),
+            albums: [...albumGroups.values()].map(group => ({
+                ...group,
+                artwork: group.name.toLowerCase() === 'single' ? undefined : getCollectionArtwork(group.tracks)
+            })).sort((a, b) => b.tracks.length - a.tracks.length).slice(0, 12),
             artists: [...artistGroups.values()].sort((a, b) => b.tracks.length - a.tracks.length).slice(0, 12)
         };
     }, [results]);

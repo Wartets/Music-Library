@@ -12,10 +12,11 @@ import {
     isPathWithin,
     normalizePath,
     getPathBasename,
+    splitPathSegments,
 } from '../../utils/pathUtils';
 import { TrackItem } from '../../types/music';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
-import { getBestArtwork } from '../../utils/artworkResolver';
+import { getCollectionArtwork } from '../../utils/artworkResolver';
 import type { GroupedTracks } from '../../utils/grouping';
 
 interface FoldersViewProps {
@@ -130,10 +131,8 @@ export const FoldersView: React.FC<FoldersViewProps> = ({ onNavigate }) => {
         }] : []),
         ...folders.map(folder => {
             const palette = getMutedVisualStyle(seedFromText(folder.path));
-            const firstArtworkTrack = folder.tracks.find((t: TrackItem) =>
-                t.artworks?.track_artwork?.length || t.artworks?.album_artwork?.length
-            );
-            const artworkDetails = getBestArtwork(firstArtworkTrack);
+            const folderDepth = splitPathSegments(folder.path).length;
+            const artworkDetails = folderDepth >= 3 ? getCollectionArtwork(folder.tracks) : undefined;
 
             return {
                 id: folder.path,

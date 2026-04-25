@@ -6,7 +6,7 @@ import { Filter, User, Pencil } from 'lucide-react';
 import { CollectionGridView, GridItem } from './CollectionGridView';
 import { formatDuration, parseDuration } from '../../utils/formatters';
 import { TrackItem } from '../../types/music';
-import { getBestArtwork } from '../../utils/artworkResolver';
+import { getCollectionArtwork } from '../../utils/artworkResolver';
 import { groupTracks, sortGroupsAlphabeticallyWithUnknownLast } from '../../utils/grouping';
 import { createGroupContextMenu } from '../../utils/contextMenuPresets';
 import { sortTracksByTrackNumber } from '../../utils/trackSorting';
@@ -42,7 +42,7 @@ const groupAlbums = (tracks: TrackItem[], sortBy: 'name' | 'artist'): AlbumGroup
             artist: sortedTracks[0]?.metadata?.album_artist || sortedTracks[0]?.metadata?.artists?.[0] || 'Unknown Artist',
             tracks: group.tracks,
             sortedTracks,
-            artwork: sortedTracks.map(track => getBestArtwork(track)).find(Boolean),
+            artwork: getCollectionArtwork(sortedTracks),
             durationSeconds,
             durationLabel: formatDuration(durationSeconds),
         } as AlbumGroup;
@@ -74,7 +74,11 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
     const [sortBy, setSortBy] = React.useState<'name' | 'artist'>('artist');
 
     const albums = useMemo(() => {
-        return groupAlbums(libraryState.filteredTracks, sortBy);
+        return groupAlbums(libraryState.filteredTracks, sortBy).map(album => (
+            album.id === '__unknown__' || album.name.toLowerCase() === 'single'
+                ? { ...album, artwork: undefined }
+                : album
+        ));
     }, [libraryState.filteredTracks, sortBy]);
 
     const onRightClick = React.useCallback((e: React.MouseEvent, album: any) => {
