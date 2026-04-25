@@ -15,6 +15,10 @@ $root = Get-Location | Select-Object -ExpandProperty Path
 $output = Join-Path $root "musicBib.json"
 $shell = New-Object -ComObject Shell.Application
 
+# Define assets folder - all music files are under assets/
+$assetsFolder = "assets"
+$assetsPath = Join-Path $root $assetsFolder
+
 # Chargement de la librairie d'images pour analyser la couleur et le ratio
 Add-Type -AssemblyName System.Drawing
 
@@ -88,7 +92,8 @@ function Get-ImageDetails($imgPath) {
     return $result
 }
 
-$files = Get-ChildItem -Path $root -Recurse -File | Where-Object { $audioExt -contains $_.Extension.ToLower() }
+# fichiers audio
+$files = Get-ChildItem -Path $assetsPath -Recurse -File | Where-Object { $audioExt -contains $_.Extension.ToLower() }
 $total = $files.Count
 $results = [System.Collections.Generic.List[PSCustomObject]]::new()
 $timer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -104,6 +109,11 @@ for ($i = 0; $i -lt $total; $i++) {
     # -- 1. ANALYSE DE LA HIeRARCHIE --
     $relDir = Get-Rel $f.DirectoryName $root
     $parts = $relDir -split '\\'
+    
+    # Skip 'assets' root folder if present
+    if ($parts.Count -gt 0 -and $parts[0] -ieq 'assets') {
+        $parts = $parts[1..($parts.Count-1)]
+    }
     
     $isSingle = $false
     $group = $null

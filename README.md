@@ -47,7 +47,7 @@ A high-performance local music library and player designed for managing and play
 ### Prerequisites
 
 - Node.js (Latest LTS recommended)
-- A music collection structured as: `Group > Project > Folder > Audio Files`
+- A music collection structured as: `assets/Group > Project > Folder > Audio Files`
 
 ### Installation
 

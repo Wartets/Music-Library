@@ -36,19 +36,26 @@ function musicFilesMiddleware(): Plugin {
                 }
 
                 const urlPath = url.split('?')[0].replace(/%2F/g, '/').replace(/%5C/g, '/');
-                const isAlbumAsset = /^\/Album(?:\s|%20)/i.test(urlPath);
-                const isSingleAsset = /^\/Single\//i.test(urlPath);
+                let musicPath = urlPath.replace(/^\/+/, '');
+                
+                // Strip 'assets/' prefix for feature detection
+                const subPath = musicPath.toLowerCase().startsWith('assets/') 
+                    ? musicPath.substring(6) 
+                    : musicPath;
+
+                const isAlbumAsset = /^Album(?:\s|%20)/i.test(subPath);
+                const isSingleAsset = /^Single\//i.test(subPath);
                 if (!isAlbumAsset && !isSingleAsset) {
                     return next();
                 }
 
-                const musicPath = urlPath.replace(/^\/+/, '');
                 const ext = musicPath.toLowerCase().split('.').pop() || '';
                 const allowedExtensions = new Set(['m4a', 'mp3', 'wav', 'flac', 'ogg', 'opus', 'aac', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg']);
                 if (!allowedExtensions.has(ext)) {
                     return next();
                 }
 
+                // Try resolving from parent Music-Library (which contains assets/) and from current dir
                 const localPath = resolve(currentDir, '..', 'Music-Library', musicPath);
                 const altLocalPath = resolve(currentDir, musicPath);
 

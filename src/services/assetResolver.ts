@@ -39,13 +39,21 @@ const normalizeRepositoryRelativePath = (inputPath: string): string => {
 
     let normalized = toPosixPath(stripped);
 
+    // Strip repository anchor (e.g., '/Music-Library/')
     const repoAnchorIndex = normalized.toLowerCase().indexOf('/music-library/');
     if (repoAnchorIndex >= 0) {
         normalized = normalized.slice(repoAnchorIndex + '/music-library/'.length);
     }
 
+    // Strip Windows drive letter or leading slashes
     normalized = normalized.replace(/^[A-Za-z]:\//, '').replace(/^\/+/, '');
 
+    // Strip 'assets/' prefix if present — it's not part of the collection anchor
+    if (normalized.toLowerCase().startsWith('assets/')) {
+        normalized = normalized.slice(6); // remove 'assets/'
+    }
+
+    // Find collection anchor (Album XX..., Single, save) — everything after
     const collectionAnchor = normalized.match(/(Album\s+\d[^/]*|Single|save)\/.*$/i);
     if (collectionAnchor) {
         normalized = collectionAnchor[0];

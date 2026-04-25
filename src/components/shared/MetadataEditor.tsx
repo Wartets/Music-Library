@@ -1146,7 +1146,7 @@ export const MetadataEditor: React.FC = () => {
                             onKeyDown={handleArtworkDialogKeyDown}
                         >
                             <h3 id="artwork-url-dialog-title" className="text-white text-lg font-black tracking-tight mb-2">Artwork URL</h3>
-                            <p className="text-gray-400 text-xs mb-4">Paste a direct image URL. You can also use a local absolute path like <span className="font-mono">/Album/art.jpg</span>.</p>
+                             <p className="text-gray-400 text-xs mb-4">Paste a direct image URL. You can also use a local absolute path like <span className="font-mono">/assets/Album/art.jpg</span>.</p>
                             <input
                                 type="text"
                                 value={artworkDraftUrl}
