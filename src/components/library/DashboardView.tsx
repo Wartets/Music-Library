@@ -17,6 +17,23 @@ interface DashboardViewProps {
     onNavigate: (view: ViewType, data?: any) => void;
 }
 
+const normalizeEpochToSeconds = (value?: number | null): number => {
+    if (!value || !Number.isFinite(value) || value <= 0) return 0;
+    // Support either seconds or milliseconds inputs.
+    return value > 1_000_000_000_000 ? Math.floor(value / 1000) : Math.floor(value);
+};
+
+const getTrackCreatedEpochSeconds = (track: TrackItem): number => {
+    const epochCreated = normalizeEpochToSeconds(track.file?.epoch_created);
+    if (epochCreated > 0) return epochCreated;
+
+    const createdRaw = track.file?.created;
+    if (!createdRaw) return 0;
+
+    const parsed = Date.parse(createdRaw);
+    return Number.isNaN(parsed) ? 0 : Math.floor(parsed / 1000);
+};
+
 const getTrackRenderKey = (prefix: string, track: TrackItem, index: number): string => {
     const hash = track.logic?.hash_sha256;
     if (hash && hash !== 'null' && hash !== 'undefined') {
@@ -79,10 +96,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             .map(entry => resolveTrackVersion(entry[0], tracks, versionToPrimaryMap))
             .filter((t): t is TrackItem => !!t);
 
-        const sixMonthsAgo = (Date.now() / 1000) - (6 * 30 * 24 * 3600);
         const newArrivalsTracks = tracks
-            .filter(t => (t.file?.epoch_created || 0) > sixMonthsAgo)
-            .sort((a, b) => (b.file?.epoch_created || 0) - (a.file?.epoch_created || 0))
+            .filter(t => getTrackCreatedEpochSeconds(t) > 0)
+            .sort((a, b) => getTrackCreatedEpochSeconds(b) - getTrackCreatedEpochSeconds(a))
             .slice(0, 20);
 
         const favoriteTracks = favs

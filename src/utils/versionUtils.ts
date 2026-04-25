@@ -22,6 +22,11 @@ const parseNumberLike = (value?: string | null): number => {
     return Number(match[1]) || 0;
 };
 
+const normalizeEpochToSeconds = (value?: number | null): number => {
+    if (!value || !Number.isFinite(value) || value <= 0) return 0;
+    return value > 1_000_000_000_000 ? Math.floor(value / 1000) : Math.floor(value);
+};
+
 const normalizeVersionSegments = (raw: string): number[] | null => {
     const semverLike = raw.match(/(?:^|[^\d])v?(\d+(?:\.\d+){1,5})(?:[^\d]|$)/i);
     if (semverLike) {
@@ -127,11 +132,11 @@ export const compareTrackVersions = (a: TrackItem, b: TrackItem): number => {
         return aLabelDate ? -1 : 1;
     }
 
-    const modifiedCmp = (b.file?.epoch_modified || 0) - (a.file?.epoch_modified || 0);
-    if (modifiedCmp !== 0) return modifiedCmp;
-
-    const createdCmp = (b.file?.epoch_created || 0) - (a.file?.epoch_created || 0);
+    const createdCmp = normalizeEpochToSeconds(b.file?.epoch_created) - normalizeEpochToSeconds(a.file?.epoch_created);
     if (createdCmp !== 0) return createdCmp;
+
+    const modifiedCmp = normalizeEpochToSeconds(b.file?.epoch_modified) - normalizeEpochToSeconds(a.file?.epoch_modified);
+    if (modifiedCmp !== 0) return modifiedCmp;
 
     const qualityCmp = getTrackQualityScore(b) - getTrackQualityScore(a);
     if (qualityCmp !== 0) return qualityCmp;
