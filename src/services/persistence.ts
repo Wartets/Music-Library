@@ -633,6 +633,19 @@ class PersistenceService {
         this.saveData();
     }
 
+    resetApplicationMetadata(): void {
+        this.data.history = [];
+        this.data.playCounts = {};
+        this.data.playlists = [];
+        this.data.smartPlaylists = [];
+        this.data.metadataOverrides = {};
+        this.data.artworkOverrides = {};
+        this.data.ratings = {};
+        this.data.favorites = [];
+        this.data.hiddenTrackIds = [];
+        this.saveData();
+    }
+
     // -- Generic store (for UI preferences like columns)
     get(key: string): any {
         if (typeof window === 'undefined') return null;

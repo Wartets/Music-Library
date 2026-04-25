@@ -1,19 +1,27 @@
 import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
+import { useUI } from '../../contexts/UIContext';
 import { persistenceService } from '../../services/persistence';
 import { TrackItem } from '../../types/music';
 import { ShieldAlert, Trash2, Download, RefreshCcw, FileWarning, Zap, CheckCircle2, ChevronRight, BarChart3, Database } from 'lucide-react';
 
 export const MaintenanceView: React.FC = () => {
-    const { state } = useLibrary();
+    const { state, setEditingTracks, refresh } = useLibrary();
+    const { showToast } = useUI();
     const [activeTab, setActiveTab] = useState<'duplicates' | 'health' | 'data'>('duplicates');
+    const [hiddenHashes, setHiddenHashes] = useState<Set<string>>(new Set());
+
+    const visibleTracks = useMemo(
+        () => state.tracks.filter(track => !hiddenHashes.has(track.logic.hash_sha256)),
+        [state.tracks, hiddenHashes]
+    );
 
     // --- Duplicate Logic ---
     const duplicateGroups = useMemo(() => {
         const hashGroups: Record<string, TrackItem[]> = {};
         const fuzzyGroups: Record<string, TrackItem[]> = {};
 
-        state.tracks.forEach(track => {
+        visibleTracks.forEach(track => {
             // Hash Based
             const h = track.logic.hash_sha256;
             if (!hashGroups[h]) hashGroups[h] = [];
@@ -36,19 +44,19 @@ export const MaintenanceView: React.FC = () => {
         });
 
         return { exact, probable };
-    }, [state.tracks]);
+    }, [visibleTracks]);
 
     // --- Health Logic ---
     const healthIssues = useMemo(() => {
-        const lowBitrate = state.tracks.filter(t => {
+        const lowBitrate = visibleTracks.filter(t => {
             const br = parseInt(t.audio_specs?.bitrate || '0');
             return br > 0 && br < 128;
         });
-        const missingMetadata = state.tracks.filter(t => !t.metadata?.genre || !t.metadata?.year || !t.metadata?.album);
+        const missingMetadata = visibleTracks.filter(t => !t.metadata?.genre || !t.metadata?.year || !t.metadata?.album);
         const ghostTracks: TrackItem[] = []; // Placeholder for files not found on disk if we had that check
 
         return { lowBitrate, missingMetadata, ghostTracks };
-    }, [state.tracks]);
+    }, [visibleTracks]);
 
     // --- Actions ---
     const handleExport = () => {
@@ -59,6 +67,54 @@ export const MaintenanceView: React.FC = () => {
         a.href = url;
         a.download = `library_backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
+        URL.revokeObjectURL(url);
+        showToast('Library backup exported', 'success');
+    };
+
+    const hideTrack = (track: TrackItem) => {
+        const hash = track.logic.hash_sha256;
+        persistenceService.hideTrack(hash);
+        setHiddenHashes(prev => new Set(prev).add(hash));
+    };
+
+    const handleCleanGroup = (group: TrackItem[]) => {
+        if (group.length <= 1) {
+            showToast('No extra tracks to clean in this group', 'info', { subtle: true });
+            return;
+        }
+
+        const [, ...duplicatesToHide] = group;
+        duplicatesToHide.forEach(track => persistenceService.hideTrack(track.logic.hash_sha256));
+
+        setHiddenHashes(prev => {
+            const next = new Set(prev);
+            duplicatesToHide.forEach(track => next.add(track.logic.hash_sha256));
+            return next;
+        });
+
+        refresh();
+        showToast(`Cleaned group: ${duplicatesToHide.length} duplicate${duplicatesToHide.length > 1 ? 's' : ''} hidden`, 'success');
+    };
+
+    const handleFixTags = (track: TrackItem) => {
+        setEditingTracks([track]);
+        showToast(`Editing tags: ${track.metadata?.title || track.logic.track_name}`, 'info', { subtle: true });
+    };
+
+    const handleResetApplicationMetadata = () => {
+        const confirmed = window.confirm(
+            'Reset all application metadata? This clears playlists, ratings, favorites, overrides, and hidden-track rules. Audio files will not be changed.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        persistenceService.resetApplicationMetadata();
+        showToast('Application metadata reset. Reloading library…', 'warning');
+        window.setTimeout(() => {
+            window.location.reload();
+        }, 450);
     };
 
     return (
@@ -70,7 +126,7 @@ export const MaintenanceView: React.FC = () => {
                         Library Maintenance
                     </h1>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-2">
-                        Analyze, clean, and backup your collection · {state.tracks.length} tracks indexed
+                        Analyze, clean, and backup your collection · {visibleTracks.length} tracks indexed
                     </p>
                 </div>
                 <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5 shadow-2xl overflow-x-auto">
@@ -111,7 +167,7 @@ export const MaintenanceView: React.FC = () => {
                         <CheckCircle2 size={24} />
                     </div>
                     <div>
-                        <div className="text-2xl font-black text-white">{state.tracks.length > 0 ? (100 - ((healthIssues.missingMetadata.length / state.tracks.length) * 100)).toFixed(1) : 100}%</div>
+                        <div className="text-2xl font-black text-white">{visibleTracks.length > 0 ? (100 - ((healthIssues.missingMetadata.length / visibleTracks.length) * 100)).toFixed(1) : 100}%</div>
                         <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Library Integrity</div>
                     </div>
                 </div>
@@ -134,7 +190,12 @@ export const MaintenanceView: React.FC = () => {
                                     <div key={idx} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.07] transition-all group">
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="font-bold text-white text-sm truncate max-w-[70%]">{group[0].metadata?.title || group[0].logic.track_name}</h3>
-                                            <button className="text-xs text-red-400 font-black uppercase tracking-widest md:opacity-0 md:group-hover:opacity-100 transition-all hover:text-red-300 min-h-9 px-2">Clean Group</button>
+                                            <button
+                                                onClick={() => handleCleanGroup(group)}
+                                                className="text-xs text-red-400 font-black uppercase tracking-widest md:opacity-0 md:group-hover:opacity-100 transition-all hover:text-red-300 min-h-9 px-2 active:scale-95"
+                                            >
+                                                Clean Group
+                                            </button>
                                         </div>
                                         <div className="space-y-3">
                                             {group.map(track => (
@@ -143,7 +204,17 @@ export const MaintenanceView: React.FC = () => {
                                                         <span className="text-gray-500 font-mono">#{track.id}</span>
                                                         <span className="text-gray-300 truncate opacity-60 font-mono">{track.file.path}</span>
                                                     </div>
-                                                    <Trash2 size={14} className="text-gray-600 hover:text-red-500 cursor-pointer transition-colors" />
+                                                    <button
+                                                        onClick={() => {
+                                                            hideTrack(track);
+                                                            showToast('Track hidden from library', 'success', { subtle: true });
+                                                        }}
+                                                        className="p-2 min-h-10 min-w-10 flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors active:scale-95"
+                                                        aria-label={`Hide duplicate track ${track.metadata?.title || track.logic.track_name}`}
+                                                        title="Hide duplicate"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -206,7 +277,12 @@ export const MaintenanceView: React.FC = () => {
                                                 {!track.metadata?.album && <span className="bg-yellow-500/10 text-yellow-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">No Album</span>}
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">Fix Tags</button>
+                                        <button
+                                            className="px-4 py-2 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all active:scale-95"
+                                            onClick={() => handleFixTags(track)}
+                                        >
+                                            Fix Tags
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -245,7 +321,12 @@ export const MaintenanceView: React.FC = () => {
                                 <p className="text-[10px] text-red-400/70 mb-4 font-bold leading-relaxed">
                                     This will permanently delete all your custom metadata, playlists, and ratings. Your audio files will not be touched.
                                 </p>
-                                <button className="text-[10px] font-black uppercase tracking-[0.25em] text-red-500 opacity-50 hover:opacity-100 transition-all underline decoration-2 underline-offset-4">Reset Application Metadata</button>
+                                <button
+                                    className="text-[10px] font-black uppercase tracking-[0.25em] text-red-500 opacity-50 hover:opacity-100 transition-all underline decoration-2 underline-offset-4 active:scale-95"
+                                    onClick={handleResetApplicationMetadata}
+                                >
+                                    Reset Application Metadata
+                                </button>
                             </div>
                         </div>
                     </div>
