@@ -17,6 +17,16 @@ interface DashboardViewProps {
     onNavigate: (view: ViewType, data?: any) => void;
 }
 
+const getTrackRenderKey = (prefix: string, track: TrackItem, index: number): string => {
+    const hash = track.logic?.hash_sha256;
+    if (hash && hash !== 'null' && hash !== 'undefined') {
+        return `${prefix}-${hash}`;
+    }
+
+    const fallbackIdentity = track.file?.path || `${track.logic?.track_name || 'track'}-${track.metadata?.title || 'untitled'}`;
+    return `${prefix}-${fallbackIdentity}-${index}`;
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     const { state: libraryState } = useLibrary();
     const { playTrack, state: playerState } = usePlayer();
@@ -259,9 +269,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                 <button onClick={() => onNavigate('DetailedHistory')} className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-dominant transition-colors">View All History</button>
                             </div>
                             <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
-                                {visibleRecentlyPlayed.map(track => (
+                                {visibleRecentlyPlayed.map((track, i) => (
                                     <TrackCard
-                                        key={`recent-${track.logic.hash_sha256}`}
+                                        key={getTrackRenderKey('recent', track, i)}
                                         track={track}
                                         list={recentlyPlayed}
                                         query={libraryState.searchQuery}
@@ -291,7 +301,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-10 gap-y-2">
                                 {mostPlayed.map((track, i) => (
                                     <TrackRow
-                                        key={`most-${track.logic.hash_sha256}`}
+                                        key={getTrackRenderKey('most', track, i)}
                                         track={track}
                                         list={mostPlayed}
                                         index={i}
@@ -313,9 +323,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                 <h2 className="text-xl md:text-2xl font-black tracking-tighter text-white">Recently Added</h2>
                             </div>
                             <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-scrollbar-horizontal no-scrollbar">
-                                {visibleNewArrivals.map(track => (
+                                {visibleNewArrivals.map((track, i) => (
                                     <TrackCard
-                                        key={`new-${track.logic.hash_sha256}`}
+                                        key={getTrackRenderKey('new', track, i)}
                                         track={track}
                                         list={newArrivals}
                                         query={libraryState.searchQuery}
@@ -469,7 +479,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             <div className="space-y-2">
                                 {favorites.map((track, i) => (
                                     <TrackRow
-                                        key={`fav-${track.logic.hash_sha256}`}
+                                        key={getTrackRenderKey('fav', track, i)}
                                         track={track}
                                         list={favorites}
                                         index={i}

@@ -172,6 +172,10 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
         };
     }, [displaySrc]);
 
+    // Build srcset for responsive image delivery.
+    // Keep this hook before early returns to preserve hook order across renders.
+    const srcSet = React.useMemo(() => buildSrcSet(srcCandidates, details?.dimensions), [srcCandidates, details?.dimensions]);
+
     if (!displaySrc || hasError) {
         const fallbackSeed = (alt && alt !== 'Artwork')
             ? alt
@@ -197,9 +201,6 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
             </div>
         );
     }
-
-    // Build srcset for responsive image delivery
-    const srcSet = React.useMemo(() => buildSrcSet(srcCandidates, details?.dimensions), [srcCandidates, details?.dimensions]);
 
     return (
         <img
