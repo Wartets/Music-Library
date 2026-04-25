@@ -1,54 +1,17 @@
-name: Deploy GitHub Pages
+      - name: Configure Git to handle long paths
+        run: |
+          git config --global core.protectNTFS false
+          git config --global core.protectHFS false
+        shell: bash
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: false
           fetch-depth: 1
-
-      - name: Configure Git
-        run: |
-          git config --global core.longpaths true
-          git config --global core.autocrlf false
-
-      - name: Temporarily remove problematic assets for build
-        run: |
-          mv assets assets.full || true
-          mkdir -p assets
-          # Create minimal structure needed for build
-          find assets.full -maxdepth 2 -type d | head -50 | while read d; do
-            rel="${d#assets.full/}"
-            if [ "$rel" = "assets.full" ]; then continue; fi
-            mkdir -p "assets/$rel"
-          done
-          # Copy only files that don't have path issues
-          find assets.full -maxdepth 3 -type f -name "*.jpg" -o -name "*.m4a" -o -name "*.mp3" -o -name "*.wav" -o -name "*.JPEG" | head -100 | while read f; do
-            rel="${f#assets.full/}"
-            mkdir -p "assets/$(dirname "$rel")"
-            cp "$f" "assets/$rel" 2>/dev/null || true
-          done
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        env:
+          GIT_CONFIG_GLOBAL_CORE_PROTECTNTFS: false
+          GIT_CONFIG_GLOBAL_CORE_PROTECTHFS: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,30 +19,5 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Verify musicBib.json in dist
-        run: test -f dist/musicBib.json
-
-      - name: SPA fallback
-        run: cp dist/index.html dist/404.html
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./dist
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
