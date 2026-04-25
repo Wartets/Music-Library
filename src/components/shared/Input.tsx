@@ -33,7 +33,7 @@ export const Input: React.FC<InputProps> = ({
                 )}
                 <input
                     id={inputId}
-                    className={`bg-gray-800 text-white placeholder-gray-400 border rounded px-3 py-2 outline-none focus:border-blue-500 transition-colors w-full
+                    className={`bg-gray-800 text-white placeholder-gray-400 border rounded px-3 py-2 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-dominant focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-colors w-full
                         ${error ? 'border-red-500 focus:border-red-500' : 'border-gray-700'}
                         ${leftIcon ? 'pl-10' : ''}
                         ${rightIcon ? 'pr-10' : ''}

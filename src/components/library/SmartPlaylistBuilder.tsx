@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { SmartRule, SmartPlaylistDefinition, Operator, LogicCondition, RuleRangeValue } from '../../utils/smartPlaylistEvaluator';
 import { persistenceService } from '../../services/persistence';
 import { Plus, Trash2 } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface SmartPlaylistBuilderProps {
     onSave?: (playlist: SmartPlaylistDefinition) => void;
@@ -84,6 +85,12 @@ export const SmartPlaylistBuilder: React.FC<SmartPlaylistBuilderProps> = ({ onSa
     const [name, setName] = useState('New Smart Playlist');
     const [condition, setCondition] = useState<LogicCondition>('AND');
     const [rules, setRules] = useState<SmartRule[]>([createDefaultRule('metadata.year')]);
+    const titleInputRef = useRef<HTMLInputElement>(null);
+    const { containerRef, handleKeyDown } = useFocusTrap<HTMLDivElement>({
+        active: true,
+        onEscape: onCancel,
+        initialFocusRef: titleInputRef,
+    });
 
     const handleAddRule = () => {
         setRules([...rules, createDefaultRule()]);
@@ -171,8 +178,16 @@ export const SmartPlaylistBuilder: React.FC<SmartPlaylistBuilderProps> = ({ onSa
     };
 
     return (
-        <div className="w-full max-w-full sm:max-w-lg bg-[#1a1a1a] text-white rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto custom-scrollbar">
-            <h2 className="text-xl sm:text-2xl font-black mb-4 sm:mb-6 mt-0">Create Smart Playlist</h2>
+        <div
+            ref={containerRef}
+            className="w-full max-w-full sm:max-w-lg bg-[#1a1a1a] text-white rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto custom-scrollbar"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="smart-playlist-builder-title"
+            tabIndex={-1}
+            onKeyDown={handleKeyDown}
+        >
+            <h2 id="smart-playlist-builder-title" className="text-xl sm:text-2xl font-black mb-4 sm:mb-6 mt-0">Create Smart Playlist</h2>
 
             <div className="mb-4 sm:mb-5">
                 <label className="block text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 mb-2">

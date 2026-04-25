@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { MetadataWriteTarget, persistenceService } from '../../services/persistence';
-import { Heart, Star, Disc, Hash, Music, Type, Save, X, Image as ImageIcon, Trash2, Edit2, Globe, Tag, Calendar, Mic, Link, Users, Building, ShieldCheck, Bookmark, FileText, Activity } from 'lucide-react';
+import { Heart, Star, Disc, Hash, Type, Save, X, Image as ImageIcon, Trash2, Edit2, Globe, Tag, Calendar, Mic, Link, Users, Building, ShieldCheck, Bookmark, FileText, Activity } from 'lucide-react';
 import { TrackItem, TrackMetadata } from '../../types/music';
 import { ArtworkImage } from './ArtworkImage';
 
@@ -95,6 +96,14 @@ export const MetadataEditor: React.FC = () => {
     const [artworkDraftError, setArtworkDraftError] = useState<string | null>(null);
 
     const isApplyingSnapshotRef = useRef(false);
+    const { containerRef, handleKeyDown } = useFocusTrap<HTMLDivElement>({
+        active: Boolean(editingTracks && editingTracks.length > 0),
+        onEscape: () => setEditingTracks(null),
+    });
+    const { containerRef: artworkDialogRef, handleKeyDown: handleArtworkDialogKeyDown } = useFocusTrap<HTMLDivElement>({
+        active: isArtworkDialogOpen,
+        onEscape: () => setIsArtworkDialogOpen(false),
+    });
 
     const createSnapshot = useCallback((overrides: Partial<MetadataEditorSnapshot> = {}): MetadataEditorSnapshot => ({
         title,
@@ -596,13 +605,19 @@ export const MetadataEditor: React.FC = () => {
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setEditingTracks(null)}>
             <div
+                ref={containerRef}
                 className="bg-[#111] border border-white/10 rounded-2xl shadow-3xl w-full max-w-4xl p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar relative"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="metadata-editor-title"
+                tabIndex={-1}
                 onClick={e => e.stopPropagation()}
+                onKeyDown={handleKeyDown}
             >
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h2 className="text-2xl font-black text-white tracking-tight">
+                        <h2 id="metadata-editor-title" className="text-2xl font-black text-white tracking-tight">
                             {editingTracks.length > 1 ? `Edit ${editingTracks.length} Tracks` : 'Edit Metadata'}
                         </h2>
                         {editingTracks.length > 1 && (
@@ -672,7 +687,6 @@ export const MetadataEditor: React.FC = () => {
                                     <ArtworkImage
                                         src={artworkUrl}
                                         className="w-full h-full object-cover"
-                                        fallback={<Music className="w-12 h-12 text-gray-800" />}
                                     />
                                 )}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
@@ -1121,8 +1135,17 @@ export const MetadataEditor: React.FC = () => {
 
                 {isArtworkDialogOpen && (
                     <div className="fixed inset-0 z-[100000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={closeArtworkUrlDialog}>
-                        <div className="w-full max-w-xl bg-[#121212] border border-white/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-white text-lg font-black tracking-tight mb-2">Artwork URL</h3>
+                        <div
+                            ref={artworkDialogRef}
+                            className="w-full max-w-xl bg-[#121212] border border-white/10 rounded-2xl p-6"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="artwork-url-dialog-title"
+                            tabIndex={-1}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={handleArtworkDialogKeyDown}
+                        >
+                            <h3 id="artwork-url-dialog-title" className="text-white text-lg font-black tracking-tight mb-2">Artwork URL</h3>
                             <p className="text-gray-400 text-xs mb-4">Paste a direct image URL. You can also use a local absolute path like <span className="font-mono">/Album/art.jpg</span>.</p>
                             <input
                                 type="text"

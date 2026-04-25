@@ -10,7 +10,7 @@ export const Button: React.FC<ButtonProps> = ({ variant = 'primary', className =
     // Integrate Tailwind classes dynamically based on variant
     return (
         <button
-            className={`px-4 py-2 rounded focus:outline-none transition-colors ${className}`}
+            className={`px-4 py-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dominant focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
             {...props}
         >
             {children}

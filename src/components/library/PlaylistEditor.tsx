@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { persistenceService, Playlist } from '../../services/persistence';
 import { X, Save, Image as ImageIcon, Type, FileText, Trash2 } from 'lucide-react';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface PlaylistEditorProps {
     playlist: Playlist;
@@ -14,6 +15,10 @@ export const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ playlist, onSave
     const [name, setName] = useState(playlist.name);
     const [description, setDescription] = useState(playlist.description || '');
     const [customImage, setCustomImage] = useState(playlist.customImage || '');
+    const { containerRef, handleKeyDown } = useFocusTrap<HTMLDivElement>({
+        active: true,
+        onEscape: onCancel,
+    });
 
     useEffect(() => {
         setName(playlist.name);
@@ -38,15 +43,21 @@ export const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ playlist, onSave
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onCancel}>
             <div
+                ref={containerRef}
                 className="bg-[#111] border border-white/10 rounded-3xl shadow-3xl w-full max-w-xl p-8 animate-in zoom-in-95 duration-300 relative overflow-hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="playlist-editor-title"
+                tabIndex={-1}
                 onClick={e => e.stopPropagation()}
+                onKeyDown={handleKeyDown}
             >
                 {/* Background Glow */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-dominant/10 blur-[100px] rounded-full"></div>
 
                 <div className="flex justify-between items-center mb-8 relative z-10">
                     <div>
-                        <h2 className="text-2xl font-black text-white tracking-tight">Edit Collection</h2>
+                        <h2 id="playlist-editor-title" className="text-2xl font-black text-white tracking-tight">Edit Collection</h2>
                         <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Refine your curated masterpiece</p>
                     </div>
                     <button onClick={onCancel} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-all" aria-label="Close playlist editor">
