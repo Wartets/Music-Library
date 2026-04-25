@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { extractDominantColors, limitSaturation, ensureContrast, lightenColor, darkenColor, hexWithAlpha } from '../utils/colorUtils';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
+import { extractDominantColors, limitSaturation, ensureContrast, lightenColor, darkenColor, hexWithAlpha, hslToRgb, rgbToHex } from '../utils/colorUtils';
 export type ThemeMode = 'adaptive' | 'fixed' | 'genre' | 'neutral';
 
 export interface ThemeSettings {
@@ -80,9 +80,32 @@ const DEFAULT_PALETTE: Palette = {
 
 const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 
+const MAX_PALETTE_CACHE_SIZE = 250;
+const MAX_EXTRACTION_CACHE_SIZE = 200;
+
+const touchCacheEntry = <T,>(cache: Map<string, T>, key: string, value: T, maxSize: number) => {
+    if (cache.has(key)) {
+        cache.delete(key);
+    }
+
+    cache.set(key, value);
+
+    if (cache.size > maxSize) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey) {
+            cache.delete(oldestKey);
+        }
+    }
+};
+
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [settings, setSettings] = useState<ThemeSettings>(defaultSettings);
     const [currentPalette, setCurrentPalette] = useState<Palette>(DEFAULT_PALETTE);
+    const paletteCacheRef = useRef<Map<string, Palette>>(new Map());
+    const extractionCacheRef = useRef<Map<string, string[]>>(new Map());
+    const inFlightExtractionRef = useRef<Map<string, Promise<string[]>>>(new Map());
+    const lastRequestIdRef = useRef(0);
+    const lastAppliedPaletteKeyRef = useRef<string>('default');
 
     useEffect(() => {
         const root = document.documentElement;
@@ -117,9 +140,105 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setSettings(prev => ({ ...prev, ...newSettings }));
     };
 
-    const applyArtworkColors = async (artworkUrl: string | null) => {
+    const applyPalette = useCallback((paletteKey: string, palette: Palette) => {
+        if (lastAppliedPaletteKeyRef.current === paletteKey) {
+            return;
+        }
+
+        lastAppliedPaletteKeyRef.current = paletteKey;
+        setCurrentPalette(palette);
+    }, []);
+
+    const getSettingsCacheKey = useCallback((themeSettings: ThemeSettings) => {
+        return [
+            themeSettings.mode,
+            themeSettings.applyToNonEssentialsOnly ? '1' : '0',
+            themeSettings.limitAggressiveColors ? '1' : '0',
+            themeSettings.enforceContrast ? '1' : '0',
+            themeSettings.manualHueOverride ?? 'none'
+        ].join('|');
+    }, []);
+
+    const buildPaletteFromPrimary = useCallback((basePrimary: string, themeSettings: ThemeSettings): Palette => {
+        let primary = basePrimary;
+
+        if (themeSettings.limitAggressiveColors) {
+            primary = limitSaturation(primary, 60);
+        }
+
+        let light = lightenColor(primary, 20);
+        let dark = darkenColor(primary, 30);
+        let textOnDom = '#ffffff';
+
+        if (themeSettings.enforceContrast) {
+            primary = ensureContrast('#000000', primary, 2.5);
+            textOnDom = ensureContrast(primary, '#ffffff', 4.5);
+            light = ensureContrast('#000000', light, 4.5);
+        }
+
+        const surfaceSecondary = themeSettings.applyToNonEssentialsOnly ? '#0a0a0a' : hexWithAlpha(dark, 0.3);
+        const surfaceElevated = themeSettings.applyToNonEssentialsOnly ? '#141414' : hexWithAlpha(dark, 0.6);
+
+        return {
+            dominant: primary,
+            dominantLight: light,
+            dominantDark: dark,
+            onDominant: textOnDom,
+
+            surfacePrimary: '#000000',
+            surfaceSecondary,
+            surfaceElevated,
+            surfaceHover: hexWithAlpha(primary, 0.15),
+            surfaceActive: hexWithAlpha(primary, 0.25),
+
+            textPrimary: '#ffffff',
+            textSecondary: '#a1a1aa',
+            textMuted: '#52525b',
+            textAccent: light,
+
+            borderSubtle: 'rgba(255,255,255,0.05)',
+            borderDefault: 'rgba(255,255,255,0.1)',
+            borderAccent: hexWithAlpha(primary, 0.4),
+
+            badgeBg: hexWithAlpha(primary, 0.2),
+            badgeText: light,
+            scrollbar: 'rgba(255,255,255,0.1)'
+        };
+    }, []);
+
+    const getExtractedColors = useCallback(async (artworkUrl: string): Promise<string[]> => {
+        const cached = extractionCacheRef.current.get(artworkUrl);
+        if (cached) {
+            touchCacheEntry(extractionCacheRef.current, artworkUrl, cached, MAX_EXTRACTION_CACHE_SIZE);
+            return cached;
+        }
+
+        const inFlight = inFlightExtractionRef.current.get(artworkUrl);
+        if (inFlight) {
+            return inFlight;
+        }
+
+        const extractionPromise = extractDominantColors(artworkUrl, 1)
+            .then((colors) => {
+                const normalized = colors.length > 0 ? colors : [DEFAULT_PALETTE.dominant];
+                touchCacheEntry(extractionCacheRef.current, artworkUrl, normalized, MAX_EXTRACTION_CACHE_SIZE);
+                return normalized;
+            })
+            .catch(() => [DEFAULT_PALETTE.dominant])
+            .finally(() => {
+                inFlightExtractionRef.current.delete(artworkUrl);
+            });
+
+        inFlightExtractionRef.current.set(artworkUrl, extractionPromise);
+        return extractionPromise;
+    }, []);
+
+    const applyArtworkColors = useCallback(async (artworkUrl: string | null) => {
+        const requestId = ++lastRequestIdRef.current;
+
         if (!artworkUrl || settings.mode === 'neutral') {
-            setCurrentPalette(DEFAULT_PALETTE);
+            if (requestId !== lastRequestIdRef.current) return;
+            applyPalette('default', DEFAULT_PALETTE);
             return;
         }
 
@@ -128,62 +247,48 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
 
         try {
-            const colors = await extractDominantColors(artworkUrl, 1);
-            let primary = colors[0] || DEFAULT_PALETTE.dominant;
+            const settingsKey = getSettingsCacheKey(settings);
+            const paletteCacheKey = `${artworkUrl}::${settingsKey}`;
+            const cachedPalette = paletteCacheRef.current.get(paletteCacheKey);
 
-            if (settings.limitAggressiveColors) {
-                primary = limitSaturation(primary, 60);
+            if (cachedPalette) {
+                touchCacheEntry(paletteCacheRef.current, paletteCacheKey, cachedPalette, MAX_PALETTE_CACHE_SIZE);
+                if (requestId === lastRequestIdRef.current) {
+                    applyPalette(paletteCacheKey, cachedPalette);
+                }
+                return;
             }
 
-            let light = lightenColor(primary, 20);
-            let dark = darkenColor(primary, 30);
-            let textOnDom = '#ffffff';
+            let primary = DEFAULT_PALETTE.dominant;
 
-            if (settings.enforceContrast) {
-                primary = ensureContrast('#000000', primary, 2.5);
-                textOnDom = ensureContrast(primary, '#ffffff', 4.5);
-                light = ensureContrast('#000000', light, 4.5);
+            if (settings.mode === 'fixed' && settings.manualHueOverride !== null) {
+                const normalizedHue = ((settings.manualHueOverride % 360) + 360) % 360;
+                const fixedRgb = hslToRgb(normalizedHue, 55, 45);
+                primary = rgbToHex(fixedRgb.r, fixedRgb.g, fixedRgb.b);
+            } else {
+                const colors = await getExtractedColors(artworkUrl);
+                if (requestId !== lastRequestIdRef.current) return;
+                primary = colors[0] || DEFAULT_PALETTE.dominant;
             }
 
-            // Adjust semantic tokens based on primary color
-            const surfaceSecondary = settings.applyToNonEssentialsOnly ? '#0a0a0a' : hexWithAlpha(dark, 0.3);
-            const surfaceElevated = settings.applyToNonEssentialsOnly ? '#141414' : hexWithAlpha(dark, 0.6);
+            const palette = buildPaletteFromPrimary(primary, settings);
+            touchCacheEntry(paletteCacheRef.current, paletteCacheKey, palette, MAX_PALETTE_CACHE_SIZE);
 
-            setCurrentPalette({
-                dominant: primary,
-                dominantLight: light,
-                dominantDark: dark,
-                onDominant: textOnDom,
-
-                surfacePrimary: '#000000',
-                surfaceSecondary: surfaceSecondary,
-                surfaceElevated: surfaceElevated,
-                surfaceHover: hexWithAlpha(primary, 0.15),
-                surfaceActive: hexWithAlpha(primary, 0.25),
-
-                textPrimary: '#ffffff',
-                textSecondary: '#a1a1aa',
-                textMuted: '#52525b',
-                textAccent: light, // Using lightened dominant for readable links/accents
-
-                borderSubtle: 'rgba(255,255,255,0.05)',
-                borderDefault: 'rgba(255,255,255,0.1)',
-                borderAccent: hexWithAlpha(primary, 0.4),
-
-                badgeBg: hexWithAlpha(primary, 0.2),
-                badgeText: light,
-                scrollbar: 'rgba(255,255,255,0.1)'
-            });
+            if (requestId === lastRequestIdRef.current) {
+                applyPalette(paletteCacheKey, palette);
+            }
 
         } catch (e) {
             console.error("Theme extraction failed", e);
-            setCurrentPalette(DEFAULT_PALETTE);
+            if (requestId !== lastRequestIdRef.current) return;
+            applyPalette('default', DEFAULT_PALETTE);
         }
-    };
+    }, [settings, getSettingsCacheKey, getExtractedColors, buildPaletteFromPrimary, applyPalette]);
 
     const reportBadPalette = () => {
         console.warn("User reported bad palette for current track.", currentPalette);
         alert("Thanks for the feedback. Fallback to default palette applied.");
+        lastAppliedPaletteKeyRef.current = 'default';
         setCurrentPalette(DEFAULT_PALETTE);
     };
 
