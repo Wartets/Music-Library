@@ -178,7 +178,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         <UIContext.Provider value={contextValue}>
             {children}
             {toastState.active.length > 0 && (
-                <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+8rem)] md:bottom-[26rem] z-[120000] flex flex-col items-center gap-2 pointer-events-none w-[min(92vw,560px)]">
+                <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+6.25rem)] md:bottom-24.25 z-[120000] flex flex-col items-center gap-2 pointer-events-none w-[min(92vw,560px)]">
                     {toastState.active.map(toast => {
                         const visuals = toastVisuals[toast.type];
                         const subtleClass = toast.subtle ? 'px-3 py-1.5 rounded-full text-[11px] shadow-lg' : 'px-4 py-2.5 rounded-xl text-sm shadow-2xl';
