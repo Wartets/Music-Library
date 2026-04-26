@@ -66,7 +66,10 @@ export const AudioSettingsTab: React.FC = () => {
                                         <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-white/5 rounded-full group-hover:bg-white/10 transition-colors" />
                                         <div className={`absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-4 h-[1px] bg-white/10 transition-all duration-150 ease-out ${Math.abs(value) <= eqZeroSnapThreshold ? 'bg-dominant/70 shadow-[0_0_10px_rgba(var(--color-dominant-rgb),0.35)]' : ''}`} />
                                         <div
-                                            className={`absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border pointer-events-none transition-all duration-150 ease-out ${Math.abs(value) <= eqZeroSnapThreshold ? 'opacity-100 scale-100 border-dominant/60 bg-dominant/15 shadow-[0_0_26px_rgba(var(--color-dominant-rgb),0.38)]' : 'opacity-0 scale-50 border-transparent bg-transparent'}`}
+                                            className={`absolute left-1/2 top-1/2 h-5 w-5 rounded-full border pointer-events-none transition-all duration-150 ease-out ${Math.abs(value) <= eqZeroSnapThreshold ? 'opacity-100 scale-100 border-dominant/60 bg-dominant/15 shadow-[0_0_26px_rgba(var(--color-dominant-rgb),0.38)]' : 'opacity-0 scale-50 border-transparent bg-transparent'}`}
+                                            style={{
+                                                transform: 'translate(-50%, -50%)'
+                                            }}
                                         />
                                         <input
                                             type="range"
