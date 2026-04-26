@@ -74,11 +74,13 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
     const [sortBy, setSortBy] = React.useState<'name' | 'artist'>('artist');
 
     const albums = useMemo(() => {
-        return groupAlbums(libraryState.filteredTracks, sortBy).map(album => (
-            album.id === '__unknown__' || album.name.toLowerCase() === 'single'
-                ? { ...album, artwork: undefined }
-                : album
-        ));
+        return groupAlbums(libraryState.filteredTracks, sortBy).map(album => {
+            // Prevent artwork for Unknown Album
+            if (album.id === '__unknown__') {
+                return { ...album, artwork: undefined };
+            }
+            return album;
+        });
     }, [libraryState.filteredTracks, sortBy]);
 
     const onRightClick = React.useCallback((e: React.MouseEvent, album: any) => {
@@ -117,7 +119,14 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
         title: album.name,
         subtitle: `${album.artist} • ${album.tracks.length} tracks • ${album.durationLabel}`,
         imageDetails: album.artwork,
-        onClick: () => onNavigate('AlbumDetail', album),
+        onClick: () => {
+            // Handle navigation for Unknown Album
+            if (album.id === '__unknown__') {
+                showToast('No collection found for Unknown Album.');
+                return;
+            }
+            onNavigate('AlbumDetail', album);
+        },
         onContextMenu: (e) => onRightClick(e, album)
     }));
 
