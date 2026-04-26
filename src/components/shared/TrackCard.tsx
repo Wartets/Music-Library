@@ -50,10 +50,10 @@ export const TrackCard: React.FC<TrackCardProps> = ({
                     <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-dominant shadow-[0_0_10px_rgba(var(--dominant-rgb),0.8)] animate-pulse"></div>
                 )}
             </div>
-            <h3 className={`text-xs font-bold truncate ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
+            <h3 className={`text-xs font-bold line-clamp-3 leading-tight ${isPlaying ? 'text-dominant-light' : 'text-white'}`}>
                 <HighlightText text={title} query={query} />
             </h3>
-            <p className="text-[11px] text-gray-500 truncate mt-0.5 font-medium">
+            <p className="text-[11px] text-gray-500 line-clamp-3 leading-tight mt-1 font-medium">
                 <HighlightText text={artist} query={query} />
             </p>
         </div>

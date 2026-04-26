@@ -249,13 +249,13 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                     <div className={`flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl transition-all duration-700 ease-out ${isArtworkTransitioning ? 'translate-y-1 opacity-80' : 'translate-y-0 opacity-100'}`}>
                         <button
                             onClick={() => onNavigate('SongDetail', track)}
-                            className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4 line-clamp-2 hover:text-dominant-light transition-colors text-center lg:text-left"
+                            className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4 hover:text-dominant-light transition-colors text-center lg:text-left break-words"
                         >
                             {track.metadata?.title || track.logic.track_name}
                         </button>
                         <button
                             onClick={() => onNavigate('ArtistDetail', track.metadata?.artists?.[0] || 'Unknown Artist')}
-                            className="text-xl md:text-3xl text-white/50 font-medium mb-8 hover:text-white transition-colors"
+                            className="text-xl md:text-3xl text-white/50 font-medium mb-8 hover:text-white transition-colors break-words"
                         >
                             {track.metadata?.artists?.join(', ') || 'Unknown Artist'}
                         </button>
