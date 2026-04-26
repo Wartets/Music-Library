@@ -1,6 +1,6 @@
 const STATIC_CACHE = 'music-library-static-v3';
 const ARTWORK_CACHE = 'music-library-artwork-v3';
-const DATA_CACHE = 'music-library-data-v2';
+const DATA_CACHE = 'music-library-data-v3';
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/vite.svg', '/musicBib.json'];
 
 self.addEventListener('install', (event) => {
