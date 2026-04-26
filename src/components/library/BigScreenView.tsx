@@ -5,6 +5,7 @@ import { Maximize2, Minimize2, Repeat, Repeat1, Shuffle, X } from 'lucide-react'
 import { formatDuration } from '../../utils/formatters';
 import { ViewType } from '../layout/AppLayout';
 import { ArtworkImage } from '../shared/ArtworkImage';
+import { ImmersiveVisualizer } from '../player/ImmersiveVisualizer';
 import { TrackItem } from '../../types/music';
 import { useIsMobile, useIsTablet } from '../../hooks/useMediaQuery';
 
@@ -179,8 +180,11 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
         <div className={`fixed inset-0 z-[100] flex flex-col overflow-hidden select-none ${isControlsVisible ? 'cursor-default' : 'cursor-none'}`} onDoubleClick={handleBackgroundDoubleClick}>
             {/* Static artwork-derived background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: dominantColor }} />
-                <div className="absolute inset-0 bg-black/35" />
+                <ImmersiveVisualizer track={track} className="opacity-100" />
+                <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: dominantColor, opacity: 0.24, mixBlendMode: 'screen' }} />
+                <div className="absolute inset-0 bg-black/35 mix-blend-overlay" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,0.08),transparent_58%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.14),rgba(0,0,0,0.28))]" />
             </div>
 
             {/* Header */}

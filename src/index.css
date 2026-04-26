@@ -162,9 +162,85 @@
   100% { transform: translateX(100%); }
 }
 
+@keyframes immersiveGradientDrift {
+  0% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2.5%, -2%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+  }
+}
+
+@keyframes immersiveGradientRotate {
+  0% {
+    transform: rotate(0deg) scale(1.02);
+  }
+  50% {
+    transform: rotate(8deg) scale(1.07);
+  }
+  100% {
+    transform: rotate(0deg) scale(1.02);
+  }
+}
+
+@keyframes immersiveGrainShift {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.22;
+  }
+  25% {
+    transform: translate3d(-2%, 1%, 0);
+    opacity: 0.28;
+  }
+  50% {
+    transform: translate3d(1%, -2%, 0);
+    opacity: 0.24;
+  }
+  75% {
+    transform: translate3d(2%, 1%, 0);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.22;
+  }
+}
+
+.immersive-gradient-drift-slow {
+  animation: immersiveGradientDrift 19s ease-in-out infinite;
+}
+
+.immersive-gradient-drift-fast {
+  animation: immersiveGradientDrift 13s ease-in-out infinite reverse;
+}
+
+.immersive-gradient-rotate {
+  animation: immersiveGradientRotate 24s linear infinite;
+}
+
+.immersive-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='5.92' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.95'/%3E%3C/svg%3E");
+  background-size: 50px 50px;
+  background-repeat: repeat;
+  mix-blend-mode: soft-light;
+  filter: contrast(190%) brightness(125%);
+  opacity: 0.4;
+  animation: immersiveGrainShift 0.55s steps(2) infinite;
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .shimmer {
+    animation: none;
+  }
+
+  .immersive-gradient-drift-slow,
+  .immersive-gradient-drift-fast,
+  .immersive-gradient-rotate,
+  .immersive-grain {
     animation: none;
   }
   

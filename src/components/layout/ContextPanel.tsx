@@ -1,6 +1,7 @@
 import React from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { Visualizer } from '../player/Visualizer';
+import { ImmersiveVisualizer } from '../player/ImmersiveVisualizer';
 import { formatSizeMb } from '../../utils/formatters';
 
 interface ParsedLyricLine {
@@ -151,7 +152,8 @@ export const ContextPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                         {/* Visualizer */}
                         <div className="bg-white/5 rounded-xl p-2.5 md:p-4 border border-white/5 shadow-inner">
                             <h3 className="text-[10px] md:text-[11px] text-gray-500 uppercase tracking-widest font-bold mb-2 md:mb-4">Audio Output</h3>
-                            <div className="bg-black/40 rounded-lg p-1.5 md:p-2 overflow-hidden border border-black">
+                            <div className="relative bg-black/20 rounded-lg p-1.5 md:p-2 overflow-hidden border border-black/70">
+                                <ImmersiveVisualizer track={track} className="opacity-100" />
                                 <Visualizer />
                             </div>
                         </div>
