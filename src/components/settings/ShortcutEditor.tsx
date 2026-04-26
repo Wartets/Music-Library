@@ -4,6 +4,8 @@ import type { KeyboardShortcuts, ShortcutConfig } from '../../services/persisten
 
 type ActionKey = keyof KeyboardShortcuts;
 
+const EMPTY_SHORTCUT: ShortcutConfig = { key: '', ctrl: false, meta: false, shift: false, alt: false };
+
 const actionDefinitions: Record<ActionKey, { label: string; description: string }> = {
     togglePlay: { label: 'Play/Pause', description: 'Toggle playback' },
     seekForward: { label: 'Seek Forward', description: 'Seek forward by 5 seconds' },
@@ -14,6 +16,10 @@ const actionDefinitions: Record<ActionKey, { label: string; description: string 
 };
 
 const formatShortcut = (shortcut: ShortcutConfig): string => {
+    if (!shortcut.key) {
+        return 'Not set';
+    }
+
     const parts: string[] = [];
     if (shortcut.ctrl) parts.push('Ctrl');
     if (shortcut.meta) parts.push('Meta');
@@ -30,12 +36,52 @@ const formatShortcut = (shortcut: ShortcutConfig): string => {
     return parts.join('+');
 };
 
+const getShortcutSignature = (shortcut: ShortcutConfig): string => {
+    if (!shortcut.key) {
+        return '';
+    }
+
+    const keyPart = shortcut.key.length === 1 ? shortcut.key.toLowerCase() : shortcut.key;
+    return `${shortcut.ctrl ? '1' : '0'}:${shortcut.meta ? '1' : '0'}:${shortcut.alt ? '1' : '0'}:${shortcut.shift ? '1' : '0'}:${keyPart}`;
+};
+
 export const ShortcutEditor: React.FC = () => {
     const [shortcuts, setShortcuts] = useState<KeyboardShortcuts>(() => {
         const prefs = persistenceService.getPreferences();
         return prefs.keyboardShortcuts || DEFAULT_KEYBOARD_SHORTCUTS;
     });
     const [recordingAction, setRecordingAction] = useState<ActionKey | null>(null);
+    const [captureError, setCaptureError] = useState<string | null>(null);
+
+    const conflictByAction = React.useMemo(() => {
+        const map: Partial<Record<ActionKey, string>> = {};
+        const grouped = new Map<string, ActionKey[]>();
+
+        (Object.keys(actionDefinitions) as ActionKey[]).forEach(action => {
+            const signature = getShortcutSignature(shortcuts[action]);
+            if (!signature) {
+                return;
+            }
+
+            if (!grouped.has(signature)) {
+                grouped.set(signature, []);
+            }
+            grouped.get(signature)!.push(action);
+        });
+
+        grouped.forEach(actions => {
+            if (actions.length <= 1) {
+                return;
+            }
+
+            actions.forEach(action => {
+                const others = actions.filter(other => other !== action).map(other => actionDefinitions[other].label);
+                map[action] = `Conflict: also used by ${others.join(', ')}`;
+            });
+        });
+
+        return map;
+    }, [shortcuts]);
 
     useEffect(() => {
         const handleStorage = () => {
@@ -49,12 +95,24 @@ export const ShortcutEditor: React.FC = () => {
 
     const captureShortcut = useCallback((event: KeyboardEvent) => {
         if (!recordingAction) return;
-        if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
-            return;
-        }
 
         event.preventDefault();
         event.stopPropagation();
+
+        if (event.key === 'Escape') {
+            setShortcuts(previous => {
+                const updated = { ...previous, [recordingAction]: EMPTY_SHORTCUT };
+                persistenceService.updatePreferences({ keyboardShortcuts: updated });
+                return updated;
+            });
+            setCaptureError(null);
+            setRecordingAction(null);
+            return;
+        }
+
+        if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+            return;
+        }
 
         const nextShortcut: ShortcutConfig = {
             key: event.key,
@@ -64,13 +122,27 @@ export const ShortcutEditor: React.FC = () => {
             alt: event.altKey
         };
 
+        const duplicateAction = (Object.keys(actionDefinitions) as ActionKey[]).find(action => {
+            if (action === recordingAction) {
+                return false;
+            }
+
+            return getShortcutSignature(shortcuts[action]) === getShortcutSignature(nextShortcut);
+        });
+
+        if (duplicateAction) {
+            setCaptureError(`Shortcut already assigned to ${actionDefinitions[duplicateAction].label}.`);
+            return;
+        }
+
         setShortcuts(previous => {
             const updated = { ...previous, [recordingAction]: nextShortcut };
             persistenceService.updatePreferences({ keyboardShortcuts: updated });
             return updated;
         });
+        setCaptureError(null);
         setRecordingAction(null);
-    }, [recordingAction]);
+    }, [recordingAction, shortcuts]);
 
     useEffect(() => {
         if (!recordingAction) return;
@@ -83,25 +155,95 @@ export const ShortcutEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, [captureShortcut, recordingAction]);
 
+    const resetActionToDefault = (action: ActionKey) => {
+        setShortcuts(previous => {
+            const updated = { ...previous, [action]: DEFAULT_KEYBOARD_SHORTCUTS[action] };
+            persistenceService.updatePreferences({ keyboardShortcuts: updated });
+            return updated;
+        });
+        setCaptureError(null);
+        setRecordingAction(null);
+    };
+
+    const clearActionShortcut = (action: ActionKey) => {
+        setShortcuts(previous => {
+            const updated = { ...previous, [action]: EMPTY_SHORTCUT };
+            persistenceService.updatePreferences({ keyboardShortcuts: updated });
+            return updated;
+        });
+        setCaptureError(null);
+        setRecordingAction(null);
+    };
+
     const resetToDefault = () => {
         setShortcuts(DEFAULT_KEYBOARD_SHORTCUTS);
         persistenceService.updatePreferences({ keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS });
+        setCaptureError(null);
+        setRecordingAction(null);
     };
 
     return (
         <div className="space-y-3">
             {(Object.keys(actionDefinitions) as ActionKey[]).map(action => (
-                <div key={action} className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
-                    <div>
-                        <div className="font-bold text-sm text-white">{actionDefinitions[action].label}</div>
-                        <div className="text-[10px] text-gray-500">{actionDefinitions[action].description}</div>
-                    </div>
-                    <button
-                        onClick={() => setRecordingAction(action)}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${recordingAction === action ? 'bg-red-500/20 text-red-500 border border-red-500/50' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
-                    >
-                        {recordingAction === action ? 'Press keys...' : formatShortcut(shortcuts[action])}
-                    </button>
+                <div key={action} className="p-4 bg-black/20 rounded-2xl border border-white/5">
+                    {(() => {
+                        const isRecording = recordingAction === action;
+                        const hasShortcut = Boolean(shortcuts[action].key);
+
+                        return (
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div className="min-w-0">
+                                    <div className="font-bold text-sm text-white">{actionDefinitions[action].label}</div>
+                                    <div className="text-[10px] text-gray-500">{actionDefinitions[action].description}</div>
+                                </div>
+
+                                <div className="flex flex-col items-stretch gap-2 md:min-w-[300px]">
+                                    <button
+                                        onClick={() => {
+                                            setCaptureError(null);
+                                            setRecordingAction(action);
+                                        }}
+                                        className={`w-full px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${isRecording
+                                                ? 'bg-red-500/20 text-red-300 border-red-500/60 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]'
+                                                : hasShortcut
+                                                    ? 'bg-dominant/20 text-dominant-light border-dominant/40 hover:bg-dominant/30'
+                                                    : 'bg-white/5 text-gray-300 border-white/20 border-dashed hover:bg-white/10'
+                                            }`}
+                                        title={isRecording ? 'Recording shortcut' : 'Set or change shortcut'}
+                                    >
+                                        {isRecording ? 'Press keys… (Esc = Not set)' : formatShortcut(shortcuts[action])}
+                                    </button>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => clearActionShortcut(action)}
+                                            className="px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10"
+                                            title="Clear shortcut"
+                                        >
+                                            Not set
+                                        </button>
+                                        <button
+                                            onClick={() => resetActionToDefault(action)}
+                                            className="px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-amber-500/10 text-amber-300 border border-amber-400/25 hover:bg-amber-500/20"
+                                            title="Reset shortcut to default"
+                                        >
+                                            Reset
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                    {conflictByAction[action] && (
+                        <div className="mt-2 text-[10px] text-amber-400 font-semibold">
+                            {conflictByAction[action]}
+                        </div>
+                    )}
+                    {recordingAction === action && captureError && (
+                        <div className="mt-2 text-[10px] text-red-400 font-semibold">
+                            {captureError}
+                        </div>
+                    )}
                 </div>
             ))}
             <div className="flex justify-end">

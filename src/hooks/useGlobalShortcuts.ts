@@ -24,6 +24,10 @@ export const useGlobalShortcuts = () => {
 
             // Helper to check if event matches a shortcut
             const matches = (shortcut: ShortcutConfig) => {
+                if (!shortcut?.key) {
+                    return false;
+                }
+
                 return e.key === shortcut.key &&
                     e.ctrlKey === shortcut.ctrl &&
                     e.metaKey === shortcut.meta &&
