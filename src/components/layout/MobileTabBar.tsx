@@ -40,6 +40,13 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
     const isMoreActive = React.useMemo(() => extraTabs.some(tab => tab.id === currentView), [currentView]);
     const { state: libraryState, setSearchQuery } = useLibrary();
 
+    const navigateToView = React.useCallback((view: ViewType) => {
+        if (currentView === view && libraryState.searchQuery) {
+            setSearchQuery('');
+        }
+        onNavigate(view);
+    }, [currentView, libraryState.searchQuery, onNavigate, setSearchQuery]);
+
     React.useEffect(() => {
         if (isMoreOpen) {
             setMobileSearchQuery(libraryState.searchQuery || '');
@@ -98,7 +105,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                                 <button
                                     key={tab.id}
                                     onClick={() => {
-                                        onNavigate(tab.id);
+                                        navigateToView(tab.id);
                                         setIsMoreOpen(false);
                                     }}
                                     className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left transition-all min-h-12 active:scale-95 ${isActive ? 'bg-dominant/25 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
@@ -123,7 +130,7 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ currentView, onNavig
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => onNavigate(tab.id)}
+                                onClick={() => navigateToView(tab.id)}
                                 className={`flex flex-col items-center justify-center gap-1.5 transition-all min-h-12 active:scale-95 ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                             >
                                 <span className={isActive ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]' : ''}>

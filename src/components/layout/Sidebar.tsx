@@ -198,9 +198,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
 
     const NavButton = ({ item }: { item: any }) => {
         const isActive = currentView === item.id;
+
+        const handleNavClick = () => {
+            if (isActive && libState.searchQuery) {
+                setSearchQuery('');
+            }
+            onNavigate(item.id as ViewType);
+        };
+
         return (
             <button
-                onClick={() => onNavigate(item.id as ViewType)}
+                onClick={handleNavClick}
                 className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-left transition-colors duration-300 ${isActive
                     ? 'bg-dominant/30 text-white font-bold border-l-4 border-dominant-light'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border-l-4 border-transparent'
