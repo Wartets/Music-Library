@@ -6,6 +6,7 @@ import { formatDuration } from '../../utils/formatters';
 import { ViewType } from '../layout/AppLayout';
 import { ArtworkImage } from '../shared/ArtworkImage';
 import { TrackItem } from '../../types/music';
+import { useIsMobile, useIsTablet } from '../../hooks/useMediaQuery';
 
 const getTrackArtwork = (track?: TrackItem | null) => track?.artworks?.track_artwork?.[0] || track?.artworks?.album_artwork?.[0];
 
@@ -31,33 +32,41 @@ const getTrackTitle = (track?: TrackItem | null) => track?.metadata?.title || tr
 export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: ViewType, data?: any) => void }> = ({ onBack, onNavigate }) => {
     const { state, togglePlay, playNext, playPrevious, seek, getProgress, toggleShuffle, setRepeat, seekForward, seekBackward } = usePlayer();
     const track = state.currentTrack;
+    const isMobile = useIsMobile();
+    const isTablet = useIsTablet();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [localProgress, setLocalProgress] = useState(0);
     const [isControlsVisible, setIsControlsVisible] = useState(true);
-    const [isButtonHovered, setIsButtonHovered] = useState(false);
     const [transitionTrack, setTransitionTrack] = useState<TrackItem | null>(null);
     const [isArtworkTransitioning, setIsArtworkTransitioning] = useState(false);
-    const isButtonHoveredRef = useRef(false);
     const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const transitionFrameRef = useRef<number | null>(null);
     const previousTrackRef = useRef<TrackItem | null>(track);
+    const inactivityTimeoutMs = isFullscreen ? 3000 : 4500;
+    const showFullscreenButton = !isMobile && !isTablet;
 
     const resetInactivity = useCallback(() => {
         setIsControlsVisible(true);
         if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
         inactivityTimeoutRef.current = setTimeout(() => {
-            if (!isButtonHoveredRef.current) {
-                setIsControlsVisible(false);
-            }
-        }, 3000);
-    }, []);
+            setIsControlsVisible(false);
+        }, inactivityTimeoutMs);
+    }, [inactivityTimeoutMs]);
 
     useEffect(() => {
         window.addEventListener('mousemove', resetInactivity);
+        window.addEventListener('mousedown', resetInactivity);
+        window.addEventListener('keydown', resetInactivity);
+        window.addEventListener('touchstart', resetInactivity);
+        window.addEventListener('wheel', resetInactivity, { passive: true });
         resetInactivity();
         return () => {
             window.removeEventListener('mousemove', resetInactivity);
+            window.removeEventListener('mousedown', resetInactivity);
+            window.removeEventListener('keydown', resetInactivity);
+            window.removeEventListener('touchstart', resetInactivity);
+            window.removeEventListener('wheel', resetInactivity);
             if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
         };
     }, [resetInactivity]);
@@ -141,6 +150,10 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
     }
 
     const toggleFullscreen = () => {
+        if (!showFullscreenButton) {
+            return;
+        }
+
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen();
             setIsFullscreen(true);
@@ -163,7 +176,7 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
     const dominantColor = getTrackDominantColor(track);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden select-none" onDoubleClick={handleBackgroundDoubleClick}>
+        <div className={`fixed inset-0 z-[100] flex flex-col overflow-hidden select-none ${isControlsVisible ? 'cursor-default' : 'cursor-none'}`} onDoubleClick={handleBackgroundDoubleClick}>
             {/* Static artwork-derived background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: dominantColor }} />
@@ -171,11 +184,9 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
             </div>
 
             {/* Header */}
-            <div className={`relative z-10 flex items-center justify-between p-8 transition-opacity duration-1000 ${isControlsVisible || isButtonHovered ? 'opacity-100' : 'opacity-40'}`}>
+            <div className={`relative z-10 flex items-center justify-between p-8 transition-opacity duration-500 ${isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                 <button
                     onClick={onBack}
-                    onMouseEnter={() => { isButtonHoveredRef.current = true; setIsButtonHovered(true); }}
-                    onMouseLeave={() => { isButtonHoveredRef.current = false; setIsButtonHovered(false); }}
                     className={`group flex items-center bg-white/10 hover:bg-white/20 rounded-full transition-all duration-700 ease-in-out border border-white/10 hover:border-white/20 shadow-2xl backdrop-blur-md active:scale-95 overflow-hidden h-[44px] w-[44px]`}
                 >
                     <div className="flex items-center justify-center w-[44px] h-[44px] flex-shrink-0">
@@ -183,9 +194,11 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
                     </div>
                 </button>
                 <div className="flex items-center gap-4">
-                    <button onClick={toggleFullscreen} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all text-white opacity-40 hover:opacity-100">
-                        {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-                    </button>
+                    {showFullscreenButton && (
+                        <button onClick={toggleFullscreen} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all text-white opacity-40 hover:opacity-100">
+                            {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -299,7 +312,7 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
             </div>
 
             {/* Controls (Floating/Overlay) */}
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 z-20 opacity-40 hover:opacity-100 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10 pointer-events-auto">
+            <div className={`absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 z-20 transition-opacity duration-300 bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10 ${isControlsVisible ? 'opacity-40 hover:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                 <button
                     onClick={toggleShuffle}
                     className={`text-xs px-3 py-1 rounded-full border transition-all inline-flex items-center justify-center gap-1 min-w-10 ${state.shuffle ? 'bg-white text-black border-white' : 'text-white/80 border-white/30 hover:border-white'}`}
