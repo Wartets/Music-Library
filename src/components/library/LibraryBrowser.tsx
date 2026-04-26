@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { VirtualList } from '../shared/VirtualList';
@@ -42,8 +42,9 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     const { playTrack, state: playerState } = usePlayer();
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [showColumnConfig, setShowColumnConfig] = useState(false);
+    const [columnConfigMenuPosition, setColumnConfigMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const isMobile = useIsMobile();
-    const columnConfigRef = React.useRef<HTMLDivElement>(null);
+    const columnConfigButtonRef = React.useRef<HTMLButtonElement>(null);
     const { visibleColumns, gridTemplate } = useLibraryBrowserColumns(libraryState.columnConfig);
     const { handleSortColumn, isColumnSorted, getSortDirection } = useLibraryBrowserSort(
         libraryState.sortBy,
@@ -59,6 +60,44 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
         newConfig.splice(newIndex, 0, moved);
         updateColumnConfig(newConfig);
     }, [libraryState.columnConfig, updateColumnConfig]);
+
+    useEffect(() => {
+        if (!showColumnConfig) {
+            return;
+        }
+
+        const buttonEl = columnConfigButtonRef.current;
+        if (!buttonEl) {
+            return;
+        }
+
+        const updateMenuPosition = () => {
+            const rect = buttonEl.getBoundingClientRect();
+            const menuWidth = 224; // w-56
+            const menuHeight = 420;
+            const horizontalMargin = 12;
+            const verticalGap = 8;
+
+            const maxLeft = Math.max(horizontalMargin, window.innerWidth - menuWidth - horizontalMargin);
+            const left = Math.min(Math.max(horizontalMargin, rect.right - menuWidth), maxLeft);
+
+            const wouldOverflowBottom = rect.bottom + verticalGap + menuHeight > window.innerHeight - horizontalMargin;
+            const top = wouldOverflowBottom
+                ? Math.max(horizontalMargin, rect.top - verticalGap - menuHeight)
+                : rect.bottom + verticalGap;
+
+            setColumnConfigMenuPosition({ top, left });
+        };
+
+        updateMenuPosition();
+        window.addEventListener('resize', updateMenuPosition);
+        window.addEventListener('scroll', updateMenuPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updateMenuPosition);
+            window.removeEventListener('scroll', updateMenuPosition, true);
+        };
+    }, [showColumnConfig]);
 
     const toggleFolder = useCallback((folderKey: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -485,96 +524,102 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
             </div>
 
             {/* Table Header */}
-            <div
-                className="grid px-3 md:px-6 py-2.5 md:py-3 text-[10px] font-black text-white/20 uppercase tracking-[0.26em] md:tracking-[0.3em] border-b border-white/10 select-none items-center bg-white/2"
-                style={{ gridTemplateColumns: gridTemplate, gap: '1.5rem' }}
-            >
-                {visibleColumns.map(col => {
-                    const isRightAligned = ['year', 'bpm', 'duration', 'bitrate', 'size'].includes(col.id);
-                    const responsiveClass =
-                        col.id === 'bitrate' || col.id === 'size' ? 'hidden xl:flex' :
-                            col.id === 'bpm' || col.id === 'genre' ? 'hidden lg:flex' :
-                                col.id === 'year' ? 'hidden md:flex' : 'flex';
+            <div className="border-b border-white/10 bg-white/2">
+                <div className="flex items-center gap-2 px-3 md:px-6 py-2.5 md:py-3">
+                    <div
+                        className="grid flex-1 min-w-0 text-[10px] font-black text-white/20 uppercase tracking-[0.26em] md:tracking-[0.3em] select-none items-center"
+                        style={{ gridTemplateColumns: gridTemplate, gap: '1.5rem' }}
+                    >
+                        {visibleColumns.map(col => {
+                            const isRightAligned = ['year', 'bpm', 'duration', 'bitrate', 'size'].includes(col.id);
+                            const responsiveClass =
+                                col.id === 'bitrate' || col.id === 'size' ? 'hidden xl:flex' :
+                                    col.id === 'bpm' || col.id === 'genre' ? 'hidden lg:flex' :
+                                        col.id === 'year' ? 'hidden md:flex' : 'flex';
 
-                    return (
-                        <div
-                            key={col.id}
-                            className={`${responsiveClass} items-center ${isRightAligned ? 'justify-end' : ''} ${col.sortable ? 'cursor-pointer hover:text-white transition-colors' : ''} pr-2`}
-                            onClick={() => handleSortColumn(col)}
-                        >
-                            <span className="truncate">{col.label}</span>
-                            {isColumnSorted(col.id) && getSortDirection(col.id) && (
-                                <span className="ml-1 text-dominant/70">
-                                    {getSortDirection(col.id) === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </span>
-                            )}
-                        </div>
-                    );
-                })}
+                            return (
+                                <div
+                                    key={col.id}
+                                    className={`${responsiveClass} items-center ${isRightAligned ? 'justify-end' : ''} ${col.sortable ? 'cursor-pointer hover:text-white transition-colors' : ''} pr-2`}
+                                    onClick={() => handleSortColumn(col)}
+                                >
+                                    <span className="truncate">{col.label}</span>
+                                    {isColumnSorted(col.id) && getSortDirection(col.id) && (
+                                        <span className="ml-1 text-dominant/70">
+                                            {getSortDirection(col.id) === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                {/* Column Config Button */}
-                <div className="relative" ref={columnConfigRef}>
                     <button
+                        ref={columnConfigButtonRef}
                         onClick={() => setShowColumnConfig(!showColumnConfig)}
-                        className="flex items-center justify-center p-1 text-white/20 hover:text-white/60 transition-colors rounded hover:bg-white/5"
+                        className="flex items-center justify-center w-8 h-8 text-white/40 hover:text-white/80 transition-colors rounded-lg hover:bg-white/5 border border-white/5 shrink-0"
                         title="Configure columns"
                         aria-label="Configure visible columns"
                     >
-                        <SlidersHorizontal size={12} />
+                        <SlidersHorizontal size={14} />
                     </button>
-
-                    {showColumnConfig && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowColumnConfig(false)} />
-                            <div className="absolute right-0 top-full mt-2 w-56 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-2" onClick={e => e.stopPropagation()}>
-                                <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 border-b border-white/5 flex justify-between items-center">
-                                    <span>Visible Columns</span>
-                                </div>
-                                <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                                    {libraryState.columnConfig.map((col, idx) => (
-                                        <div key={col.id} className="flex items-center group px-2 py-0.5">
-                                            <button
-                                                onClick={() => {
-                                                    if (col.id === 'title') return;
-                                                    const newConfig = libraryState.columnConfig.map(c =>
-                                                        c.id === col.id ? { ...c, visible: !c.visible } : c
-                                                    );
-                                                    updateColumnConfig(newConfig);
-                                                }}
-                                                className={`flex flex-1 items-center justify-between px-2 py-2 text-xs transition-colors rounded-lg ${col.id === 'title' ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'} ${col.visible ? 'text-white font-bold' : 'text-gray-500'}`}
-                                            >
-                                                <span>{col.label || (col.id === 'artwork' ? 'Artwork' : col.id)}</span>
-                                                <div className={`w-8 h-4 rounded-full transition-all relative flex-shrink-0 ml-2 border border-black/20 ${col.visible ? 'bg-dominant' : 'bg-white/10'}`}>
-                                                    <div className={`absolute top-[1px] w-3 h-3 rounded-full bg-white shadow-sm transition-all ${col.visible ? 'left-[17px]' : 'left-[1px]'}`} />
-                                                </div>
-                                            </button>
-                                            <div className="flex flex-col ml-1 opacity-100 md:opacity-0 md:lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); moveColumn(idx, -1); }}
-                                                    disabled={idx === 0}
-                                                    className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20 transition-colors"
-                                                    title="Move Up"
-                                                    aria-label={`Move ${col.label || col.id} column up`}
-                                                >
-                                                    <ChevronUp size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); moveColumn(idx, 1); }}
-                                                    disabled={idx === libraryState.columnConfig.length - 1}
-                                                    className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20 transition-colors"
-                                                    title="Move Down"
-                                                    aria-label={`Move ${col.label || col.id} column down`}
-                                                >
-                                                    <ChevronDown size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </>
-                    )}
                 </div>
+
+                {showColumnConfig && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowColumnConfig(false)} />
+                        <div
+                            className="fixed w-56 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-2"
+                            style={{ top: `${columnConfigMenuPosition.top}px`, left: `${columnConfigMenuPosition.left}px` }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 border-b border-white/5 flex justify-between items-center">
+                                <span>Visible Columns</span>
+                            </div>
+                            <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                                {libraryState.columnConfig.map((col, idx) => (
+                                    <div key={col.id} className="flex items-center group px-2 py-0.5">
+                                        <button
+                                            onClick={() => {
+                                                if (col.id === 'title') return;
+                                                const newConfig = libraryState.columnConfig.map(c =>
+                                                    c.id === col.id ? { ...c, visible: !c.visible } : c
+                                                );
+                                                updateColumnConfig(newConfig);
+                                            }}
+                                            className={`flex flex-1 items-center justify-between px-2 py-2 text-xs transition-colors rounded-lg ${col.id === 'title' ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'} ${col.visible ? 'text-white font-bold' : 'text-gray-500'}`}
+                                        >
+                                            <span>{col.label || (col.id === 'artwork' ? 'Artwork' : col.id)}</span>
+                                            <div className={`w-8 h-4 rounded-full transition-all relative flex-shrink-0 ml-2 border border-black/20 ${col.visible ? 'bg-dominant' : 'bg-white/10'}`}>
+                                                <div className={`absolute top-[1px] w-3 h-3 rounded-full bg-white shadow-sm transition-all ${col.visible ? 'left-[17px]' : 'left-[1px]'}`} />
+                                            </div>
+                                        </button>
+                                        <div className="flex flex-col ml-1 opacity-100 md:opacity-0 md:lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); moveColumn(idx, -1); }}
+                                                disabled={idx === 0}
+                                                className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20 transition-colors"
+                                                title="Move Up"
+                                                aria-label={`Move ${col.label || col.id} column up`}
+                                            >
+                                                <ChevronUp size={14} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); moveColumn(idx, 1); }}
+                                                disabled={idx === libraryState.columnConfig.length - 1}
+                                                className="p-0.5 text-gray-500 hover:text-white disabled:opacity-20 transition-colors"
+                                                title="Move Down"
+                                                aria-label={`Move ${col.label || col.id} column down`}
+                                            >
+                                                <ChevronDown size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="flex-1 overflow-hidden relative">
