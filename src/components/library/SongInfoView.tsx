@@ -4,10 +4,39 @@ import { ArtworkImage } from '../shared/ArtworkImage';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { Play } from 'lucide-react';
 
-export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
+interface SongInfoViewProps {
+    track: TrackItem;
+    onNavigate: (view: any, data?: any) => void;
+}
+
+export const SongInfoView: React.FC<SongInfoViewProps> = ({ track, onNavigate }) => {
     const { playTrack } = usePlayer();
     const artwork = track.artworks?.track_artwork?.[0] || track.artworks?.album_artwork?.[0];
     const versions = track.versions || [track];
+    const artists = track.metadata?.artists?.filter(Boolean) || [];
+    const albumName = track.metadata?.album?.trim();
+    const normalizedGenre = track.metadata?.genre?.trim();
+    const normalizedYear = track.metadata?.year?.trim();
+
+    const navigateToAlbum = () => {
+        if (!albumName) return;
+        onNavigate('AlbumDetail', albumName);
+    };
+
+    const navigateToArtist = (artist: string) => {
+        if (!artist) return;
+        onNavigate('ArtistDetail', artist);
+    };
+
+    const navigateToYear = () => {
+        if (!normalizedYear) return;
+        onNavigate('AllTracks', { filter: { type: 'year', value: normalizedYear } });
+    };
+
+    const navigateToGenre = () => {
+        if (!normalizedGenre) return;
+        onNavigate('AllTracks', { filter: { type: 'genre', value: normalizedGenre } });
+    };
 
     return (
         <div className="h-full flex flex-col px-3 md:px-8 pb-6 md:pb-8 pt-16 md:pt-28 overflow-y-auto custom-scrollbar">
@@ -17,7 +46,20 @@ export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
                 </div>
                 <div className="flex flex-col justify-end">
                     <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3 md:mb-4 text-white">{track.metadata?.title || track.logic.track_name}</h1>
-                    <p className="text-lg md:text-2xl text-white/50 font-medium mb-3 md:mb-4">{track.metadata?.artists?.join(', ')}</p>
+                    <div className="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
+                        {artists.length > 0 ? artists.map((artist) => (
+                            <button
+                                key={artist}
+                                onClick={() => navigateToArtist(artist)}
+                                className="text-sm md:text-lg text-white/60 hover:text-dominant-light hover:underline transition-colors font-semibold"
+                                title={`Go to artist: ${artist}`}
+                            >
+                                {artist}
+                            </button>
+                        )) : (
+                            <span className="text-lg md:text-2xl text-white/50 font-medium">Unknown Artist</span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-3">
                         <span className="text-xs font-bold bg-white/10 px-3 py-1 rounded-full text-gray-400">
                             {track.logic.track_name}
@@ -74,7 +116,17 @@ export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
                         <div className="grid grid-cols-2 gap-6">
                             <div>
                                 <h4 className="text-[10px] text-white/30 font-black uppercase mb-1">Album</h4>
-                                <p className="text-sm">{track.metadata?.album || 'Unknown'}</p>
+                                {albumName ? (
+                                    <button
+                                        onClick={navigateToAlbum}
+                                        className="text-sm text-left hover:text-dominant-light hover:underline transition-colors"
+                                        title={`Go to album: ${albumName}`}
+                                    >
+                                        {albumName}
+                                    </button>
+                                ) : (
+                                    <p className="text-sm text-white/60">Unknown</p>
+                                )}
                             </div>
                             <div>
                                 <h4 className="text-[10px] text-white/30 font-black uppercase mb-1">Audio Quality</h4>
@@ -87,6 +139,34 @@ export const SongInfoView: React.FC<{ track: TrackItem }> = ({ track }) => {
                             <div>
                                 <h4 className="text-[10px] text-white/30 font-black uppercase mb-1">File Size</h4>
                                 <p className="text-sm">{(track.file.size_bytes / (1024 * 1024)).toFixed(2)} MB</p>
+                            </div>
+                            <div>
+                                <h4 className="text-[10px] text-white/30 font-black uppercase mb-1">Genre</h4>
+                                {normalizedGenre ? (
+                                    <button
+                                        onClick={navigateToGenre}
+                                        className="text-sm text-left hover:text-dominant-light hover:underline transition-colors"
+                                        title={`Show tracks in genre: ${normalizedGenre}`}
+                                    >
+                                        {normalizedGenre}
+                                    </button>
+                                ) : (
+                                    <p className="text-sm text-white/60">Unknown</p>
+                                )}
+                            </div>
+                            <div>
+                                <h4 className="text-[10px] text-white/30 font-black uppercase mb-1">Year</h4>
+                                {normalizedYear ? (
+                                    <button
+                                        onClick={navigateToYear}
+                                        className="text-sm text-left hover:text-dominant-light hover:underline transition-colors"
+                                        title={`Show tracks from year: ${normalizedYear}`}
+                                    >
+                                        {normalizedYear}
+                                    </button>
+                                ) : (
+                                    <p className="text-sm text-white/60">Unknown</p>
+                                )}
                             </div>
                         </div>
                     </div>

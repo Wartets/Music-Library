@@ -116,7 +116,7 @@ export const MainView: React.FC<MainViewProps> = ({ currentView, viewData, onNav
                     : <DashboardView onNavigate={onNavigate} />;
             case 'SongDetail':
                 return songViewData
-                    ? <SongInfoView track={songViewData} />
+                    ? <SongInfoView track={songViewData} onNavigate={onNavigate} />
                     : <DashboardView onNavigate={onNavigate} />;
             case 'ArtistDetail':
                 return artistViewData
