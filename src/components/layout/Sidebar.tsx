@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
     const [isFocused, setIsFocused] = React.useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = React.useState(-1);
     const [discScratch, setDiscScratch] = React.useState(false);
+    const [discScratchTiltDeg, setDiscScratchTiltDeg] = React.useState(0);
     const searchInputRef = React.useRef<HTMLInputElement>(null);
     const blurTimeoutRef = React.useRef<number | null>(null);
     const discScratchTimeoutRef = React.useRef<number | null>(null);
@@ -34,12 +35,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
     const lastRotationTickRef = React.useRef<number>(0);
     const discRotationRef = React.useRef<number>(0);
     const discSpinnerRef = React.useRef<HTMLDivElement>(null);
+    const discSeedRef = React.useRef<number>(0.5);
+    const lastTrackHashRef = React.useRef<string | null>(null);
+    const lastPlaybackTrackHashRef = React.useRef<string | null>(null);
+    const lastPlaybackTimeRef = React.useRef<number>(0);
+    const discPressStartRef = React.useRef<number | null>(null);
+    const lastScratchAtRef = React.useRef<number>(0);
+    const scratchTimestampsRef = React.useRef<number[]>([]);
+    const nextScratchDirectionRef = React.useRef<1 | -1>(1);
     const isDiscSpinning = Boolean(playerState.currentTrack && playerState.isPlaying);
     const visibleResults = React.useMemo(() => libState.filteredTracks.slice(0, 5), [libState.filteredTracks]);
     const hasMoreSearchResults = libState.filteredTracks.length > visibleResults.length;
     const maxKeyboardIndex = visibleResults.length > 0
         ? visibleResults.length - 1 + (hasMoreSearchResults ? 1 : 0)
         : -1;
+
+    const MIN_SCRATCH_HOLD_MS = 40;
+    const MAX_SCRATCH_HOLD_MS = 900;
+    const SCRATCH_COOLDOWN_MS = 140;
+    const SCRATCH_WINDOW_MS = 2200;
+    const MAX_SCRATCHES_PER_WINDOW = 6;
+
+    const clamp = React.useCallback((value: number, min: number, max: number) => {
+        return Math.max(min, Math.min(max, value));
+    }, []);
+
+    const hashToUnitInterval = React.useCallback((value: string): number => {
+        let hash = 2166136261;
+        for (let i = 0; i < value.length; i++) {
+            hash ^= value.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0) / 4294967295;
+    }, []);
+
+    const getTrackBaseAngle = React.useCallback((trackHash: string): number => {
+        const unit = hashToUnitInterval(`${discSeedRef.current}:${trackHash}`);
+        return (unit * 360) % 360;
+    }, [hashToUnitInterval]);
 
     const clearBlurTimeout = React.useCallback(() => {
         if (blurTimeoutRef.current) {
@@ -61,6 +94,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
     );
 
     React.useEffect(() => {
+        const storedSeed = persistenceService.get('sidebar_disc_seed');
+        const seedValue = typeof storedSeed === 'number' && Number.isFinite(storedSeed)
+            ? clamp(storedSeed, 0, 1)
+            : Math.random();
+
+        if (storedSeed === null || typeof storedSeed !== 'number' || !Number.isFinite(storedSeed)) {
+            persistenceService.set('sidebar_disc_seed', seedValue);
+        }
+
+        discSeedRef.current = seedValue;
+        discRotationRef.current = (seedValue * 360) % 360;
+        if (discSpinnerRef.current) {
+            discSpinnerRef.current.style.transform = `rotate(${discRotationRef.current}deg)`;
+        }
+    }, [clamp]);
+
+    React.useEffect(() => {
+        const trackHash = playerState.currentTrack?.logic.hash_sha256 || null;
+        if (!trackHash) {
+            lastTrackHashRef.current = null;
+            return;
+        }
+
+        if (lastTrackHashRef.current === trackHash) {
+            return;
+        }
+
+        lastTrackHashRef.current = trackHash;
+
+        let nextAngle = getTrackBaseAngle(trackHash);
+
+        if (Math.abs(nextAngle - discRotationRef.current) < 16) {
+            nextAngle = (nextAngle + 47) % 360;
+        }
+
+        discRotationRef.current = nextAngle;
+        lastRotationTickRef.current = 0;
+
+        if (discSpinnerRef.current) {
+            discSpinnerRef.current.style.transform = `rotate(${discRotationRef.current}deg)`;
+        }
+    }, [getTrackBaseAngle, playerState.currentTrack?.logic.hash_sha256]);
+
+    React.useEffect(() => {
         return () => {
             clearBlurTimeout();
             if (discScratchTimeoutRef.current) {
@@ -80,6 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
 
         const spinMsPerRevolution = 16000;
         let disposed = false;
+        const trackHash = playerState.currentTrack?.logic.hash_sha256 || null;
 
         const tick = (timestamp: number) => {
             if (disposed) {
@@ -92,6 +170,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
 
             const delta = timestamp - lastRotationTickRef.current;
             lastRotationTickRef.current = timestamp;
+
+            // Detect true restart of the same track (time jump from meaningful value back near zero).
+            const playbackTime = audioEngine.getCurrentTime();
+            if (trackHash) {
+                const prevTrackHash = lastPlaybackTrackHashRef.current;
+                const prevTime = lastPlaybackTimeRef.current;
+                const sameTrack = prevTrackHash === trackHash;
+                const restartedSameTrack =
+                    sameTrack &&
+                    prevTime > 1.2 &&
+                    playbackTime <= 0.35 &&
+                    (prevTime - playbackTime) > 0.9;
+
+                if (restartedSameTrack) {
+                    discRotationRef.current = getTrackBaseAngle(trackHash);
+                }
+
+                lastPlaybackTrackHashRef.current = trackHash;
+                lastPlaybackTimeRef.current = playbackTime;
+            }
 
             discRotationRef.current = (discRotationRef.current + (360 * delta / spinMsPerRevolution)) % 360;
             if (discSpinnerRef.current) {
@@ -107,24 +205,85 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
             cancelDiscFrame();
             lastRotationTickRef.current = 0;
         };
-    }, [cancelDiscFrame, isDiscSpinning]);
+    }, [cancelDiscFrame, getTrackBaseAngle, isDiscSpinning, playerState.currentTrack?.logic.hash_sha256]);
 
-    const triggerDiscScratch = React.useCallback(() => {
+    const triggerDiscScratch = React.useCallback((durationMs: number, tiltDeg: number) => {
         setDiscScratch(true);
+        setDiscScratchTiltDeg(tiltDeg);
         if (discScratchTimeoutRef.current) {
             window.clearTimeout(discScratchTimeoutRef.current);
         }
         discScratchTimeoutRef.current = window.setTimeout(() => {
             setDiscScratch(false);
+            setDiscScratchTiltDeg(0);
             discScratchTimeoutRef.current = null;
-        }, 160);
+        }, durationMs);
     }, []);
 
-    const handleDiscClick = React.useCallback(() => {
+    const handleDiscPointerDown = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDiscSpinning) {
+            return;
+        }
+
+        discPressStartRef.current = performance.now();
+        try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+            // No-op: pointer capture can fail on some devices, interaction still works.
+        }
+    }, [isDiscSpinning]);
+
+    const handleDiscPointerCancel = React.useCallback(() => {
+        discPressStartRef.current = null;
+    }, []);
+
+    const handleDiscPointerUp = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
         if (!isDiscSpinning) return;
-        triggerDiscScratch();
-        audioEngine.triggerDjBurst();
-    }, [isDiscSpinning, triggerDiscScratch]);
+
+        const now = performance.now();
+        const startedAt = discPressStartRef.current ?? now;
+        discPressStartRef.current = null;
+
+        try {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        } catch {
+            // No-op on devices without pointer capture.
+        }
+
+        if (now - lastScratchAtRef.current < SCRATCH_COOLDOWN_MS) {
+            return;
+        }
+
+        const recent = scratchTimestampsRef.current.filter(ts => now - ts <= SCRATCH_WINDOW_MS);
+        if (recent.length >= MAX_SCRATCHES_PER_WINDOW) {
+            scratchTimestampsRef.current = recent;
+            return;
+        }
+
+        const holdMs = clamp(now - startedAt, MIN_SCRATCH_HOLD_MS, MAX_SCRATCH_HOLD_MS);
+        const normalizedHold = (holdMs - MIN_SCRATCH_HOLD_MS) / (MAX_SCRATCH_HOLD_MS - MIN_SCRATCH_HOLD_MS);
+        const intensity = clamp(0.25 + normalizedHold * 0.75, 0.25, 1);
+
+        const scratchVisualDurationMs = Math.round(120 + normalizedHold * 280);
+        const direction = nextScratchDirectionRef.current;
+        nextScratchDirectionRef.current = direction === 1 ? -1 : 1;
+        const scratchTiltDeg = direction * (10 + normalizedHold * 24);
+
+        triggerDiscScratch(scratchVisualDurationMs, scratchTiltDeg);
+        audioEngine.triggerDjBurst({ intensity, holdMs });
+
+        lastScratchAtRef.current = now;
+        scratchTimestampsRef.current = [...recent, now];
+    }, [
+        MAX_SCRATCHES_PER_WINDOW,
+        MAX_SCRATCH_HOLD_MS,
+        MIN_SCRATCH_HOLD_MS,
+        SCRATCH_COOLDOWN_MS,
+        SCRATCH_WINDOW_MS,
+        clamp,
+        isDiscSpinning,
+        triggerDiscScratch
+    ]);
 
     const hasFavorites = React.useMemo(() => {
         return persistenceService.getFavorites().some(id => {
@@ -237,7 +396,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 <div className="flex flex-col items-center gap-4 mb-10">
                     <div
                         className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden flex-shrink-0 transition-all duration-700 group cursor-pointer active:scale-95 relative"
-                        onClick={handleDiscClick}
+                        onPointerDown={handleDiscPointerDown}
+                        onPointerUp={handleDiscPointerUp}
+                        onPointerCancel={handleDiscPointerCancel}
+                        onPointerLeave={handleDiscPointerCancel}
                         style={{
                             background: `linear-gradient(135deg, ${currentPalette.dominant} 0%, ${currentPalette.dominantDark} 100%)`,
                             boxShadow: `0 10px 30px -10px ${currentPalette.dominant}88`
@@ -262,7 +424,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                                 size={28}
                                 style={{
                                     transformOrigin: 'center',
-                                    transform: discScratch ? 'rotate(22deg)' : 'rotate(0deg)'
+                                    transform: discScratch ? `rotate(${discScratchTiltDeg}deg)` : 'rotate(0deg)'
                                 }}
                             />
                         </div>

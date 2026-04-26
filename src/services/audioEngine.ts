@@ -221,7 +221,7 @@ export class AudioEngine {
         }, duration * 1000);
     }
 
-    triggerDjBurst(): void {
+    triggerDjBurst(options?: { intensity?: number; holdMs?: number }): void {
         const el = this.getActiveElement();
         if (!this.currentTrack || el.paused) {
             return;
@@ -232,8 +232,12 @@ export class AudioEngine {
             this.djBurstTimer = null;
         }
 
+        const intensity = this.clamp(options?.intensity ?? 0.4, 0.1, 1);
+        const holdFactor = this.clamp((options?.holdMs ?? 120) / 900, 0, 1);
         const originalRate = 1;
-        const burstRate = 1.07;
+        const burstRate = this.clamp(1 + (0.02 + intensity * 0.03), 1.02, 1.055);
+        const burstDurationMs = Math.round(this.clamp(95 + intensity * 130 + holdFactor * 90, 95, 320));
+        const gainBoost = this.clamp(1 + 0.01 + intensity * 0.02, 1.01, 1.03);
         const gainNode = this.getActiveGainNode();
         const now = this.audioContext?.currentTime || 0;
         const effectiveVolume = this.getEffectiveVolume();
@@ -243,14 +247,14 @@ export class AudioEngine {
         if (this.audioContext && gainNode) {
             gainNode.gain.cancelScheduledValues(now);
             gainNode.gain.setValueAtTime(effectiveVolume, now);
-            gainNode.gain.linearRampToValueAtTime(this.clamp(effectiveVolume * 1.03, 0, 1), now + 0.04);
-            gainNode.gain.linearRampToValueAtTime(effectiveVolume, now + 0.12);
+            gainNode.gain.linearRampToValueAtTime(this.clamp(effectiveVolume * gainBoost, 0, 1), now + 0.035);
+            gainNode.gain.linearRampToValueAtTime(effectiveVolume, now + burstDurationMs / 1000);
         }
 
         this.djBurstTimer = window.setTimeout(() => {
             el.playbackRate = originalRate;
             this.djBurstTimer = null;
-        }, 120);
+        }, burstDurationMs);
     }
 
     private buildTrackSourceCandidates(track: TrackItem): string[] {
@@ -533,6 +537,11 @@ export class AudioEngine {
      */
     seek(time: number): void {
         this.getActiveElement().currentTime = time;
+    }
+
+    getCurrentTime(): number {
+        const time = Number(this.getActiveElement().currentTime);
+        return Number.isFinite(time) ? Math.max(0, time) : 0;
     }
 
     /**

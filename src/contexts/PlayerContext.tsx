@@ -440,7 +440,15 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
 
         if (cur.queue.length > 0 && cur.currentTrack) {
-            const nextTrackIndex = cur.queue.findIndex(t => t.logic.hash_sha256 === cur.currentTrack?.logic.hash_sha256) + 1;
+            const currentHash = cur.currentTrack.logic.hash_sha256;
+            const currentPrimaryHash = toPrimaryHash(cur.currentTrack);
+
+            let currentIndex = cur.queue.findIndex(t => t.logic.hash_sha256 === currentHash);
+            if (currentIndex < 0 && currentPrimaryHash) {
+                currentIndex = cur.queue.findIndex(t => toPrimaryHash(t) === currentPrimaryHash);
+            }
+
+            const nextTrackIndex = currentIndex + 1;
 
             if (nextTrackIndex < cur.queue.length) {
                 playTrackLogic(cur.queue[nextTrackIndex], cur.queue);
@@ -460,7 +468,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         audioEngine.pause();
         setState(prev => ({ ...prev, isPlaying: false }));
         return false;
-    }, [playTrackLogic]);
+    }, [playTrackLogic, toPrimaryHash]);
 
     const playNext = useCallback(() => {
         advanceToNextTrack(false);
