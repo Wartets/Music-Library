@@ -228,7 +228,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
     }, [cardMinHeight, isDesktop, libraryState.searchQuery, symbolDisplaySizeClass]);
 
     return (
-        <div className="h-full flex flex-col p-2 sm:p-3 md:p-6 pt-14 md:pt-20 bg-surface-primary">
+        <div className="h-full flex flex-col p-2 sm:p-3 md:p-6 pt-0 md:pt-20 bg-surface-primary">
             <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-3 md:mb-8 gap-3 md:gap-4">
                 <div>
                     <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">{title}</h1>

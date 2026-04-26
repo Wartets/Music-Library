@@ -32,7 +32,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-0 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-10">
                 <div>
                     <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white flex items-center gap-3">

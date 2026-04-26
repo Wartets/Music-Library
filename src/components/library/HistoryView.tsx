@@ -76,7 +76,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onNavigate: _onNavigat
 
     if (isMobile) {
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-2 pb-28 bg-surface-primary">
+            <div className="h-full overflow-y-auto custom-scrollbar pt-0 px-2 pb-28 bg-surface-primary">
                 <div className="mb-3 flex items-center justify-between gap-2">
                     <div>
                         <h1 className="text-lg font-black tracking-tight flex items-center gap-2">
@@ -135,7 +135,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onNavigate: _onNavigat
     }
 
     return (
-            <div className="h-full flex flex-col pt-14 md:pt-20 px-3 md:px-6 pb-0 overflow-hidden">
+            <div className="h-full flex flex-col pt-0 md:pt-20 px-3 md:px-6 pb-0 overflow-hidden">
             <div className="mb-4 md:mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">

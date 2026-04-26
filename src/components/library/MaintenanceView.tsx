@@ -118,7 +118,7 @@ export const MaintenanceView: React.FC = () => {
     };
 
     return (
-        <div className="h-full flex flex-col p-8 pt-24 bg-surface-primary overflow-y-auto custom-scrollbar">
+        <div className="h-full flex flex-col p-8 pt-0 md:pt-24 bg-surface-primary overflow-y-auto custom-scrollbar">
             <div className="flex items-end justify-between mb-10">
                 <div>
                     <h1 className="text-4xl font-black tracking-tighter text-white flex items-center gap-4">

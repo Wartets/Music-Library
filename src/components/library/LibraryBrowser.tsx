@@ -417,7 +417,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
 
     if (isMobile) {
         return (
-            <div className="h-full flex flex-col overflow-hidden pt-14 px-3 sm:px-4 pb-0 bg-surface-primary">
+            <div className="h-full flex flex-col overflow-hidden pt-0 px-3 sm:px-4 pb-0 bg-surface-primary">
                 <div className="mb-3 flex items-center gap-3">
                     {artworkPath ? (
                         <div className="w-14 h-14 rounded-xl overflow-hidden shadow-lg flex-shrink-0 border border-white/10 relative">
@@ -477,7 +477,7 @@ export const LibraryBrowser: React.FC<LibraryBrowserProps> = ({
     }
 
     return (
-        <div className="h-full flex flex-col pt-14 md:pt-20 px-3 md:px-6 pb-0 bg-surface-primary">
+        <div className="h-full flex flex-col pt-0 md:pt-20 px-3 md:px-6 pb-0 bg-surface-primary">
             {/* Header */}
             <div className={`mb-4 md:mb-8 flex flex-col sm:flex-row items-center sm:items-end gap-4 md:gap-8 ${artworkPath ? 'md:mb-10' : 'md:mb-6'}`}>
                 {artworkPath ? (

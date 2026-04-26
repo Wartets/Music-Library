@@ -152,7 +152,7 @@ export const AnalysisView: React.FC = () => {
 
     if (analysis.totalTracks === 0) {
         return (
-            <div className="h-full p-6 md:p-8 pt-20 md:pt-24 bg-surface-primary">
+            <div className="h-full p-6 md:p-8 pt-0 md:pt-24 bg-surface-primary">
                 <EmptyState
                     icon={<PieChart size={40} />}
                     title="No tracks to analyze"
@@ -176,7 +176,7 @@ export const AnalysisView: React.FC = () => {
     ].filter((row) => row.count > 0);
 
     return (
-        <div className="h-full p-6 md:p-8 pt-20 md:pt-24 bg-surface-primary overflow-y-auto custom-scrollbar">
+        <div className="h-full p-6 md:p-8 pt-0 md:pt-24 bg-surface-primary overflow-y-auto custom-scrollbar">
             <div className="mb-8">
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
                     <AudioLines size={30} className="text-dominant" />

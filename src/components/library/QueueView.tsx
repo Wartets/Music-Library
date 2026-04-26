@@ -190,7 +190,7 @@ export const QueueView: React.FC = () => {
 
     if (isMobile) {
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar pt-14 px-3 sm:px-4 pb-28 bg-surface-primary">
+            <div className="h-full overflow-y-auto custom-scrollbar pt-0 px-3 sm:px-4 pb-28 bg-surface-primary">
                 <div className="mb-3">
                     <h1 className="text-lg font-black tracking-tight text-white">Playback Control</h1>
                     <p className="text-gray-500 text-[11px] mt-1 flex items-center gap-2 flex-wrap">
@@ -340,7 +340,7 @@ export const QueueView: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-0 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">
             <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-8">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>

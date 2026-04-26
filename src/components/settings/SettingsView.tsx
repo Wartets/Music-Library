@@ -40,7 +40,7 @@ const SettingsViewLayout: React.FC = () => {
     };
 
     return (
-        <div className="h-full flex flex-col p-4 sm:p-5 md:p-8 pt-16 md:pt-24 bg-surface-primary overflow-hidden">
+        <div className="h-full flex flex-col p-4 sm:p-5 md:p-8 pt-0 md:pt-24 bg-surface-primary overflow-hidden">
             <div className="max-w-[110rem] mx-auto w-full flex flex-col h-full">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-8">
                     <div>

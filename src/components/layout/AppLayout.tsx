@@ -185,9 +185,9 @@ const AppContent: React.FC<AppContentProps> = ({
             <div className="flex flex-1 overflow-hidden relative">
                 <Sidebar currentView={currentView} onNavigate={navigate} />
                 <div className={`flex-1 flex flex-col overflow-hidden relative ${showShellChrome && isMobile ? 'pb-[10.25rem]' : 'pb-0'}`}>
-                    {/* Navigation Bar - Superimposed, no background, fixed position */}
+                    {/* Navigation Bar - Superimposed inside content area */}
                     {showShellChrome && !isMobile && (
-                        <div className="flex fixed top-4 left-24 xl:left-72 z-40 items-center gap-2 pointer-events-none">
+                        <div className="flex absolute top-4 left-4 z-40 items-center gap-2 pointer-events-none">
                             <button
                                 onClick={goBack}
                                 disabled={historyIndex === 0}

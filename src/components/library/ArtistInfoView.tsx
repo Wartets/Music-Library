@@ -82,7 +82,7 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
     }, [artistTracks]);
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-8 pt-16 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-8 pt-0 md:pt-24 overflow-y-auto custom-scrollbar bg-surface-primary">
 
             <div className="flex flex-col mb-4 md:mb-12">
                 <div className="flex items-center gap-2 mb-2">

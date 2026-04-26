@@ -216,7 +216,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-0 md:pt-24 overflow-hidden relative z-10 bg-surface-primary">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 md:mb-10">
                 <div>
                     <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-white">Playlists</h1>

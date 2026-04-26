@@ -105,7 +105,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     );
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-16 md:pt-24 px-3 md:px-8 pb-24 md:pb-32">
+        <div className="h-full overflow-y-auto custom-scrollbar bg-[#0a0a0a] pt-0 md:pt-24 px-3 md:px-8 pb-24 md:pb-32">
             {/* Welcome Header for New Users */}
             {totalTracks === 0 && (
                 <div className="mb-8 p-6 md:p-8 rounded-3xl bg-gradient-to-br from-dominant/20 via-dominant/10 to-transparent border border-dominant/20">

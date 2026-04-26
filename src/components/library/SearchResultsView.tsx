@@ -57,7 +57,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({ query, sou
     const openTrack = (track: any) => playTrack(track, results);
 
     return (
-        <div className="h-full flex flex-col p-3 md:p-6 pt-16 md:pt-20 overflow-y-auto custom-scrollbar bg-surface-primary">
+        <div className="h-full flex flex-col p-3 md:p-6 pt-0 md:pt-20 overflow-y-auto custom-scrollbar bg-surface-primary">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-4 md:mb-8">
                 <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.35em] text-dominant/70 mb-2 flex items-center gap-2">

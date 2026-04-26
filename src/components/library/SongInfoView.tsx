@@ -39,7 +39,7 @@ export const SongInfoView: React.FC<SongInfoViewProps> = ({ track, onNavigate })
     };
 
     return (
-        <div className="h-full flex flex-col px-3 md:px-8 pb-6 md:pb-8 pt-16 md:pt-28 overflow-y-auto custom-scrollbar">
+        <div className="h-full flex flex-col px-3 md:px-8 pb-6 md:pb-8 pt-0 md:pt-28 overflow-y-auto custom-scrollbar">
             <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-12">
                 <div className="w-40 h-40 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl border border-white/5 flex-shrink-0">
                     <ArtworkImage details={artwork} alt={track.metadata?.title} className="w-full h-full object-cover" />
