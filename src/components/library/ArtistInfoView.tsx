@@ -65,9 +65,11 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
         artistTracks.forEach(t => {
             const albumName = t.metadata?.album || 'Unknown Album';
             if (!albums[albumName]) {
+                // Don't show artwork for "Unknown Album" - singles should not have collection artwork
+                const shouldShowArtwork = albumName !== 'Unknown Album';
                 albums[albumName] = {
                     name: albumName,
-                    artwork: getBestArtwork(t),
+                    artwork: shouldShowArtwork ? getBestArtwork(t) : undefined,
                     tracks: []
                 };
             }
@@ -107,8 +109,8 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
                 {artistAlbums.map(album => (
                     <div key={album.name} className="flex flex-col lg:flex-row gap-4 sm:gap-8">
                         <div
-                            className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/5 bg-gray-900 group relative cursor-pointer"
-                            onClick={() => onNavigate('AlbumDetail', album.name)}
+                            className={`w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/5 bg-gray-900 group relative ${album.name !== 'Unknown Album' ? 'cursor-pointer' : ''}`}
+                            onClick={() => album.name !== 'Unknown Album' && onNavigate('AlbumDetail', album.name)}
                         >
                             {album.artwork ? (
                                 <ArtworkImage details={album.artwork} alt={album.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -133,8 +135,8 @@ export const ArtistInfoView: React.FC<ArtistInfoViewProps> = ({ artistName, onNa
 
                         <div className="flex-1 flex flex-col">
                             <h3
-                                className="text-xl font-bold text-white mb-4 flex items-center gap-3 cursor-pointer hover:text-dominant transition-colors"
-                                onClick={() => onNavigate('AlbumDetail', album.name)}
+                                className={`text-xl font-bold text-white mb-4 flex items-center gap-3 ${album.name !== 'Unknown Album' ? 'cursor-pointer hover:text-dominant transition-colors' : ''}`}
+                                onClick={() => album.name !== 'Unknown Album' && onNavigate('AlbumDetail', album.name)}
                             >
                                 {album.name}
                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{album.tracks.length} tracks</span>

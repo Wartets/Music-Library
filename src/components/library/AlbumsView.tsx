@@ -119,14 +119,7 @@ export const AlbumsView: React.FC<AlbumsViewProps> = ({ onNavigate }) => {
         title: album.name,
         subtitle: `${album.artist} • ${album.tracks.length} tracks • ${album.durationLabel}`,
         imageDetails: album.artwork,
-        onClick: () => {
-            // Handle navigation for Unknown Album
-            if (album.id === '__unknown__') {
-                showToast('No collection found for Unknown Album.');
-                return;
-            }
-            onNavigate('AlbumDetail', album);
-        },
+        onClick: () => onNavigate('AlbumDetail', album),
         onContextMenu: (e) => onRightClick(e, album)
     }));
 

@@ -7,6 +7,18 @@ import { EmptyState } from '../shared/EmptyState';
 import { Folder } from 'lucide-react';
 import { getCollectionArtwork } from '../../utils/artworkResolver';
 
+const UNKNOWN_ALBUM_LABELS = new Set(['', '-', 'unknown', 'unknown album', 'n/a', 'na', 'null']);
+
+const isUnknownAlbumName = (value: string | null | undefined): boolean => {
+    const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    return UNKNOWN_ALBUM_LABELS.has(normalized);
+};
+
 
 interface AlbumContentsViewProps {
     album: AlbumGroup | string;
@@ -18,7 +30,8 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
 
     const album = useMemo(() => {
         if (typeof initialAlbum === 'object' && initialAlbum !== null && 'tracks' in initialAlbum) {
-            const collectionArtwork = initialAlbum.name.toLowerCase() === 'single' ? undefined : getCollectionArtwork(initialAlbum.tracks);
+            const isArtworkDisabledCollection = initialAlbum.name.toLowerCase() === 'single' || isUnknownAlbumName(initialAlbum.name);
+            const collectionArtwork = isArtworkDisabledCollection ? undefined : getCollectionArtwork(initialAlbum.tracks);
             return {
                 ...initialAlbum,
                 artworkPath: collectionArtwork?.path,
@@ -34,7 +47,8 @@ export const AlbumContentsView: React.FC<AlbumContentsViewProps> = ({ album: ini
         });
         if (tracks.length === 0) return null;
 
-        const collectionArtwork = albumName.toLowerCase() === 'single' ? undefined : getCollectionArtwork(tracks);
+        const isArtworkDisabledCollection = albumName.toLowerCase() === 'single' || isUnknownAlbumName(albumName);
+        const collectionArtwork = isArtworkDisabledCollection ? undefined : getCollectionArtwork(tracks);
 
         return {
             name: albumName,

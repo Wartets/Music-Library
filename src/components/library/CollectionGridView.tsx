@@ -20,6 +20,7 @@ export interface GridItem {
     onClick: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
     isTextIcon?: boolean;
+    isNonInteractive?: boolean;
 }
 
 interface CollectionGridViewProps {
@@ -164,12 +165,12 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
         return (
             <div
                 key={item.id}
-                className="group flex flex-col cursor-pointer transition-colors duration-200"
+                className={`group flex flex-col transition-colors duration-200 ${item.isNonInteractive ? '' : 'cursor-pointer'}`}
                 onClick={item.onClick}
                 onContextMenu={item.onContextMenu}
             >
                 <div
-                    className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl bg-white/5 border border-white/5 group-hover:border-white/20 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-[border-color,box-shadow,background-color] duration-250 flex items-center justify-center mb-3"
+                    className={`relative aspect-square rounded-2xl overflow-hidden shadow-2xl bg-white/5 border border-white/5 transition-[border-color,box-shadow,background-color] duration-250 flex items-center justify-center mb-3 ${item.isNonInteractive ? 'opacity-60' : 'group-hover:border-white/20 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)]'}`}
                     style={{ minHeight: `${cardMinHeight}px`, ...(usesVisualToken ? (visualToken?.style || {}) : {}) }}
                 >
                     {item.isTextIcon ? (
@@ -183,7 +184,7 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                         <ArtworkImage
                             details={item.imageDetails}
                             alt={item.title}
-                            className="w-full h-full object-cover transition-[filter] duration-300 group-hover:brightness-110 group-hover:saturate-110"
+                            className={`w-full h-full object-cover transition-[filter] duration-300 ${item.isNonInteractive ? '' : 'group-hover:brightness-110 group-hover:saturate-110'}`}
                             loading="lazy"
                         />
                     ) : usesVisualToken ? (
@@ -208,15 +209,17 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
                             {item.icon || <div className="w-12 h-12 bg-white/10 rounded-full"></div>}
                         </>
                     )}
-                    <div className="absolute inset-0 z-20 pointer-events-none bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-250 flex items-center justify-center backdrop-blur-[1px]">
-                        <Play size={isDesktop ? 32 : 28} fill="currentColor" className="text-white drop-shadow-2xl" />
-                    </div>
+                    {!item.isNonInteractive && (
+                        <div className="absolute inset-0 z-20 pointer-events-none bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-250 flex items-center justify-center backdrop-blur-[1px]">
+                            <Play size={isDesktop ? 32 : 28} fill="currentColor" className="text-white drop-shadow-2xl" />
+                        </div>
+                    )}
                 </div>
                 <div className="min-w-0 pr-1 px-1">
-                    <h3 className="font-bold text-sm text-white truncate group-hover:text-dominant-light transition-colors">
+                    <h3 className={`font-bold text-sm truncate transition-colors ${item.isNonInteractive ? 'text-white/60' : 'text-white group-hover:text-dominant-light'}`}>
                         <HighlightText text={item.title} query={libraryState.searchQuery} />
                     </h3>
-                    <p className="text-[11px] text-gray-500 font-bold truncate mt-0.5 uppercase tracking-tighter">
+                    <p className={`text-[11px] font-bold truncate mt-0.5 uppercase tracking-tighter transition-colors ${item.isNonInteractive ? 'text-gray-700' : 'text-gray-500'}`}>
                         <HighlightText text={item.subtitle} query={libraryState.searchQuery} />
                     </p>
                 </div>
