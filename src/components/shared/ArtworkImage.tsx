@@ -31,34 +31,37 @@ const PATTERN_GENERATORS: ((hue: number, seed: number) => string)[] = [
     // 0: Diagonal lines
     (hue, seed) => {
         const spacing = 10 + (seed % 6);
-        const opacity = 0.04 + (seed % 5) * 0.006;
+        const opacity = 0.1 + (seed % 5) * 0.06;
         return `<svg xmlns='http://www.w3.org/2000/svg' width='${spacing * 2}' height='${spacing * 2}'><line x1='0' y1='0' x2='${spacing * 2}' y2='${spacing * 2}' stroke='hsla(${hue},60%,75%,${opacity})' stroke-width='1'/></svg>`;
     },
     // 1: Dot grid
     (hue, seed) => {
         const gap = 12 + (seed % 8);
         const radius = 1 + (seed % 3) * 0.4;
-        const opacity = 0.05 + (seed % 4) * 0.007;
+        const opacity = 0.1 + (seed % 4) * 0.07;
         return `<svg xmlns='http://www.w3.org/2000/svg' width='${gap}' height='${gap}'><circle cx='${gap / 2}' cy='${gap / 2}' r='${radius}' fill='hsla(${hue},50%,70%,${opacity})'/></svg>`;
     },
     // 2: Concentric ring fragment
     (hue, seed) => {
         const size = 40 + (seed % 20);
-        const opacity = 0.035 + (seed % 5) * 0.005;
-        return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><circle cx='${size / 2}' cy='${size / 2}' r='${size * 0.35}' fill='none' stroke='hsla(${hue},45%,65%,${opacity})' stroke-width='1'/><circle cx='${size / 2}' cy='${size / 2}' r='${size * 0.18}' fill='none' stroke='hsla(${hue},45%,65%,${opacity * 0.7})' stroke-width='0.7'/></svg>`;
+        const opacity = 0.1 + (seed % 5) * 0.05;
+        const stroke = 0.4 + (seed % 5) * 0.2;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><circle cx='${size / 2}' cy='${size / 2}' r='${size * 0.35}' fill='none' stroke='hsla(${hue},45%,65%,${opacity})' stroke-width='${stroke}'/><circle cx='${size / 2}' cy='${size / 2}' r='${size * 0.18}' fill='none' stroke='hsla(${hue},45%,65%,${opacity * 0.7})' stroke-width='${stroke * 0.7}'/></svg>`;
     },
     // 3: Chevrons
     (hue, seed) => {
         const size = 16 + (seed % 8);
-        const opacity = 0.04 + (seed % 4) * 0.006;
+        const opacity = 0.1 + (seed % 4) * 0.06;
+        const stroke = 0.4 + (seed % 4) * 0.1;
         const mid = size / 2;
-        return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><polyline points='0,${mid} ${mid},${mid * 0.4} ${size},${mid}' fill='none' stroke='hsla(${hue},50%,70%,${opacity})' stroke-width='0.8'/></svg>`;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><polyline points='0,${mid} ${mid},${mid * 0.4} ${size},${mid}' fill='none' stroke='hsla(${hue},50%,70%,${opacity})' stroke-width='${stroke}'/></svg>`;
     },
     // 4: Cross-hatch
     (hue, seed) => {
         const spacing = 14 + (seed % 6);
-        const opacity = 0.03 + (seed % 5) * 0.005;
-        return `<svg xmlns='http://www.w3.org/2000/svg' width='${spacing}' height='${spacing}'><line x1='0' y1='0' x2='${spacing}' y2='${spacing}' stroke='hsla(${hue},55%,72%,${opacity})' stroke-width='0.6'/><line x1='${spacing}' y1='0' x2='0' y2='${spacing}' stroke='hsla(${hue},55%,72%,${opacity * 0.7})' stroke-width='0.6'/></svg>`;
+        const opacity = 0.1 + (seed % 5) * 0.05;
+        const stroke = 0.4 + (seed % 3) * 0.1;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${spacing}' height='${spacing}'><line x1='0' y1='0' x2='${spacing}' y2='${spacing}' stroke='hsla(${hue},55%,72%,${opacity})' stroke-width='${stroke}'/><line x1='${spacing}' y1='0' x2='0' y2='${spacing}' stroke='hsla(${hue},55%,72%,${opacity * 0.7})' stroke-width='${stroke}'/></svg>`;
     },
 ];
 
