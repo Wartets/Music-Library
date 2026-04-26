@@ -43,6 +43,7 @@ export class AudioEngine {
     private normalizationBuffer: Uint8Array | null = null;
     private lastNormalizationAt: number = 0;
     private userVolume: number = 1;
+    private userPlaybackRate: number = 1;
     private djBurstTimer: number | null = null;
     private crossfadePauseTimer: number | null = null;
     private playInvocationDepth: number = 0;
@@ -126,6 +127,12 @@ export class AudioEngine {
         if (this.secondaryGainNode) {
             this.secondaryGainNode.gain.setValueAtTime(effective, this.audioContext?.currentTime || 0);
         }
+    }
+
+    private applyPlaybackRate(): void {
+        const rate = this.clamp(this.userPlaybackRate, 0.5, 2);
+        this.audioElement.playbackRate = rate;
+        this.secondaryAudioElement.playbackRate = rate;
     }
 
     private updateNormalization(): void {
@@ -234,7 +241,7 @@ export class AudioEngine {
 
         const intensity = this.clamp(options?.intensity ?? 0.4, 0.1, 1);
         const holdFactor = this.clamp((options?.holdMs ?? 120) / 900, 0, 1);
-        const originalRate = 1;
+        const originalRate = this.clamp(this.userPlaybackRate, 0.5, 2);
         const burstRate = this.clamp(1 + (0.02 + intensity * 0.03), 1.02, 1.055);
         const burstDurationMs = Math.round(this.clamp(95 + intensity * 130 + holdFactor * 90, 95, 320));
         const gainBoost = this.clamp(1 + 0.01 + intensity * 0.02, 1.01, 1.03);
@@ -520,6 +527,15 @@ export class AudioEngine {
     setVolume(level: number): void {
         this.userVolume = this.clamp(level, 0, 1);
         this.applyOutputVolume();
+    }
+
+    setPlaybackRate(rate: number): void {
+        this.userPlaybackRate = this.clamp(rate, 0.5, 2);
+        this.applyPlaybackRate();
+    }
+
+    getPlaybackRate(): number {
+        return this.clamp(this.userPlaybackRate, 0.5, 2);
     }
 
     setVolumeNormalization(enabled: boolean, strength: number): void {

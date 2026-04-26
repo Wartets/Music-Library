@@ -110,6 +110,9 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     useEffect(() => {
         const prefs = persistenceService.getPreferences();
+        audioEngine.setPlaybackRate(
+            Number.isFinite(prefs.playbackSpeed) ? prefs.playbackSpeed : 1
+        );
         audioEngine.setVolumeNormalization(
             !!prefs.normalizationEnabled,
             Number.isFinite(prefs.normalizationStrength) ? prefs.normalizationStrength : 45

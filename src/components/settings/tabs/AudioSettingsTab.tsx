@@ -16,13 +16,16 @@ export const AudioSettingsTab: React.FC = () => {
         handleBandChange,
         normalizationEnabled,
         normalizationStrength,
+        playbackSpeed,
         presets,
+        commitPlaybackSpeed,
         setCrossfadeDuration,
         setCrossfadeEnabled,
         setEqBands,
         setEqEnabled,
         setNormalizationEnabled,
         setNormalizationStrength,
+        setPlaybackSpeed,
         setShuffleModePreference
     } = useSettingsView();
 
@@ -174,6 +177,29 @@ export const AudioSettingsTab: React.FC = () => {
                                     step="1"
                                     value={normalizationStrength}
                                     onChange={(event) => setNormalizationStrength(parseInt(event.target.value, 10))}
+                                    className="w-full accent-dominant h-2 sm:h-1.5 bg-white/5 rounded-full cursor-pointer"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="text-xl font-black text-white mb-2">Playback Speed (Beta)</h3>
+                            <p className="text-sm text-gray-500 mb-6">Adjust playback tempo from 0.5x to 2.0x.</p>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-[10px] font-black text-gray-500 uppercase">Speed</span>
+                                    <span className="text-lg font-black text-dominant">{playbackSpeed.toFixed(2)}x</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2"
+                                    step="0.05"
+                                    value={playbackSpeed}
+                                    onChange={(event) => setPlaybackSpeed(parseFloat(event.target.value))}
+                                    onMouseUp={(event) => commitPlaybackSpeed(parseFloat((event.currentTarget as HTMLInputElement).value))}
+                                    onTouchEnd={(event) => commitPlaybackSpeed(parseFloat((event.currentTarget as HTMLInputElement).value))}
+                                    onPointerUp={(event) => commitPlaybackSpeed(parseFloat((event.currentTarget as HTMLInputElement).value))}
                                     className="w-full accent-dominant h-2 sm:h-1.5 bg-white/5 rounded-full cursor-pointer"
                                 />
                             </div>

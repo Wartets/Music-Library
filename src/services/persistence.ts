@@ -41,6 +41,7 @@ export interface Playlist {
 
 export interface UserPreferences {
     volume: number;
+    playbackSpeed: number;
     shuffle: boolean;
     shuffleMode: ShuffleMode;
     repeat: RepeatMode;
@@ -117,6 +118,7 @@ const DEFAULT_DATA: UserDataStore = {
     smartPlaylists: [],
     preferences: {
         volume: 1.0,
+        playbackSpeed: 1.0,
         shuffle: false,
         shuffleMode: 'recent',
         repeat: RepeatMode.None,

@@ -48,6 +48,9 @@ interface SettingsViewContextValue {
     setNormalizationEnabled: React.Dispatch<React.SetStateAction<boolean>>;
     normalizationStrength: number;
     setNormalizationStrength: React.Dispatch<React.SetStateAction<number>>;
+    playbackSpeed: number;
+    setPlaybackSpeed: React.Dispatch<React.SetStateAction<number>>;
+    commitPlaybackSpeed: (value: number) => void;
     freqs: string[];
     presets: Record<string, number[]>;
     eqZeroSnapThreshold: number;
@@ -106,6 +109,11 @@ const normalizeEqBands = (bands: number[] | undefined): number[] => {
     return nextBands.slice(0, 10);
 };
 
+const clampPlaybackSpeed = (speed: number): number => {
+    if (!Number.isFinite(speed)) return 1;
+    return Math.max(0.5, Math.min(2, speed));
+};
+
 export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab?: string }>> = ({ children, initialTab }) => {
     const { state: libraryState, setEditingTracks } = useLibrary();
     const { setShuffleMode } = usePlayer();
@@ -127,6 +135,10 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
     const [crossfadeDuration, setCrossfadeDuration] = useState(() => persistenceService.getPreferences().crossfadeDuration || 3);
     const [normalizationEnabled, setNormalizationEnabled] = useState(() => persistenceService.getPreferences().normalizationEnabled || false);
     const [normalizationStrength, setNormalizationStrength] = useState(() => persistenceService.getPreferences().normalizationStrength || 45);
+    const [playbackSpeed, setPlaybackSpeed] = useState(() => {
+        const speed = persistenceService.getPreferences().playbackSpeed;
+        return clampPlaybackSpeed(speed);
+    });
 
     useEffect(() => {
         if (eqBands.length !== 10) return;
@@ -141,6 +153,14 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
             normalizationStrength
         });
     }, [crossfadeDuration, crossfadeEnabled, eqBands, eqEnabled, normalizationEnabled, normalizationStrength]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            audioEngine.setPlaybackRate(clampPlaybackSpeed(playbackSpeed));
+        }, 90);
+
+        return () => window.clearTimeout(timer);
+    }, [playbackSpeed]);
 
     useEffect(() => {
         audioEngine.setVolumeNormalization(normalizationEnabled, normalizationStrength);
@@ -351,6 +371,13 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         setShuffleMode(mode);
     }, [setShuffleMode]);
 
+    const commitPlaybackSpeed = useCallback((value: number) => {
+        const nextSpeed = clampPlaybackSpeed(value);
+        setPlaybackSpeed(nextSpeed);
+        audioEngine.setPlaybackRate(nextSpeed);
+        persistenceService.updatePreferences({ playbackSpeed: nextSpeed });
+    }, []);
+
     const snapEqBandValue = useCallback((value: number) => {
         const rounded = Math.round(value * 10) / 10;
         return Math.abs(rounded) <= EQ_ZERO_SNAP_THRESHOLD ? 0 : rounded;
@@ -444,6 +471,9 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         setNormalizationEnabled,
         normalizationStrength,
         setNormalizationStrength,
+        playbackSpeed,
+        setPlaybackSpeed,
+        commitPlaybackSpeed,
         freqs: EQ_FREQUENCIES,
         presets: EQ_PRESETS,
         eqZeroSnapThreshold: EQ_ZERO_SNAP_THRESHOLD,
@@ -470,6 +500,7 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         duplicateGroups,
         eqBands,
         eqEnabled,
+        commitPlaybackSpeed,
         handleBandChange,
         handleExport,
         healthIssues,
@@ -479,6 +510,7 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         metadataWriteTarget,
         normalizationEnabled,
         normalizationStrength,
+        playbackSpeed,
         openMetadataEditor,
         requestNowPlayingNotifications,
         selectedHashes,
