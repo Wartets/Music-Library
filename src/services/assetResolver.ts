@@ -73,7 +73,9 @@ export const resolveAssetCandidates = (assetPath: string, includeLocalFallback: 
     const candidates: string[] = [];
 
     if (MEDIA_BASE_URL) {
-        candidates.push(`${MEDIA_BASE_URL}/${encodedPath}`);
+        // The R2 bucket stores files without the 'assets/' prefix
+        const remotePath = encodedPath.replace(/^assets\//i, '');
+        candidates.push(`${MEDIA_BASE_URL}/${remotePath}`);
     }
 
     if (includeLocalFallback) {
