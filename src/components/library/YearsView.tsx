@@ -38,6 +38,23 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
         return year;
     };
 
+    const getYearBadgeSymbol = (label: string): string => {
+        if (label === 'Unknown Year') {
+            return '?';
+        }
+
+        const parsed = parseGroupStartYear(label);
+        if (!Number.isFinite(parsed)) {
+            return label;
+        }
+
+        if (groupBy === 'decade') {
+            return `${parsed}`;
+        }
+
+        return `${parsed}`;
+    };
+
     const years = useMemo(() => {
         const { groups } = groupTracks(libraryState.filteredTracks, {
             keyExtractor: (track) => {
@@ -88,6 +105,7 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
     const gridItems: GridItem[] = years.map(yearGroup => {
         const palette = getMutedVisualStyle(seedFromYear(yearGroup.name));
         const filterValue = yearGroup.name;
+        const badgeSymbol = getYearBadgeSymbol(yearGroup.name);
         return {
             id: yearGroup.name,
             title: yearGroup.name,
@@ -99,11 +117,10 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
                 },
                 symbol: (
                     <span className="font-black tracking-tight" style={{ color: palette.accentColor }}>
-                        {yearGroup.name === 'Unknown Year' ? '?' : yearGroup.name.slice(-2)}
+                        {badgeSymbol}
                     </span>
                 ),
-                label: yearGroup.name === 'Unknown Year' ? 'Unknown' : 'Year',
-                symbolClassName: 'text-5xl leading-none'
+                symbolClassName: groupBy === 'decade' ? 'text-4xl leading-none' : 'text-5xl leading-none'
             },
             onClick: () => onNavigate('AllTracks', { filter: { type: 'year', value: filterValue } }),
             onContextMenu: (e) => onRightClick(e, yearGroup)
@@ -113,25 +130,28 @@ export const YearsView: React.FC<YearsViewProps> = ({ onNavigate }) => {
     return (
         <CollectionGridView
             title="Years"
-            subtitle={`${years.length} release years`}
+            subtitle={groupBy === 'decade' ? `${years.length} release decades` : `${years.length} release years`}
             items={gridItems}
             sortOptions={[
                 { id: 'group-year', label: 'By Year', icon: <Calendar size={14} /> },
                 { id: 'group-decade', label: 'By Decade', icon: <CalendarRange size={14} /> },
-                { id: 'year', label: 'Year', icon: <Calendar size={14} /> },
                 { id: 'count', label: 'Track Count', icon: <Hash size={14} /> }
             ]}
-            currentSort={groupBy === 'year' ? sortBy : `group-${groupBy}`}
+            currentSort={sortBy === 'count' ? 'count' : `group-${groupBy}`}
             onSortChange={(id) => {
                 if (id === 'group-year') {
                     setGroupBy('year');
+                    setSortBy('year');
                     return;
                 }
                 if (id === 'group-decade') {
                     setGroupBy('decade');
+                    setSortBy('year');
                     return;
                 }
-                setSortBy(id as 'year' | 'count');
+                if (id === 'count') {
+                    setSortBy('count');
+                }
             }}
         />
     );
