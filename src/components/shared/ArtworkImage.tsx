@@ -24,12 +24,69 @@ const hashText = (value: string): number => {
     return Math.abs(hash);
 };
 
+// Procedural SVG pattern generators for fallback artwork variety.
+// Each returns an SVG snippet to be inlined as a data URI overlay.
+// The pattern index is deterministically chosen from the seed.
+const PATTERN_GENERATORS: ((hue: number, seed: number) => string)[] = [
+    // 0: Diagonal lines
+    (hue, seed) => {
+        const spacing = 10 + (seed % 6);
+        const opacity = 0.04 + (seed % 5) * 0.006;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${spacing * 2}' height='${spacing * 2}'><line x1='0' y1='0' x2='${spacing * 2}' y2='${spacing * 2}' stroke='hsla(${hue},60%,75%,${opacity})' stroke-width='1'/></svg>`;
+    },
+    // 1: Dot grid
+    (hue, seed) => {
+        const gap = 12 + (seed % 8);
+        const radius = 1 + (seed % 3) * 0.4;
+        const opacity = 0.05 + (seed % 4) * 0.007;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${gap}' height='${gap}'><circle cx='${gap / 2}' cy='${gap / 2}' r='${radius}' fill='hsla(${hue},50%,70%,${opacity})'/></svg>`;
+    },
+    // 2: Concentric ring fragment
+    (hue, seed) => {
+        const size = 40 + (seed % 20);
+        const opacity = 0.035 + (seed % 5) * 0.005;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><circle cx='${size / 2}' cy='${size / 2}' r='${size * 0.35}' fill='none' stroke='hsla(${hue},45%,65%,${opacity})' stroke-width='1'/><circle cx='${size / 2}' cy='${size / 2}' r='${size * 0.18}' fill='none' stroke='hsla(${hue},45%,65%,${opacity * 0.7})' stroke-width='0.7'/></svg>`;
+    },
+    // 3: Chevrons
+    (hue, seed) => {
+        const size = 16 + (seed % 8);
+        const opacity = 0.04 + (seed % 4) * 0.006;
+        const mid = size / 2;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'><polyline points='0,${mid} ${mid},${mid * 0.4} ${size},${mid}' fill='none' stroke='hsla(${hue},50%,70%,${opacity})' stroke-width='0.8'/></svg>`;
+    },
+    // 4: Cross-hatch
+    (hue, seed) => {
+        const spacing = 14 + (seed % 6);
+        const opacity = 0.03 + (seed % 5) * 0.005;
+        return `<svg xmlns='http://www.w3.org/2000/svg' width='${spacing}' height='${spacing}'><line x1='0' y1='0' x2='${spacing}' y2='${spacing}' stroke='hsla(${hue},55%,72%,${opacity})' stroke-width='0.6'/><line x1='${spacing}' y1='0' x2='0' y2='${spacing}' stroke='hsla(${hue},55%,72%,${opacity * 0.7})' stroke-width='0.6'/></svg>`;
+    },
+];
+
 const createFallbackVisual = (seedText: string) => {
     const seed = hashText(seedText || 'track');
     const hue = seed % 360;
-    const background = `linear-gradient(145deg, hsla(${hue}, 38%, 38%, 0.9), hsla(${(hue + 28) % 360}, 32%, 24%, 0.92))`;
+
+    // Vary gradient angle procedurally (range 115–175deg for subtle tilt variation)
+    const gradientAngle = 115 + (seed % 61);
+    const background = `linear-gradient(${gradientAngle}deg, hsla(${hue}, 38%, 38%, 0.9), hsla(${(hue + 28) % 360}, 32%, 24%, 0.92))`;
+
     const letter = (seedText.match(/[\p{L}\p{N}]/u)?.[0] || '?').toUpperCase();
-    return { background, letter };
+
+    // Select a pattern overlay deterministically
+    const patternIndex = seed % PATTERN_GENERATORS.length;
+    const patternSvg = PATTERN_GENERATORS[patternIndex](hue, seed);
+    const patternDataUri = `url("data:image/svg+xml,${encodeURIComponent(patternSvg)}")`;
+
+    // Accent radial glow — position varies per seed
+    const glowX = 20 + (seed % 60);
+    const glowY = 20 + ((seed >> 4) % 60);
+    const glowOpacity = 0.06 + (seed % 8) * 0.008;
+    const accentGlow = `radial-gradient(ellipse at ${glowX}% ${glowY}%, hsla(${(hue + 40) % 360}, 45%, 55%, ${glowOpacity}), transparent 65%)`;
+
+    // Subtle letter size variation (1.3rem – 1.7rem) for visual diversity
+    const letterSize = 1.3 + (seed % 5) * 0.1;
+
+    return { background, letter, patternDataUri, accentGlow, letterSize };
 };
 
 const buildSrcCandidates = (pathValue: string): string[] => dbService.getAssetCandidates(pathValue);
@@ -51,10 +108,8 @@ const buildInputCandidates = (rawSrc?: string, detailsPath?: string): string[] =
     return [];
 };
 
-/**
- * Parse dimensions string (e.g., "1920 x 1080") to get width and height numbers.
- * Returns null if parsing fails.
- */
+// Parse dimensions string (e.g., "1920 x 1080") to get width and height numbers.
+// Returns null if parsing fails.
 const parseDimensions = (dimensions?: string): { width: number; height: number } | null => {
     if (!dimensions) return null;
     const match = dimensions.match(/(\d+)\s*x\s*(\d+)/i);
@@ -68,9 +123,7 @@ const parseDimensions = (dimensions?: string): { width: number; height: number }
     return null;
 };
 
-/**
- * Get aspect ratio CSS value from aspect_ratio field.
- */
+// Get aspect ratio CSS value from aspect_ratio field.
 const getAspectRatioCSS = (aspectRatio: string | undefined): string | undefined => {
     if (!aspectRatio) return undefined;
     switch (aspectRatio) {
@@ -99,14 +152,14 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
         return availableCandidates;
     }, [src, details?.path, cacheKey]);
 
-     const displaySrc = srcCandidates[candidateIndex] ?? null;
+    const displaySrc = srcCandidates[candidateIndex] ?? null;
 
-    // Parse dimensions and aspect ratio for responsive images and layout
-    const dimensions = React.useMemo(() => parseDimensions(details?.dimensions), [details?.dimensions]);
-     const aspectRatioCSS = React.useMemo(() => 
-         getAspectRatioCSS(details?.aspect_ratio), 
-         [details?.aspect_ratio]
-     ) as string | undefined;
+// Parse dimensions and aspect ratio for responsive images and layout
+const dimensions = React.useMemo(() => parseDimensions(details?.dimensions), [details?.dimensions]);
+    const aspectRatioCSS = React.useMemo(() => 
+        getAspectRatioCSS(details?.aspect_ratio), 
+        [details?.aspect_ratio]
+    ) as string | undefined;
 
     React.useEffect(() => {
         setHasError(false);
@@ -121,18 +174,23 @@ export const ArtworkImage: React.FC<ArtworkImageProps> = ({ details, src, alt = 
         const fallbackVisual = createFallbackVisual(fallbackSeed);
         
         // Use aspect ratio when available for proper fallback layout
-        const style: React.CSSProperties = { background: fallbackVisual.background };
+        const fallbackStyle: React.CSSProperties = {
+            background: `${fallbackVisual.accentGlow}, ${fallbackVisual.patternDataUri} repeat, ${fallbackVisual.background}`,
+        };
         if (aspectRatioCSS) {
-            style.aspectRatio = aspectRatioCSS as any;
+            fallbackStyle.aspectRatio = aspectRatioCSS as any;
         }
         
         return (
             <div
                 className={`flex items-center justify-center text-white/90 overflow-hidden ${className}`}
-                style={style}
+                style={fallbackStyle}
             >
                 {fallback || (
-                    <span className="text-2xl font-black tracking-tight select-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]">
+                    <span
+                        className="font-black tracking-tight select-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                        style={{ fontSize: `${fallbackVisual.letterSize}rem` }}
+                    >
                         {fallbackVisual.letter}
                     </span>
                 )}
