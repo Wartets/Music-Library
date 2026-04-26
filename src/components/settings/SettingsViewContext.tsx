@@ -6,7 +6,8 @@ import { audioEngine } from '../../services/audioEngine';
 import { persistenceService } from '../../services/persistence';
 import type { MetadataWriteTarget, ShuffleMode } from '../../services/persistence';
 import type { TrackItem } from '../../types/music';
-import type { MaintenanceTabId, SettingsStatCard, SettingsTabId } from './settingsTypes';
+import { parseDuration } from '../../utils/formatters';
+import type { MaintenanceTabId, SettingsDetailedStats, SettingsStatCard, SettingsTabId } from './settingsTypes';
 
 interface DuplicateGroups {
     exact: TrackItem[][];
@@ -56,6 +57,7 @@ interface SettingsViewContextValue {
     healthIssues: HealthIssues;
     metadataCandidates: TrackItem[];
     statsCards: SettingsStatCard[];
+    detailedStats: SettingsDetailedStats;
     setInterfacePreference: (key: string, value: boolean) => void;
     requestNowPlayingNotifications: () => Promise<boolean>;
     setShuffleModePreference: (mode: ShuffleMode) => void;
@@ -212,6 +214,108 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         { label: 'Lossless', value: libraryState.tracks.filter(track => track.audio_specs?.is_lossless).length.toLocaleString() }
     ]), [libraryState.stats.totalDuration, libraryState.stats.totalSizeMb, libraryState.stats.totalTracks, libraryState.tracks]);
 
+    const detailedStats = useMemo<SettingsDetailedStats>(() => {
+        const tracks = libraryState.tracks;
+        const favorites = persistenceService.getFavorites();
+        const ratings = persistenceService.getAllRatings();
+        const genres: Record<string, number> = {};
+        const artistSet = new Set<string>();
+        const albumSet = new Set<string>();
+        const folderSet = new Set<string>();
+        let totalTime = 0;
+        let totalBitrate = 0;
+        let bitrateCount = 0;
+        let totalSizeMb = 0;
+        let lossless = 0;
+        let totalVersionsCount = 0;
+        let singles = 0;
+        let totalSampleRate = 0;
+        let sampleRateCount = 0;
+        const codecDist: Record<string, number> = {};
+        const years: number[] = [];
+
+        tracks.forEach(track => {
+            const trackGenres = track.metadata?.genre;
+            if (Array.isArray(trackGenres)) {
+                trackGenres.forEach(genre => {
+                    genres[genre] = (genres[genre] || 0) + 1;
+                });
+            } else if (trackGenres) {
+                genres[trackGenres] = (genres[trackGenres] || 0) + 1;
+            }
+
+            (track.metadata?.artists || []).forEach(artist => {
+                if (artist?.trim()) artistSet.add(artist.trim());
+            });
+
+            if (track.metadata?.album?.trim()) albumSet.add(track.metadata.album.trim());
+            if (track.logic?.hierarchy?.folder?.trim()) folderSet.add(track.logic.hierarchy.folder.trim());
+            if (track.logic?.is_single) singles++;
+            totalVersionsCount += track.versions?.length || 1;
+
+            if (track.audio_specs?.duration) {
+                totalTime += parseDuration(track.audio_specs.duration);
+            }
+
+            if (track.audio_specs?.bitrate) {
+                const bitrate = parseInt(track.audio_specs.bitrate, 10);
+                if (!isNaN(bitrate)) {
+                    totalBitrate += bitrate;
+                    bitrateCount++;
+                }
+            }
+
+            if (track.audio_specs?.sample_rate) {
+                const sampleRate = parseInt(String(track.audio_specs.sample_rate).replace(/[^\d]/g, ''), 10);
+                if (!isNaN(sampleRate) && sampleRate > 0) {
+                    totalSampleRate += sampleRate;
+                    sampleRateCount++;
+                }
+            }
+
+            const codec = (track.audio_specs?.codec || track.file?.ext || 'unknown').toLowerCase();
+            codecDist[codec] = (codecDist[codec] || 0) + 1;
+
+            const year = Number(track.metadata?.year);
+            if (!isNaN(year) && year > 1000) years.push(year);
+
+            totalSizeMb += track.file?.size_mb || 0;
+            if (track.audio_specs?.is_lossless) {
+                lossless++;
+            }
+        });
+
+        const ratingsValues = Object.values(ratings).filter(value => value > 0);
+        const sortedGenres = Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+        return {
+            totalPlaytimeMinutes: Math.round(totalTime / 60),
+            averageBitrate: bitrateCount > 0 ? Math.round(totalBitrate / bitrateCount) : 0,
+            totalTracks: tracks.length,
+            totalAlbums: albumSet.size,
+            totalArtists: artistSet.size,
+            totalGenres: Object.keys(genres).length,
+            totalFolders: folderSet.size,
+            totalSizeGb: totalSizeMb / 1024,
+            averageDurationMinutes: tracks.length > 0 ? (totalTime / tracks.length) / 60 : 0,
+            losslessCount: lossless,
+            ratedTracksCount: ratingsValues.length,
+            averageRating: ratingsValues.length > 0
+                ? ratingsValues.reduce((acc, n) => acc + n, 0) / ratingsValues.length
+                : 0,
+            totalVersions: totalVersionsCount,
+            singlesCount: singles,
+            topCodec: Object.entries(codecDist).sort((a, b) => b[1] - a[1])[0]?.[0]?.toUpperCase() || '-',
+            averageSampleRateKhz: sampleRateCount > 0 ? (totalSampleRate / sampleRateCount) / 1000 : 0,
+            oldestYear: years.length ? Math.min(...years) : null,
+            newestYear: years.length ? Math.max(...years) : null,
+            historyCount: persistenceService.getHistoryIds().length,
+            favoritesCount: favorites.length,
+            genreDistribution: sortedGenres,
+            maxGenreCount: Math.max(...Object.values(genres).concat(1))
+        };
+    }, [libraryState.tracks]);
+
     const setMetadataWriteTarget = useCallback((target: MetadataWriteTarget) => {
         setMetadataWriteTargetState(target);
         persistenceService.updatePreferences({ metadataWriteTarget: target });
@@ -349,6 +453,7 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         healthIssues,
         metadataCandidates,
         statsCards,
+        detailedStats,
         setInterfacePreference,
         requestNowPlayingNotifications,
         setShuffleModePreference,
@@ -380,6 +485,7 @@ export const SettingsViewProvider: React.FC<React.PropsWithChildren<{ initialTab
         setInterfacePreference,
         setMetadataWriteTarget,
         setShuffleModePreference,
+        detailedStats,
         statsCards,
         toggleTrackSelection,
         uiCompactPlayerEnabled,
