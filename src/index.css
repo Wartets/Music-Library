@@ -189,23 +189,80 @@
 @keyframes immersiveGrainShift {
   0% {
     transform: translate3d(0, 0, 0);
-    opacity: 0.22;
+    opacity: 0.42;
   }
   25% {
-    transform: translate3d(-2%, 1%, 0);
-    opacity: 0.28;
+    transform: translate3d(-0.55%, 0.42%, 0);
+    opacity: 0.5;
   }
   50% {
-    transform: translate3d(1%, -2%, 0);
-    opacity: 0.24;
+    transform: translate3d(0.45%, -0.6%, 0);
+    opacity: 0.44;
   }
   75% {
-    transform: translate3d(2%, 1%, 0);
-    opacity: 0.3;
+    transform: translate3d(0.62%, 0.44%, 0);
+    opacity: 0.52;
   }
   100% {
     transform: translate3d(0, 0, 0);
+    opacity: 0.42;
+  }
+}
+
+@keyframes immersiveGrainMicroShift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.18;
+  }
+  33% {
+    transform: translate3d(-0.2%, 0.24%, 0) scale(1.004);
+    opacity: 0.24;
+  }
+  66% {
+    transform: translate3d(0.22%, -0.2%, 0) scale(0.998);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.18;
+  }
+}
+
+@keyframes immersiveGrainBoldShift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
     opacity: 0.22;
+  }
+  25% {
+    transform: translate3d(0.4%, -0.34%, 0) scale(1.006);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate3d(-0.28%, 0.4%, 0) scale(0.996);
+    opacity: 0.26;
+  }
+  75% {
+    transform: translate3d(0.24%, -0.28%, 0) scale(1.004);
+    opacity: 0.32;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.22;
+  }
+}
+
+@keyframes immersiveGrainPatchPulse {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.46;
+  }
+  50% {
+    transform: translate3d(0.5%, -0.6%, 0) scale(1.015);
+    opacity: 0.58;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.46;
   }
 }
 
@@ -222,13 +279,35 @@
 }
 
 .immersive-grain {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='5.92' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.95'/%3E%3C/svg%3E");
-  background-size: 50px 50px;
+  background-size: 192px 192px;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.58;
+  animation: immersiveGrainShift 0.68s steps(2) infinite;
+}
+
+.immersive-grain-mid {
+  background-size: 128px 128px;
   background-repeat: repeat;
   mix-blend-mode: soft-light;
-  filter: contrast(190%) brightness(125%);
-  opacity: 0.4;
-  animation: immersiveGrainShift 0.55s steps(2) infinite;
+  opacity: 0.34;
+  animation: immersiveGrainBoldShift 0.62s steps(2) infinite;
+}
+
+.immersive-grain-fine {
+  background-size: 96px 96px;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.28;
+  animation: immersiveGrainMicroShift 0.48s steps(2) infinite;
+}
+
+.immersive-grain-patch {
+  background-size: cover;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.2;
+  animation: immersiveGrainPatchPulse 6.2s ease-in-out infinite;
 }
 
 /* Reduced motion preference */
@@ -240,7 +319,10 @@
   .immersive-gradient-drift-slow,
   .immersive-gradient-drift-fast,
   .immersive-gradient-rotate,
-  .immersive-grain {
+  .immersive-grain,
+  .immersive-grain-mid,
+  .immersive-grain-fine,
+  .immersive-grain-patch {
     animation: none;
   }
   
@@ -250,7 +332,6 @@
   }
 }
 
-/* Screen reader only */
 .sr-only {
   position: absolute;
   width: 1px;

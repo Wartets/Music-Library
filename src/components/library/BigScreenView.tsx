@@ -181,10 +181,10 @@ export const BigScreenView: React.FC<{ onBack: () => void; onNavigate: (view: Vi
             {/* Static artwork-derived background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 <ImmersiveVisualizer track={track} className="opacity-100" />
-                <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: dominantColor, opacity: 0.24, mixBlendMode: 'screen' }} />
-                <div className="absolute inset-0 bg-black/35 mix-blend-overlay" />
+                <div className="absolute inset-0 transition-colors duration-700" style={{ backgroundColor: dominantColor, opacity: 0.2, mixBlendMode: 'screen' }} />
+                <div className="absolute inset-0 bg-black/18 mix-blend-overlay" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(255,255,255,0.08),transparent_58%)]" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.14),rgba(0,0,0,0.28))]" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.08),rgba(0,0,0,0.2))]" />
             </div>
 
             {/* Header */}
